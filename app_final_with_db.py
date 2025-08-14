@@ -36,7 +36,17 @@ app = Flask(__name__)
 if os.environ.get('RENDER'):
     # Configuration pour Render.com
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///douka_km.db'
+    
+    # Gestion adaptative de la base de données PostgreSQL
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        # Adapter l'URL pour la version de psycopg utilisée
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://')
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///douka_km.db'
+    
     app.config['DEBUG'] = False
     app.config['TESTING'] = False
 else:

@@ -3,6 +3,7 @@ services:
     name: douka-km
     env: python
     plan: free
+    runtime: python311
     buildCommand: |
       chmod +x build.sh && ./build.sh
     startCommand: |
