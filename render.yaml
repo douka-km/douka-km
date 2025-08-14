@@ -24,3 +24,9 @@ services:
         value: postgresql://douka_km_disk_user:knTLe25stMrj3GiYHQPZZui7jKsDP24Q@dpg-d2f3kgf5r7bs73c884b0-a/douka_km_disk
       - key: VERIFICATION_URL_BASE
         value: https://douka-km.onrender.com
+      - key: ADMIN_EMAIL
+        value: admin@doukakm.com
+      - key: ADMIN_PASSWORD
+        value: admin123!
+      - key: ADMIN_NAME
+        value: Super Admin DOUKA KM

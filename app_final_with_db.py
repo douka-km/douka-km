@@ -15789,6 +15789,40 @@ def initialize_production_db():
             # Créer toutes les tables
             db.create_all()
             
+            # Créer le compte administrateur initial si les variables d'environnement sont définies
+            admin_email = os.environ.get('ADMIN_EMAIL')
+            admin_password = os.environ.get('ADMIN_PASSWORD') 
+            admin_name = os.environ.get('ADMIN_NAME')
+            
+            if admin_email and admin_password and admin_name:
+                # Vérifier si l'admin existe déjà
+                existing_admin = Admin.query.filter_by(email=admin_email).first()
+                if not existing_admin:
+                    print(f"🔄 Création du compte administrateur: {admin_email}")
+                    
+                    # Créer le nouvel administrateur
+                    new_admin = Admin(
+                        email=admin_email,
+                        name=admin_name,
+                        password_hash=generate_password_hash(admin_password),
+                        role='super_admin',
+                        permissions=['all'],  # Toutes les permissions
+                        is_active=True,
+                        email_verified=True
+                    )
+                    
+                    try:
+                        db.session.add(new_admin)
+                        db.session.commit()
+                        print(f"✅ Compte administrateur créé avec succès: {admin_email}")
+                    except Exception as e:
+                        db.session.rollback()
+                        print(f"❌ Erreur lors de la création de l'administrateur: {e}")
+                else:
+                    print(f"ℹ️ Compte administrateur existe déjà: {admin_email}")
+            else:
+                print("⚠️ Variables d'environnement administrateur manquantes (ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME)")
+            
             # Initialiser les proxies de base de données
             initialize_db_proxies()
             
