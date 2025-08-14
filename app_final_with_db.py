@@ -7265,17 +7265,23 @@ def admin_login():
         password = request.form.get('password')
         remember = 'remember' in request.form
         
-        print(f"Tentative de connexion admin: {email}")  # Log pour déboguer
-        
         # Récupérer l'administrateur et vérifier s'il existe
         admin = admins_db.get(email)
         employee = employees_db.get(email)
         
         # DATABASE-FIRST: Vérifier aussi dans la base de données Admin
-        db_admin = Admin.query.filter_by(email=email, status='active').first()
+        try:
+            db_admin = Admin.query.filter_by(email=email, status='active').first()
+        except Exception as e:
+            print(f"Erreur requête Admin.query: {e}")
+            db_admin = None
         
         # DATABASE-FIRST: Vérifier aussi dans la base de données Employee
-        db_employee = Employee.query.filter_by(email=email, status='active').first()
+        try:
+            db_employee = Employee.query.filter_by(email=email, status='active').first()
+        except Exception as e:
+            print(f"Erreur requête Employee.query: {e}")
+            db_employee = None
         
         user_found = False
         
@@ -15895,6 +15901,45 @@ if __name__ == '__main__':
         # Créer les tables si elles n'existent pas et initialiser les proxies
         with app.app_context():
             db.create_all()
+            
+            # **CORRECTION CRITIQUE: Créer l'admin aussi en développement**
+            # Créer l'admin par défaut en développement
+            admin_email = os.environ.get('ADMIN_EMAIL', 'admin@doukakm.com')
+            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123!')
+            admin_name = os.environ.get('ADMIN_NAME', 'Super Admin DOUKA KM')
+            
+            existing_admin = Admin.query.filter_by(email=admin_email).first()
+            if not existing_admin:
+                print(f"🔄 Création du compte administrateur pour le développement: {admin_email}")
+                
+                # Séparer le nom complet en prénom et nom de famille
+                name_parts = admin_name.split(' ', 1)
+                first_name = name_parts[0] if len(name_parts) > 0 else 'Admin'
+                last_name = name_parts[1] if len(name_parts) > 1 else 'DOUKA KM'
+                
+                # Créer le nouvel administrateur
+                new_admin = Admin(
+                    email=admin_email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password_hash=generate_password_hash(admin_password),
+                    role='super_admin',
+                    status='active'
+                )
+                
+                try:
+                    db.session.add(new_admin)
+                    db.session.commit()
+                    print(f"✅ Compte administrateur créé: {admin_email}")
+                    print(f"   Nom: {first_name} {last_name}")
+                    print(f"   Mot de passe: {admin_password}")
+                    print(f"   Rôle: super_admin")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"❌ Erreur création administrateur: {e}")
+            else:
+                print(f"ℹ️ Compte administrateur existe déjà: {admin_email}")
+            
             initialize_db_proxies()
         
         print("🚀 Application DOUKA KM COMPLÈTE avec base de données SQLite démarrée!")
