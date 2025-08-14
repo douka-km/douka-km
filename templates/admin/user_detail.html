@@ -1,0 +1,256 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Détail utilisateur - Admin{% endblock %}
+
+{% block page_title %}Détail de l'utilisateur{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-user me-2"></i>{{ user.first_name }} {{ user.last_name }}
+        </h1>
+        <p class="text-muted mb-0">{{ user.email }}</p>
+    </div>
+    <div>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Retour à la liste
+        </a>
+    </div>
+</div>
+
+<!-- Informations principales -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Informations personnelles</h6>
+                <div class="dropdown no-arrow">
+                    <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                        {{ 'Actif' if user.is_active else 'Inactif' }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Prénom</label>
+                            <p class="fw-bold">{{ user.first_name }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Nom</label>
+                            <p class="fw-bold">{{ user.last_name }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Email</label>
+                            <p class="fw-bold">{{ user.email }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Téléphone</label>
+                            <p class="fw-bold">{{ user.phone or 'Non renseigné' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Ville</label>
+                            <p class="fw-bold">{{ user.city or 'Non renseigné' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Région</label>
+                            <p class="fw-bold">{{ user.region or 'Non renseigné' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Date d'inscription</label>
+                            <p class="fw-bold">{{ user.registration_date or 'Non renseigné' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Dernière connexion</label>
+                            <p class="fw-bold">{{ user.last_login or 'Jamais connecté' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Statistiques utilisateur -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Statistiques</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Commandes totales</span>
+                        <span class="fw-bold">{{ user.orders_count }}</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Montant total dépensé</span>
+                        <span class="fw-bold">{{ "{:,.0f}".format(user.total_spent) }} KMF</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Produits en favoris</span>
+                        <span class="fw-bold">{{ user.wishlist_count }}</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Adresses enregistrées</span>
+                        <span class="fw-bold">{{ user.addresses_count }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions rapides -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if user.is_active %}
+                        <form method="POST" action="{{ url_for('admin_toggle_user_status', user_id=user.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-warning btn-sm w-100" 
+                                    onclick="return confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?')">
+                                <i class="fas fa-user-slash"></i> Désactiver l'utilisateur
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('admin_toggle_user_status', user_id=user.id) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="fas fa-user-check"></i> Activer l'utilisateur
+                            </button>
+                        </form>
+                    {% endif %}
+                    
+                    <form method="POST" action="{{ url_for('admin_delete_user', user_id=user.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger btn-sm w-100" 
+                                onclick="return confirm('Êtes-vous sûr de vouloir supprimer définitivement cet utilisateur ? Cette action est irréversible.')">
+                            <i class="fas fa-trash"></i> Supprimer l'utilisateur
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historique des commandes -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Historique des commandes ({{ user.orders|length if user.orders else 0 }} commande{{ 's' if (user.orders|length != 1) else '' }})</h6>
+    </div>
+    <div class="card-body">
+        {% if user.orders and user.orders|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID Commande</th>
+                            <th>Date</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in user.orders %}
+                        <tr>
+                            <td>{{ order.id }}</td>
+                            <td>{{ order.created_at or 'Non renseigné' }}</td>
+                            <td>{{ "{:,.0f}".format(order.total or 0) }} KMF</td>
+                            <td>
+                                {% set status_class = {
+                                    'processing': 'warning',
+                                    'shipped': 'info',
+                                    'delivered': 'success',
+                                    'cancelled': 'danger'
+                                } %}
+                                <span class="badge bg-{{ status_class.get(order.status, 'secondary') }}">
+                                    {{ order.status_text or order.status|title or 'Non défini' }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin_order_detail', order_id=order.id) }}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i> Voir
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Aucune commande trouvée</h5>
+                <p class="text-muted">Cet utilisateur n'a passé aucune commande pour le moment.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Adresses de l'utilisateur -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Adresses enregistrées ({{ user.addresses|length if user.addresses else 0 }} adresse{{ 's' if (user.addresses|length != 1) else '' }})</h6>
+    </div>
+    <div class="card-body">
+        {% if user.addresses and user.addresses|length > 0 %}
+            <div class="row">
+                {% for address in user.addresses %}
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ address.name or 'Adresse' }}</h6>
+                            <p class="card-text">
+                                {{ address.address }}<br>
+                                {{ address.city }}, {{ address.region }}<br>
+                                {% if address.phone %}Tél: {{ address.phone }}{% endif %}
+                            </p>
+                            {% if address.is_default %}
+                            <span class="badge bg-primary">Adresse par défaut</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Aucune adresse enregistrée</h5>
+                <p class="text-muted">Cet utilisateur n'a enregistré aucune adresse de livraison.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

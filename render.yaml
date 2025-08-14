@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: douka-km
+    env: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+    startCommand: |
+      export RENDER=1
+      python init_render.py && gunicorn app_final_with_db:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --preload
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_APP
+        value: app_final_with_db.py
+      - key: FLASK_ENV
+        value: production
+      - key: RENDER
+        value: "1"
+      - key: SECRET_KEY
+        value: c20f60e2902185e2bd2948acdd190ccb
+      - key: DATABASE_URL
+        value: postgresql://douka_km_disk_user:knTLe25stMrj3GiYHQPZZui7jKsDP24Q@dpg-d2f3kgf5r7bs73c884b0-a/douka_km_disk
+      - key: VERIFICATION_URL_BASE
+        value: https://douka-km.onrender.com

@@ -1,0 +1,687 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Paiements - DOUKA KM Marchands{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Gestion des paiements</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_dashboard') }}">Tableau de bord</a></li>
+        <li class="breadcrumb-item active">Paiements</li>
+    </ol>
+
+    <!-- Messages flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Information sur les paramètres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Informations importantes</h6>
+                <p class="mb-1"><strong>Taux de commission actuel :</strong> {{ site_settings.commission_rate }}%</p>
+                <p class="mb-1"><strong>Frais de livraison :</strong> {{ site_settings.shipping_fee|format_number }} KMF (Gratuite pour commandes ≥ {{ site_settings.free_shipping_threshold|format_number }} KMF)</p>
+                <p class="mb-0"><small class="text-muted">Ces paramètres sont définis par l'administration et s'appliquent à toutes vos ventes.</small></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carte récapitulative du solde -->
+    <div class="row">
+        <div class="col-xl-4 col-md-6">
+            <div class="card border-left-primary shadow mb-4">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Solde actuel</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ balance_info.current|format_number }} KMF</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-wallet fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+            <div class="card border-left-warning shadow mb-4">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Retraits en attente</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ balance_info.pending|format_number }} KMF</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+            <div class="card border-left-info shadow mb-4">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Délai de traitement</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ balance_info.next_payout_date }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Récapitulatif détaillé du solde -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-chart-pie me-1"></i>
+            Récapitulatif détaillé du solde
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless table-sm">
+                        <tbody>
+                            <tr>
+                                <td><strong>Total des gains bruts :</strong></td>
+                                <td class="text-end"><span class="text-success">{{ (balance_info.current + balance_info.pending + (merchant.total_withdrawn or 0))|format_number }} KMF</span></td>
+                            </tr>
+                            <tr>
+                                <td>Commission plateforme ({{ site_settings.commission_rate }}%) :</td>
+                                <td class="text-end"><span class="text-warning">-{{ ((balance_info.current + balance_info.pending + (merchant.total_withdrawn or 0)) * (site_settings.commission_rate / 100)    )|int|format_number }} KMF</span></td>
+                            </tr>
+                            <tr class="border-top">
+                                <td><strong>Gains nets :</strong></td>
+                                <td class="text-end"><strong class="text-primary">{{ ((balance_info.current + balance_info.pending + (merchant.total_withdrawn or 0)) * (1 - site_settings.commission_rate / 100))|int|format_number }} KMF</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-borderless table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Retraits complétés :</td>
+                                <td class="text-end"><span class="text-info">{{ (merchant.total_withdrawn or 0)|format_number }} KMF</span></td>
+                            </tr>
+                            <tr>
+                                <td>Retraits en cours :</td>
+                                <td class="text-end"><span class="text-warning">{{ balance_info.pending|format_number }} KMF</span></td>
+                            </tr>
+                            <tr class="border-top">
+                                <td><strong>Solde disponible :</strong></td>
+                                <td class="text-end"><strong class="text-success">{{ balance_info.current|format_number }} KMF</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Options de retrait -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-money-check-alt me-1"></i>
+            Demander un retrait
+        </div>
+        <div class="card-body">
+            {% if balance_info.has_pending_request %}
+                <!-- Alerte pour demande en cours -->
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock me-2"></i>
+                    <strong>Demande en cours :</strong> Vous avez déjà une demande de retrait 
+                    {% if balance_info.pending_request_info.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">en attente</span>
+                    {% elif balance_info.pending_request_info.status == 'approved' %}
+                        <span class="badge bg-success">approuvée</span>
+                    {% elif balance_info.pending_request_info.status == 'processing' %}
+                        <span class="badge bg-info">en traitement</span>
+                    {% endif %}
+                    (ID: {{ balance_info.pending_request_info.id }}) 
+                    de {{ balance_info.pending_request_info.amount|format_number }} KMF.
+                    <br>Vous ne pouvez pas faire une nouvelle demande tant que celle-ci n'est pas complétée.
+                    <div class="mt-2">
+                        <a href="{{ url_for('merchant_withdrawal_detail', request_id=balance_info.pending_request_info.id) }}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye me-1"></i>Voir les détails
+                        </a>
+                    </div>
+                </div>
+            {% elif balance_info.current >= balance_info.min_withdrawal %}
+                <form id="withdrawalForm" data-min-amount="{{ balance_info.min_withdrawal }}" data-max-amount="{{ balance_info.current }}">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-3">
+                            <label for="withdrawAmount" class="form-label">Montant à retirer</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="withdrawAmount" name="amount" 
+                                       step="1" min="1" max="{{ balance_info.current }}" 
+                                       placeholder="Saisir le montant" required>
+                                <span class="input-group-text">KMF</span>
+                            </div>
+                            <div class="form-text">
+                                Minimum: {{ balance_info.min_withdrawal|format_number }} KMF - 
+                                Disponible: {{ balance_info.current|format_number }} KMF
+                            </div>
+                            <div id="amountError" class="text-danger small" style="display: none;"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="withdrawMethod" class="form-label">Méthode de retrait</label>
+                            <select class="form-select" id="withdrawMethod" name="method" required>
+                                <option value="bank_transfer">Virement bancaire</option>
+                                <option value="mobile_money">Mobile Money</option>
+                                <option value="cash_pickup">Retrait en espèces</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="withdrawNotes" class="form-label">Notes (optionnel)</label>
+                            <input type="text" class="form-control" id="withdrawNotes" name="notes" 
+                                   placeholder="Instructions spéciales...">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-paper-plane me-1"></i>
+                                Demander
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Vous devez avoir un solde minimum de {{ balance_info.min_withdrawal|format_number }} KMF pour faire un retrait.
+                    <br>Solde actuel: {{ balance_info.current|format_number }} KMF
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Informations bancaires -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-university me-1"></i>
+            Vos informations bancaires
+        </div>
+        <div class="card-body">
+            {% if merchant.bank_info %}
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="row mb-2">
+                            <div class="col-md-3 fw-bold">Nom de la banque</div>
+                            <div class="col-md-9">{{ merchant.bank_info.bank_name }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-3 fw-bold">Titulaire du compte</div>
+                            <div class="col-md-9">{{ merchant.bank_info.account_holder }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3 fw-bold">Numéro de compte</div>
+                            <div class="col-md-9">{{ merchant.bank_info.account_number }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-outline-primary" id="editBankInfo">
+                            <i class="fas fa-edit me-1"></i>
+                            Modifier
+                        </button>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Vous n'avez pas encore ajouté vos informations bancaires.
+                    <button class="btn btn-primary ms-3" id="addBankInfo">
+                        <i class="fas fa-plus me-1"></i>
+                        Ajouter maintenant
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Historique des demandes de retrait -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-history me-1"></i>
+            Historique des demandes de retrait
+        </div>
+        <div class="card-body">
+            {% if withdrawal_requests %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID Demande</th>
+                                <th>Date</th>
+                                <th>Montant</th>
+                                <th>Méthode</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for request in withdrawal_requests %}
+                                <tr>
+                                    <td>{{ request.id }}</td>
+                                    <td>{{ request.requested_at }}</td>
+                                    <td>{{ request.amount|format_number }} KMF</td>
+                                    <td>
+                                        {% if request.method == 'bank_transfer' %}
+                                            <span class="badge bg-info">Virement</span>
+                                        {% elif request.method == 'mobile_money' %}
+                                            <span class="badge bg-success">Mobile Money</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ request.method }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">En attente</span>
+                                        {% elif request.status == 'approved' %}
+                                            <span class="badge bg-success">Approuvé</span>
+                                        {% elif request.status == 'processing' %}
+                                            <span class="badge bg-info">En traitement</span>
+                                        {% elif request.status == 'completed' %}
+                                            <span class="badge bg-primary">Complété</span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="badge bg-danger">Rejeté</span>
+                                        {% elif request.status == 'cancelled' %}
+                                            <span class="badge bg-secondary">Annulé</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ request.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('merchant_withdrawal_detail', request_id=request.id) }}" 
+                                           class="btn btn-sm btn-outline-primary me-2">
+                                            <i class="fas fa-eye"></i> Détails
+                                        </a>
+                                        {% if request.status == 'pending' %}
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="cancelWithdrawal('{{ request.id }}')" 
+                                                    title="Annuler cette demande">
+                                                <i class="fas fa-times"></i> Annuler
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aucune demande de retrait pour le moment.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Historique des transactions -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-history me-1"></i>
+            Historique des transactions
+        </div>
+        <div class="card-body">
+            {% if transactions %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID Transaction</th>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in transactions %}
+                                <tr>
+                                    <td>{{ transaction.id }}</td>
+                                    <td>{{ transaction.date }}</td>
+                                    <td>{{ transaction.description }}</td>
+                                    <td>
+                                        {% if transaction.type == 'order' %}
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-shopping-cart me-1"></i>Commande
+                                            </span>
+                                        {% elif transaction.type == 'withdrawal' %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-money-bill-wave me-1"></i>Retrait
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ transaction.type|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaction.amount >= 0 %}
+                                            <span class="text-success fw-bold">+{{ transaction.amount|format_number }} KMF</span>
+                                        {% else %}
+                                            <span class="text-danger fw-bold">{{ transaction.amount|format_number }} KMF</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaction.status == 'completed' %}
+                                            <span class="badge bg-success">Complété</span>
+                                        {% elif transaction.status == 'processing' %}
+                                            <span class="badge bg-info">En cours</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">{{ transaction.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Aucune transaction à afficher.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour ajouter/modifier les informations bancaires -->
+<div class="modal fade" id="bankInfoModal" tabindex="-1" aria-labelledby="bankInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bankInfoModalLabel">Informations bancaires</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bankInfoForm">
+                    <div class="mb-3">
+                        <label for="bankName" class="form-label">Nom de la banque</label>
+                        <input type="text" class="form-control" id="bankName" name="bank_name" required
+                               value="{{ merchant.bank_info.bank_name if merchant.bank_info }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="accountHolder" class="form-label">Titulaire du compte</label>
+                        <input type="text" class="form-control" id="accountHolder" name="account_holder" required
+                               value="{{ merchant.bank_info.account_holder if merchant.bank_info }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="accountNumber" class="form-label">Numéro de compte</label>
+                        <input type="text" class="form-control" id="accountNumber" name="account_number" required
+                               value="{{ merchant.bank_info.account_number if merchant.bank_info }}">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="saveBankInfo">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialisation du modal
+        const bankInfoModal = new bootstrap.Modal(document.getElementById('bankInfoModal'));
+        
+        // Gestion du formulaire de demande de retrait
+        const withdrawalForm = document.getElementById('withdrawalForm');
+        if (withdrawalForm) {
+            // Récupérer les montants depuis les attributs data
+            const minAmount = parseFloat(withdrawalForm.dataset.minAmount);
+            const maxAmount = parseFloat(withdrawalForm.dataset.maxAmount);
+            
+            // Validation en temps réel du montant (informative seulement)
+            const withdrawAmountInput = document.getElementById('withdrawAmount');
+            const amountErrorDiv = document.getElementById('amountError');
+            
+            if (withdrawAmountInput && amountErrorDiv) {
+                withdrawAmountInput.addEventListener('input', function() {
+                    const amount = parseFloat(this.value) || 0;
+                    
+                    // Réinitialiser les styles d'erreur
+                    this.classList.remove('is-invalid');
+                    amountErrorDiv.style.display = 'none';
+                    
+                    // Validation en temps réel (informative seulement)
+                    if (amount > 0) {
+                        if (amount < minAmount) {
+                            amountErrorDiv.textContent = `Le montant minimum est de ${minAmount.toLocaleString()} KMF`;
+                            amountErrorDiv.style.display = 'block';
+                            this.classList.add('is-invalid');
+                        } else if (amount > maxAmount) {
+                            amountErrorDiv.textContent = `Montant maximum disponible: ${maxAmount.toLocaleString()} KMF`;
+                            amountErrorDiv.style.display = 'block';
+                            this.classList.add('is-invalid');
+                        }
+                    }
+                });
+            }
+            
+            // Gestion de la soumission du formulaire
+            withdrawalForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validation finale du montant à la soumission
+                const amountInput = document.getElementById('withdrawAmount');
+                const amount = parseFloat(amountInput.value) || 0;
+                const amountErrorDiv = document.getElementById('amountError');
+                
+                // Réinitialiser l'état d'erreur
+                amountInput.classList.remove('is-invalid');
+                amountErrorDiv.style.display = 'none';
+                
+                // Validation du montant
+                if (amount < minAmount) {
+                    amountErrorDiv.textContent = `Le montant minimum pour un retrait est de ${minAmount.toLocaleString()} KMF`;
+                    amountErrorDiv.style.display = 'block';
+                    amountInput.classList.add('is-invalid');
+                    amountInput.focus();
+                    return;
+                }
+                
+                if (amount > maxAmount) {
+                    amountErrorDiv.textContent = `Montant maximum disponible: ${maxAmount.toLocaleString()} KMF`;
+                    amountErrorDiv.style.display = 'block';
+                    amountInput.classList.add('is-invalid');
+                    amountInput.focus();
+                    return;
+                }
+                
+                const formData = new FormData(this);
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                
+                // Désactiver le bouton pendant le traitement
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Traitement...';
+                
+                fetch('{{ url_for("merchant_request_withdrawal") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Afficher message de succès
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <i class="fas fa-check-circle me-2"></i>
+                            ${data.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+                        
+                        // Recharger la page après 2 secondes
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        // Afficher message d'erreur
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            ${data.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+                        
+                        // Si l'erreur concerne le montant, mettre en évidence le champ
+                        if (data.message.toLowerCase().includes('montant')) {
+                            amountInput.classList.add('is-invalid');
+                            amountErrorDiv.textContent = data.message;
+                            amountErrorDiv.style.display = 'block';
+                            amountInput.focus();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Une erreur est survenue lors de la demande de retrait.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+                })
+                .finally(() => {
+                    // Réactiver le bouton
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                });
+            });
+        }
+        
+        // Bouton pour ajouter des informations bancaires
+        const addBankInfoBtn = document.getElementById('addBankInfo');
+        if (addBankInfoBtn) {
+            addBankInfoBtn.addEventListener('click', function() {
+                bankInfoModal.show();
+            });
+        }
+        
+        // Bouton pour modifier les informations bancaires
+        const editBankInfoBtn = document.getElementById('editBankInfo');
+        if (editBankInfoBtn) {
+            editBankInfoBtn.addEventListener('click', function() {
+                bankInfoModal.show();
+            });
+        }
+        
+        // Enregistrement des informations bancaires
+        const saveBankInfoBtn = document.getElementById('saveBankInfo');
+        if (saveBankInfoBtn) {
+            saveBankInfoBtn.addEventListener('click', function() {
+                const form = document.getElementById('bankInfoForm');
+                const formData = new FormData(form);
+                
+                // Validation côté client
+                const bankName = formData.get('bank_name');
+                const accountHolder = formData.get('account_holder');
+                const accountNumber = formData.get('account_number');
+                
+                if (!bankName || !accountHolder || !accountNumber) {
+                    alert('Veuillez remplir tous les champs.');
+                    return;
+                }
+                
+                // Désactiver le bouton pendant le traitement
+                this.disabled = true;
+                this.textContent = 'Enregistrement...';
+                
+                fetch('{{ url_for("merchant_update_bank_info") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        bankInfoModal.hide();
+                        // Recharger la page pour afficher les nouvelles informations
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Erreur: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Une erreur est survenue lors de l\'enregistrement.');
+                })
+                .finally(() => {
+                    // Réactiver le bouton
+                    this.disabled = false;
+                    this.textContent = 'Enregistrer';
+                });
+            });
+        }
+    });
+
+    // Fonction pour annuler une demande de retrait
+    function cancelWithdrawal(requestId) {
+        if (!confirm('Êtes-vous sûr de vouloir annuler cette demande de retrait ? Cette action est irréversible.')) {
+            return;
+        }
+
+        fetch(`/merchant/withdrawal/${requestId}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue lors de l\'annulation.');
+        });
+    }
+</script>
+{% endblock %}

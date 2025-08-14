@@ -1,0 +1,982 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}{{ merchant.store_name }} - Détails Marchand - DOUKA KM{% endblock %}
+{% block page_title %}Détails du marchand{% endblock %}
+
+{% block admin_content %}
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_merchants') }}">Marchands</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ merchant.store_name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Merchant Header Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <img src="{{ merchant.store_logo }}" alt="Logo" class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
+                        </div>
+                        <div>
+                            <h3 class="mb-1">{{ merchant.store_name }}</h3>
+                            <p class="text-muted mb-1">{{ merchant.first_name }} {{ merchant.last_name }}</p>
+                            <p class="text-muted mb-2">
+                                <i class="fas fa-envelope me-1"></i> {{ merchant.email }}
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-phone me-1"></i> {{ merchant.phone }}
+                            </p>
+                            <!-- Note du marchand -->
+                            {% if merchant.avg_rating > 0 %}
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <span class="fs-4 fw-bold text-warning">{{ merchant.avg_rating }}</span>
+                                    <div class="text-warning">
+                                        {% for i in range(5) %}
+                                            {% if i < merchant.avg_rating|int %}
+                                                <i class="fas fa-star"></i>
+                                            {% elif i < merchant.avg_rating %}
+                                                <i class="fas fa-star-half-alt"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    {{ merchant.total_reviews }} avis
+                                </small>
+                            </div>
+                            {% else %}
+                            <div class="text-muted">
+                                <i class="fas fa-star-o me-1"></i> Aucun avis pour le moment
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="mb-2">
+                        {% if merchant.store_verified %}
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-check-circle me-1"></i> Vérifié
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark fs-6">
+                                <i class="fas fa-clock me-1"></i> En attente
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if not merchant.store_verified %}
+                            <form method="POST" action="{{ url_for('admin_verify_merchant', merchant_id=merchant.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Confirmer la vérification de ce marchand ?')">
+                                    <i class="fas fa-check me-1"></i> Vérifier
+                                </button>
+                            </form>
+                        {% endif %}
+                        <a href="{{ url_for('admin_merchants') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i> Retour
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Informations générales -->
+        <div class="col-lg-8">
+            <!-- Store Information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-store me-2"></i> Informations de la boutique</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Nom de la boutique</label>
+                                <p class="mb-0">{{ merchant.store_name }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Adresse</label>
+                                <p class="mb-0">{{ merchant.store_address or 'Non renseignée' }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Ville</label>
+                                <p class="mb-0">{{ merchant.store_city or 'Non renseignée' }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Région</label>
+                                <p class="mb-0">{{ merchant.store_region or 'Non renseignée' }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Date d'inscription</label>
+                                <p class="mb-0">{{ merchant.registration_date or 'Non renseignée' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% if merchant.store_description %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Description</label>
+                            <p class="mb-0">{{ merchant.store_description }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Store Images -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-images me-2"></i> Images de la boutique</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h6>Logo de la boutique</h6>
+                                <img src="{{ merchant.store_logo }}" alt="Logo" class="img-fluid rounded border" style="max-height: 200px;">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h6>Bannière de la boutique</h6>
+                                <img src="{{ merchant.store_banner }}" alt="Bannière" class="img-fluid rounded border" style="max-height: 200px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-box me-2"></i> Produits</h5>
+                    <span class="badge bg-primary">{{ merchant.products|length }} produits</span>
+                </div>
+                <div class="card-body">
+                    {% if merchant.products %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Image</th>
+                                        <th>Nom</th>
+                                        <th>Catégorie</th>
+                                        <th>Prix</th>
+                                        <th>Stock</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in merchant.products[:10] %}
+                                        <tr>
+                                            <td>
+                                                {% if product.image and (product.image.startswith('http') or product.image.startswith('/')) %}
+                                                    <img src="{{ product.image }}" alt="{{ product.name }}" class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% else %}
+                                                    <img src="{{ url_for('static', filename='img/products/' + (product.image or 'default.jpg')) }}" alt="{{ product.name }}" class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold">{{ product.name }}</div>
+                                                {% if product.description %}
+                                                    <small class="text-muted">{{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ product.category_name or 'Non classé' }}</td>
+                                            <td>{{ product.price }} KMF</td>
+                                            <td>
+                                                {% if product.stock|default(0) > 0 %}
+                                                    <span class="badge bg-success">{{ product.stock|default(0) }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Épuisé</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if product.status == 'active' %}
+                                                    <span class="badge bg-success">Actif</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactif</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if merchant.products|length > 10 %}
+                            <div class="text-center mt-3">
+                                <small class="text-muted">Affichage des 10 premiers produits sur {{ merchant.products|length }}</small>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                            <h6>Aucun produit</h6>
+                            <p class="text-muted">Ce marchand n'a pas encore ajouté de produits.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Commandes récentes</h5>
+                    <span class="badge bg-primary">{{ merchant.orders|length }} commandes</span>
+                </div>
+                <div class="card-body">
+                    {% if merchant.orders %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Client</th>
+                                        <th>Total</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in merchant.orders[-10:] %}
+                                        <tr>
+                                            <td>#{{ order.id }}</td>
+                                            <td>{{ order.date }}</td>
+                                            <td>{{ order.customer_name or 'Client' }}</td>
+                                            <td>{{ order.total }} KMF</td>
+                                            <td>
+                                                {% if order.status == 'pending' %}
+                                                    <span class="badge bg-warning text-dark">En attente</span>
+                                                {% elif order.status == 'confirmed' %}
+                                                    <span class="badge bg-info">Confirmé</span>
+                                                {% elif order.status == 'delivered' %}
+                                                    <span class="badge bg-success">Livré</span>
+                                                {% elif order.status == 'cancelled' %}
+                                                    <span class="badge bg-danger">Annulé</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ order.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if merchant.orders|length > 10 %}
+                            <div class="text-center mt-3">
+                                <small class="text-muted">Affichage des 10 dernières commandes sur {{ merchant.orders|length }}</small>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                            <h6>Aucune commande</h6>
+                            <p class="text-muted">Ce marchand n'a pas encore reçu de commandes.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Statistics -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i> Statistiques</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="border-end">
+                                <h4 class="text-primary mb-1">{{ merchant.products|length }}</h4>
+                                <small class="text-muted">Produits</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h4 class="text-success mb-1">{{ merchant.orders|length }}</h4>
+                            <small class="text-muted">Commandes</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h4 class="text-info mb-1">{{ "{:,.0f}".format(merchant.balance|float) }} KMF</h4>
+                                <small class="text-muted">Solde disponible</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning mb-1">
+                                {% set active_products = merchant.products | selectattr('status', 'equalto', 'active') | list %}
+                                {{ active_products|length }}
+                            </h4>
+                            <small class="text-muted">Produits actifs</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Évaluations -->
+            {% if merchant.total_reviews > 0 %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-star me-2"></i> Évaluations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h2 class="text-warning mb-1">{{ merchant.avg_rating }}</h2>
+                        <div class="text-warning mb-2">
+                            {% for i in range(5) %}
+                                {% if i < merchant.avg_rating|int %}
+                                    <i class="fas fa-star"></i>
+                                {% elif i < merchant.avg_rating %}
+                                    <i class="fas fa-star-half-alt"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">{{ merchant.total_reviews }} avis</small>
+                    </div>
+                    
+                    <!-- Distribution des notes -->
+                    {% if merchant.rating_distribution %}
+                    <div class="mt-3">
+                        {% for rating in [5, 4, 3, 2, 1] %}
+                        {% set percentage = merchant.rating_distribution.get(rating, 0) %}
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="me-2" style="width: 20px;">
+                                <small>{{ rating }}</small>
+                            </div>
+                            <div class="me-2">
+                                <i class="fas fa-star text-warning" style="font-size: 0.8rem;"></i>
+                            </div>
+                            <div class="flex-grow-1 me-2">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ percentage }}%"></div>
+                                </div>
+                            </div>
+                            <div style="width: 40px;">
+                                <small class="text-muted">{{ percentage }}%</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Balance Details -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-wallet me-2"></i> Détails du solde</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                <span class="text-muted">Solde disponible:</span>
+                                <span class="fw-bold text-success">{{ "{:,.0f}".format(merchant.balance|float) }} KMF</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                <span class="text-muted">Gains totaux:</span>
+                                <span class="fw-bold text-info">{{ "{:,.0f}".format(merchant.total_earnings|float) }} KMF</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                <span class="text-muted">Frais de commission:</span>
+                                <span class="fw-bold text-warning">{{ "{:,.0f}".format(merchant.commission_fees|float) }} KMF</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                <span class="text-muted">Commandes livrées:</span>
+                                <span class="fw-bold">{{ merchant.delivered_orders_count }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                <span class="text-muted">Taux de commission:</span>
+                                <span class="fw-bold">{{ "{:.1f}".format(merchant.commission_rate * 100) }}%</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Calcul:</span>
+                                <span class="small text-muted">Gains - Commission</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if merchant.delivered_orders_count == 0 %}
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Aucune commande livrée pour le moment. Le solde sera calculé une fois que des commandes seront livrées.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Admin Balance Withdrawal -->
+            {% if merchant.balance > 0 %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-hand-holding-usd me-2 text-primary"></i> Retrait administratif</h5>
+                    <small class="text-muted">Verser le solde du marchand</small>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Retrait administratif :</strong> Vous pouvez verser une partie ou la totalité du solde disponible du marchand directement, sans qu'il ait besoin de faire une demande.
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('admin_send_merchant_balance', merchant_id=merchant.id) }}" onsubmit="return confirm('Confirmer le versement de cet argent au marchand ?')">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="amount" class="form-label">Montant à verser (KMF)</label>
+                                    <input type="number" class="form-control" id="amount" name="amount" 
+                                           min="1" max="{{ merchant.balance }}" step="1" required>
+                                    <div class="form-text">
+                                        Solde disponible: {{ "{:,.0f}".format(merchant.balance|float) }} KMF
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="reason" class="form-label">Raison du versement</label>
+                                    <select class="form-select" id="reason" name="reason" required onchange="toggleCustomReason(this)">
+                                        <option value="">Sélectionner une raison</option>
+                                        <option value="Versement de solde">Versement de solde</option>
+                                        <option value="Retrait sur demande téléphonique">Retrait sur demande téléphonique</option>
+                                        <option value="Retrait d'urgence">Retrait d'urgence</option>
+                                        <option value="Versement programméé">Versement programmé</option>
+                                        <option value="custom">Autre (spécifier)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3 d-none" id="customReasonDiv">
+                                    <label for="customReason" class="form-label">Raison personnalisée</label>
+                                    <input type="text" class="form-control" id="customReason" name="custom_reason" maxlength="100">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="method" class="form-label">Méthode de versement</label>
+                                    <select class="form-select" id="method" name="method" required>
+                                        <option value="admin_payout">Versement administratif</option>
+                                        <option value="bank_transfer">Virement bancaire</option>
+                                        <option value="mobile_money">Mobile Money</option>
+                                        <option value="cash_pickup">Retrait en espèces</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-paper-plane me-2"></i> Effectuer le versement
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Payment Information -->
+            {% if merchant.bank_info %}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="fas fa-university me-2"></i> Informations bancaires</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if merchant.bank_info.bank_name %}
+                            <div class="mb-2">
+                                <strong>Banque:</strong> {{ merchant.bank_info.bank_name }}
+                            </div>
+                        {% endif %}
+                        {% if merchant.bank_info.account_number %}
+                            <div class="mb-2">
+                                <strong>Numéro de compte:</strong> {{ merchant.bank_info.account_number }}
+                            </div>
+                        {% endif %}
+                        {% if merchant.bank_info.account_holder %}
+                            <div class="mb-2">
+                                <strong>Titulaire:</strong> {{ merchant.bank_info.account_holder }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i> Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if not merchant.store_verified %}
+                            <form method="POST" action="{{ url_for('admin_verify_merchant', merchant_id=merchant.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-success w-100" onclick="return confirm('Confirmer la vérification de ce marchand ?')">
+                                    <i class="fas fa-check me-1"></i> Vérifier le marchand
+                                </button>
+                            </form>
+                        {% endif %}
+                        
+                        <a href="{{ url_for('admin_edit_merchant', merchant_id=merchant.id) }}" class="btn btn-warning">
+                            <i class="fas fa-edit me-1"></i> Modifier les informations
+                        </a>
+                        
+                        <a href="{{ url_for('admin_message_merchant', merchant_id=merchant.id) }}" class="btn btn-info">
+                            <i class="fas fa-envelope me-1"></i> Envoyer un message
+                        </a>
+                        
+                        {% if merchant.status == 'suspended' %}
+                            <!-- Bouton pour réactiver le compte -->
+                            <button type="button" class="btn btn-success" onclick="showSuspensionModal('reactivate')" id="reactivateBtn">
+                                <i class="fas fa-check-circle me-1"></i> Réactiver le compte
+                            </button>
+                        {% else %}
+                            <!-- Bouton pour suspendre le compte -->
+                            <button type="button" class="btn btn-outline-danger" onclick="showSuspensionModal('suspend')" id="suspendBtn">
+                                <i class="fas fa-ban me-1"></i> Suspendre le compte
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de suspension/réactivation -->
+    <div class="modal fade" id="suspensionModal" tabindex="-1" aria-labelledby="suspensionModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="suspensionModalLabel">
+                        <span id="modalTitle">Suspendre le compte</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ url_for('admin_suspend_merchant', merchant_id=merchant.id) }}" id="suspensionForm">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" id="suspensionAction" value="suspend">
+                        
+                        <div id="suspendContent">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Attention !</strong> Cette action suspendra temporairement le compte du marchand.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="reason" class="form-label">Raison de la suspension *</label>
+                                <select class="form-select" id="reason" name="reason" required>
+                                    <option value="">Sélectionner une raison</option>
+                                    <option value="Violation des conditions d'utilisation">Violation des conditions d'utilisation</option>
+                                    <option value="Produits non conformes">Produits non conformes</option>
+                                    <option value="Service client défaillant">Service client défaillant</option>
+                                    <option value="Retards de livraison répétés">Retards de livraison répétés</option>
+                                    <option value="Activité suspecte">Activité suspecte</option>
+                                    <option value="Demande du marchand">Demande du marchand</option>
+                                    <option value="Maintenance du compte">Maintenance du compte</option>
+                                    <option value="custom">Autre (spécifier)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3 d-none" id="customReasonDiv">
+                                <label for="customReason" class="form-label">Raison personnalisée *</label>
+                                <textarea class="form-control" id="customReason" name="custom_reason" rows="3" maxlength="200"></textarea>
+                                <div class="form-text">Maximum 200 caractères</div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <h6>Conséquences de la suspension :</h6>
+                                <ul class="mb-0">
+                                    <li>Les produits du marchand ne seront plus visibles</li>
+                                    <li>Aucune nouvelle commande ne pourra être passée</li>
+                                    <li>L'accès à l'espace marchand sera restreint</li>
+                                    <li>Le marchand recevra un email de notification</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div id="reactivateContent" class="d-none">
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Réactivation du compte</strong>
+                            </div>
+                            
+                            <p>Êtes-vous sûr de vouloir réactiver le compte de ce marchand ?</p>
+                            
+                            <div class="alert alert-info">
+                                <h6>Effets de la réactivation :</h6>
+                                <ul class="mb-0">
+                                    <li>Les produits redeviendront visibles</li>
+                                    <li>Le marchand pourra recevoir de nouvelles commandes</li>
+                                    <li>L'accès complet à l'espace marchand sera restauré</li>
+                                    <li>Le marchand recevra un email de confirmation</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn" id="confirmBtn">
+                            <span id="confirmBtnText">Suspendre le compte</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block admin_extra_js %}
+<script>
+        // Ajouter plus de logging pour debug
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔄 Template admin merchant detail chargé');
+            
+            // Vérifier les éléments importants
+            const suspendBtn = document.getElementById('suspendBtn');
+            const reactivateBtn = document.getElementById('reactivateBtn');
+            const modal = document.getElementById('suspensionModal');
+            const form = document.getElementById('suspensionForm');
+            
+            console.log('📊 Éléments trouvés:');
+            console.log('   suspendBtn:', !!suspendBtn);
+            console.log('   reactivateBtn:', !!reactivateBtn);
+            console.log('   modal:', !!modal);
+            console.log('   form:', !!form);
+            
+            if (form) {
+                console.log('   form action:', form.action);
+                console.log('   form method:', form.method);
+            }
+            
+            // Ajouter un listener sur le formulaire
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const action = document.getElementById('suspensionAction').value;
+                    console.log('📝 Soumission du formulaire avec action:', action);
+                    
+                    // Vérifier si on a une session admin valide
+                    fetch('/admin/api/session-check', {
+                        method: 'GET',
+                        credentials: 'include'
+                    })
+                    .then(response => {
+                        if (response.status === 401) {
+                            console.log('❌ Session admin expirée');
+                            alert('Session administrateur expirée. Veuillez vous reconnecter.');
+                            window.location.href = '/admin/login';
+                            return false;
+                        }
+                        console.log('✅ Session admin valide');
+                    })
+                    .catch(error => {
+                        console.error('❌ Erreur vérification session:', error);
+                    });
+                });
+            }
+        });
+    
+    // Fonction pour gérer la raison personnalisée
+    function toggleCustomReason(select) {
+        const customDiv = document.getElementById('customReasonDiv');
+        const customInput = document.getElementById('customReason');
+        
+        if (select.value === 'custom') {
+            customDiv.classList.remove('d-none');
+            customInput.required = true;
+        } else {
+            customDiv.classList.add('d-none');
+            customInput.required = false;
+            customInput.value = '';
+        }
+    }
+
+    // Fonction pour afficher le modal de suspension/réactivation
+    window.showSuspensionModal = function(action) {
+        console.log('showSuspensionModal called with action:', action);
+        
+        try {
+            const modalElement = document.getElementById('suspensionModal');
+            if (!modalElement) {
+                console.error('Modal element not found');
+                return;
+            }
+            
+            const modal = new bootstrap.Modal(modalElement);
+            const modalTitle = document.getElementById('modalTitle');
+            const suspensionAction = document.getElementById('suspensionAction');
+            const confirmBtn = document.getElementById('confirmBtn');
+            const confirmBtnText = document.getElementById('confirmBtnText');
+            const suspendContent = document.getElementById('suspendContent');
+            const reactivateContent = document.getElementById('reactivateContent');
+            const reasonSelect = document.getElementById('reason');
+            
+            // Reset form
+            document.getElementById('suspensionForm').reset();
+            
+            if (action === 'suspend') {
+                modalTitle.textContent = 'Suspendre le compte';
+                suspensionAction.value = 'suspend';
+                confirmBtn.className = 'btn btn-danger';
+                confirmBtnText.textContent = 'Suspendre le compte';
+                suspendContent.classList.remove('d-none');
+                reactivateContent.classList.add('d-none');
+                reasonSelect.required = true;
+                reasonSelect.disabled = false; // Réactiver le champ
+                reasonSelect.value = ''; // Vider la valeur
+            } else if (action === 'reactivate') {
+                modalTitle.textContent = 'Réactiver le compte';
+                suspensionAction.value = 'reactivate';
+                confirmBtn.className = 'btn btn-success';
+                confirmBtnText.textContent = 'Réactiver le compte';
+                suspendContent.classList.add('d-none');
+                reactivateContent.classList.remove('d-none');
+                reasonSelect.required = false;
+                reasonSelect.disabled = true; // Désactiver complètement le champ
+                reasonSelect.value = ''; // Vider la valeur
+            }
+            
+            modal.show();
+        } catch (error) {
+            console.error('Error in showSuspensionModal:', error);
+            alert('Erreur lors de l\'ouverture du modal: ' + error.message);
+        }
+    };
+
+    // Fonction pour mettre à jour dynamiquement les boutons de suspension
+    function updateSuspensionButton() {
+        console.log('🔄 Mise à jour des boutons de suspension...');
+        
+        // Détecter si une action de suspension/réactivation vient de se produire
+        const flashMessages = document.querySelectorAll('.alert');
+        let actionDetected = false;
+        let newStatus = null;
+        
+        flashMessages.forEach(function(alert) {
+            const text = alert.textContent.toLowerCase();
+            if (text.includes('suspendu')) {
+                actionDetected = true;
+                newStatus = 'suspended';
+                console.log('🚫 Suspension détectée via flash message');
+            } else if (text.includes('réactivé') || text.includes('reactive')) {
+                actionDetected = true;
+                newStatus = 'active';
+                console.log('✅ Réactivation détectée via flash message');
+            }
+        });
+        
+        if (actionDetected && newStatus) {
+            console.log('🔄 Action détectée, mise à jour de l\'interface...');
+            
+            // Supprimer tous les anciens boutons de suspension/réactivation
+            const oldSuspendBtn = document.getElementById('suspendBtn');
+            const oldReactivateBtn = document.getElementById('reactivateBtn');
+            
+            if (oldSuspendBtn) {
+                oldSuspendBtn.remove();
+                console.log('🗑️ Ancien bouton suspendre supprimé');
+            }
+            if (oldReactivateBtn) {
+                oldReactivateBtn.remove();
+                console.log('🗑️ Ancien bouton réactiver supprimé');
+            }
+            
+            // Trouver le conteneur parent (chercher .btn-group ou le parent des boutons)
+            const buttonContainer = document.querySelector('.btn-group') || 
+                                   document.querySelector('.d-flex.gap-2') ||
+                                   document.querySelector('[class*="btn"]')?.parentElement;
+            
+            if (!buttonContainer) {
+                console.error('❌ Conteneur de boutons non trouvé');
+                return;
+            }
+            
+            // Créer le nouveau bouton selon le nouveau statut
+            const newButton = document.createElement('button');
+            newButton.type = 'button';
+            
+            if (newStatus === 'suspended') {
+                newButton.id = 'reactivateBtn';
+                newButton.className = 'btn btn-success';
+                newButton.onclick = function() { showSuspensionModal('reactivate'); };
+                newButton.innerHTML = '<i class="fas fa-check-circle me-1"></i> Réactiver le compte';
+                console.log('✅ Nouveau bouton réactiver créé');
+            } else {
+                newButton.id = 'suspendBtn';
+                newButton.className = 'btn btn-outline-danger';
+                newButton.onclick = function() { showSuspensionModal('suspend'); };
+                newButton.innerHTML = '<i class="fas fa-ban me-1"></i> Suspendre le compte';
+                console.log('✅ Nouveau bouton suspendre créé');
+            }
+            
+            buttonContainer.appendChild(newButton);
+            console.log('✅ Interface mise à jour dynamiquement');
+        } else {
+            console.log('ℹ️ Aucune action de suspension/réactivation détectée');
+        }
+    }
+
+    // Ajouter des fonctionnalités JavaScript si nécessaire
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion des actions du marchand
+        console.log('Page de détails du marchand chargée');
+        
+        // Mettre à jour les boutons au chargement de la page
+        // updateSuspensionButton(); // DÉSACTIVÉ temporairement pour éviter les doublons
+        
+        // Debug du bouton de suspension
+        const suspendBtn = document.getElementById('suspendBtn');
+        const reactivateBtn = document.getElementById('reactivateBtn');
+        
+        if (suspendBtn) {
+            console.log('✅ Bouton de suspension trouvé:', suspendBtn);
+            console.log('   onclick attr:', suspendBtn.getAttribute('onclick'));
+            
+            // Ajouter un event listener de backup
+            suspendBtn.addEventListener('click', function(e) {
+                console.log('Click détecté sur le bouton de suspension');
+                if (typeof showSuspensionModal === 'function') {
+                    console.log('showSuspensionModal est disponible');
+                } else {
+                    console.error('showSuspensionModal n\'est pas définie');
+                    alert('Erreur: La fonction showSuspensionModal n\'est pas définie');
+                }
+            });
+        } else if (reactivateBtn) {
+            console.log('✅ Bouton de réactivation trouvé:', reactivateBtn);
+            console.log('   onclick attr:', reactivateBtn.getAttribute('onclick'));
+            
+            // Ajouter un event listener de backup
+            reactivateBtn.addEventListener('click', function(e) {
+                console.log('Click détecté sur le bouton de réactivation');
+                if (typeof showSuspensionModal === 'function') {
+                    console.log('showSuspensionModal est disponible');
+                } else {
+                    console.error('showSuspensionModal n\'est pas définie');
+                    alert('Erreur: La fonction showSuspensionModal n\'est pas définie');
+                }
+            });
+        } else {
+            console.error('❌ Aucun bouton de suspension/réactivation trouvé');
+        }
+        
+        // Test de l'existence de Bootstrap
+        if (typeof bootstrap !== 'undefined') {
+            console.log('✅ Bootstrap est disponible');
+        } else {
+            console.error('❌ Bootstrap n\'est pas disponible');
+        }
+        
+        // Test de l'existence du modal
+        const modal = document.getElementById('suspensionModal');
+        if (modal) {
+            console.log('✅ Modal de suspension trouvé');
+        } else {
+            console.error('❌ Modal de suspension non trouvé');
+        }
+        
+        // Validation du formulaire de retrait
+        const withdrawalForm = document.querySelector('form[action*="admin_send_merchant_balance"]');
+        if (withdrawalForm) {
+            withdrawalForm.addEventListener('submit', function(e) {
+                const amount = parseFloat(document.getElementById('amount').value);
+                const maxAmount = parseFloat(document.getElementById('amount').getAttribute('max'));
+                
+                if (amount > maxAmount) {
+                    e.preventDefault();
+                    alert('Le montant ne peut pas dépasser le solde disponible du marchand.');
+                    return false;
+                }
+                
+                if (amount <= 0) {
+                    e.preventDefault();
+                    alert('Le montant doit être supérieur à 0.');
+                    return false;
+                }
+            });
+        }
+
+        // Gestion du formulaire de suspension
+        const suspensionForm = document.getElementById('suspensionForm');
+        if (suspensionForm) {
+            // Écouter les changements de la raison de suspension
+            const reasonSelect = document.getElementById('reason');
+            if (reasonSelect) {
+                reasonSelect.addEventListener('change', function() {
+                    toggleCustomReason(this);
+                });
+            }
+
+            // Validation du formulaire de suspension
+            suspensionForm.addEventListener('submit', function(e) {
+                const action = document.getElementById('suspensionAction').value;
+                
+                if (action === 'suspend') {
+                    const reason = document.getElementById('reason').value;
+                    const customReason = document.getElementById('customReason').value;
+                    
+                    if (!reason) {
+                        e.preventDefault();
+                        alert('Veuillez sélectionner une raison pour la suspension.');
+                        return false;
+                    }
+                    
+                    if (reason === 'custom' && !customReason.trim()) {
+                        e.preventDefault();
+                        alert('Veuillez spécifier la raison personnalisée.');
+                        document.getElementById('customReason').focus();
+                        return false;
+                    }
+                    
+                    const merchantName = '{{ merchant.store_name }}';
+                    if (!confirm(`Êtes-vous sûr de vouloir suspendre le compte de "${merchantName}" ?`)) {
+                        e.preventDefault();
+                        return false;
+                    }
+                } else if (action === 'reactivate') {
+                    const merchantName = '{{ merchant.store_name }}';
+                    if (!confirm(`Êtes-vous sûr de vouloir réactiver le compte de "${merchantName}" ?`)) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+                
+                // Désactiver le bouton pour éviter les double-clics
+                const confirmBtn = document.getElementById('confirmBtn');
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Traitement...';
+            });
+        }
+
+        // Fonction pour mettre à jour l'affichage du bouton après suspension/réactivation
+        // FONCTION SUPPRIMÉE - Conflit avec le template Jinja2
+        // Les boutons sont maintenant gérés directement par le template selon merchant.status
+
+        // Vérifier s'il y a des messages flash de succès pour mettre à jour l'interface
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.alert');
+            flashMessages.forEach(function(message) {
+                const messageText = message.textContent.toLowerCase();
+                
+                if (messageText.includes('suspendu avec succès')) {
+                    // Le compte a été suspendu
+                    setTimeout(() => updateSuspensionButton(true), 100);
+                } else if (messageText.includes('réactivé avec succès')) {
+                    // Le compte a été réactivé  
+                    setTimeout(() => updateSuspensionButton(false), 100);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

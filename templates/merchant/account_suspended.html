@@ -1,0 +1,99 @@
+{% extends 'merchant/suspension_layout.html' %}
+
+{% block title %}Compte suspendu - DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="suspension-container">
+                <!-- Logo Section -->
+                <div class="logo-section">
+                    {% if site_settings.logo_url %}
+                        <img src="{{ site_settings.logo_url }}" alt="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}" onerror="this.style.display='none'">
+                    {% endif %}
+                    <h4>{{ site_settings.site_name or 'DOUKA KM' }}</h4>
+                </div>
+                
+                <!-- Content Section -->
+                <div class="content-section text-center">
+                    <!-- Icône d'avertissement -->
+                    <div class="mb-4">
+                        <i class="fas fa-ban warning-icon"></i>
+                    </div>
+                    
+                    <!-- Titre -->
+                    <h2 class="text-dark mb-4">Compte suspendu</h2>
+                    
+                    <!-- Message principal -->
+                    <div class="alert alert-custom" role="alert">
+                        <h5 class="alert-heading mb-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Accès temporairement restreint
+                        </h5>
+                        <p class="mb-0">
+                            Votre compte marchand a été temporairement suspendu par notre équipe d'administration.
+                        </p>
+                    </div>
+                    
+                    <!-- Informations -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Qu'est-ce que cela signifie ?</h6>
+                        <div class="text-start">
+                            <div class="list-item">
+                                <i class="fas fa-times-circle text-danger me-2"></i>
+                                Vos produits ne sont plus visibles sur la plateforme
+                            </div>
+                            <div class="list-item">
+                                <i class="fas fa-times-circle text-danger me-2"></i>
+                                Vous ne pouvez plus accéder à votre espace marchand
+                            </div>
+                            <div class="list-item">
+                                <i class="fas fa-times-circle text-danger me-2"></i>
+                                Aucune nouvelle commande ne peut être passée
+                            </div>
+                            <div class="list-item">
+                                <i class="fas fa-clock text-warning me-2"></i>
+                                Cette suspension peut être temporaire ou permanente
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Que pouvez-vous faire ?</h6>
+                        <div class="d-grid gap-3">
+                            <a href="mailto:support@doukakm.com?subject=Compte suspendu - Demande d'information" 
+                               class="btn btn-primary btn-custom">
+                                <i class="fas fa-envelope me-2"></i>
+                                Contacter le support
+                            </a>
+                            <a href="tel:+269-000-0000" class="btn btn-outline-secondary btn-custom">
+                                <i class="fas fa-phone me-2"></i>
+                                Nous appeler
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Informations de contact -->
+                    <div class="info-box">
+                        <h6 class="mb-2">
+                            <i class="fas fa-info-circle text-primary me-2"></i>
+                            Informations importantes
+                        </h6>
+                        <small class="text-muted">
+                            Pour toute question concernant votre suspension, veuillez contacter notre équipe support avec votre adresse email de marchand. Nous traiterons votre demande dans les plus brefs délais.
+                        </small>
+                    </div>
+                    
+                    <!-- Retour à l'accueil -->
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-link text-decoration-none">
+                            <i class="fas fa-arrow-left me-2"></i>Retour à l'accueil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

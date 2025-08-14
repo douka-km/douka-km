@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Administration - DOUKA KM{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --admin-sidebar-width: 250px;
+            --admin-sidebar-collapsed-width: 70px;
+            --admin-primary-color: #212529;
+            --admin-secondary-color: #0d6efd;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .admin-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .admin-sidebar {
+            width: var(--admin-sidebar-width);
+            background-color: var(--admin-primary-color);
+            color: white;
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100%;
+            transition: all 0.3s;
+            z-index: 1000;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .admin-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .admin-sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .admin-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+        
+        .admin-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        .admin-sidebar.collapsed {
+            width: var(--admin-sidebar-collapsed-width);
+        }
+        
+        .admin-sidebar .sidebar-brand {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+        
+        .admin-sidebar .sidebar-brand h3 {
+            font-size: 18px;
+            margin: 0;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        
+        .admin-sidebar .admin-logo {
+            flex-shrink: 0;
+            object-fit: contain;
+        }
+        
+        .admin-sidebar.collapsed .admin-logo {
+            max-width: 30px;
+            max-height: 30px;
+        }
+        
+        .admin-sidebar .sidebar-menu {
+            padding: 20px 0 60px 0;
+            height: calc(100vh - 60px);
+        }
+        
+        .admin-sidebar .sidebar-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .admin-sidebar .sidebar-menu li {
+            margin-bottom: 5px;
+        }
+        
+        .admin-sidebar .sidebar-menu .menu-header {
+            color: #8a8a8a;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            padding: 10px 15px;
+            margin-top: 15px;
+        }
+        
+        .admin-sidebar .sidebar-menu .menu-separator {
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+            margin: 15px 10px;
+        }
+        
+        .admin-sidebar .sidebar-menu a {
+            color: #adb5bd;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+            border-radius: 5px;
+            margin: 0 5px;
+        }
+        
+        .admin-sidebar .sidebar-menu a:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.05);
+        }
+        
+        .admin-sidebar .sidebar-menu a.active {
+            color: white;
+            background-color: var(--admin-secondary-color);
+        }
+        
+        .admin-sidebar .sidebar-menu a.logout-btn {
+            background-color: #dc3545;
+            margin: 10px 5px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .admin-sidebar .sidebar-menu a.logout-btn:hover {
+            background-color: #c82333;
+            transform: translateX(2px);
+        }
+        
+        .admin-sidebar .sidebar-menu a i {
+            margin-right: 10px;
+            font-size: 16px;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .admin-sidebar.collapsed .sidebar-brand h3,
+        .admin-sidebar.collapsed .sidebar-menu a span,
+        .admin-sidebar.collapsed .sidebar-menu .menu-header {
+            display: none;
+        }
+        
+        .admin-sidebar.collapsed .sidebar-brand {
+            justify-content: center;
+            padding: 15px 10px;
+        }
+        
+        .admin-sidebar.collapsed .admin-logo {
+            margin-right: 0 !important;
+        }
+        
+        .admin-sidebar.collapsed .sidebar-menu a i {
+            margin-right: 0;
+        }
+        
+        .admin-sidebar.collapsed .sidebar-menu a {
+            justify-content: center;
+            padding: 15px;
+        }
+        
+        .admin-content {
+            flex: 1;
+            margin-left: var(--admin-sidebar-width);
+            transition: all 0.3s;
+        }
+        
+        .admin-content.expanded {
+            margin-left: var(--admin-sidebar-collapsed-width);
+        }
+        
+        .admin-navbar {
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+        
+        .admin-navbar .toggle-sidebar {
+            font-size: 18px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+        }
+        
+        .admin-navbar .toggle-sidebar:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        
+        .admin-navbar .admin-user {
+            display: flex;
+            align-items: center;
+        }
+        
+        .admin-navbar .admin-user .dropdown-toggle {
+            text-decoration: none;
+            color: #212529;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-stats {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        
+        .card-stats:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-stats .icon-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #0d6efd;
+            font-size: 24px;
+        }
+        
+        .card-stats.bg-primary .icon-box {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+        
+        .card-stats .card-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #6c757d;
+        }
+        
+        .card-stats .card-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #212529;
+        }
+        
+        .card-stats.bg-primary .card-title,
+        .card-stats.bg-primary .card-value {
+            color: #ffffff;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                width: var(--admin-sidebar-collapsed-width);
+            }
+            
+            .admin-content {
+                margin-left: var(--admin-sidebar-collapsed-width);
+            }
+            
+            .admin-sidebar.expanded {
+                width: var(--admin-sidebar-width);
+            }
+            
+            .admin-sidebar:not(.expanded) .sidebar-brand h3,
+            .admin-sidebar:not(.expanded) .sidebar-menu a span,
+            .admin-sidebar:not(.expanded) .sidebar-menu .menu-header {
+                display: none;
+            }
+            
+            .admin-sidebar:not(.expanded) .sidebar-menu a i {
+                margin-right: 0;
+            }
+            
+            .admin-sidebar:not(.expanded) .sidebar-menu a {
+                justify-content: center;
+                padding: 15px;
+            }
+            
+            .admin-sidebar.expanded .sidebar-brand h3,
+            .admin-sidebar.expanded .sidebar-menu a span,
+            .admin-sidebar.expanded .sidebar-menu .menu-header {
+                display: block;
+            }
+            
+            .admin-sidebar.expanded .sidebar-menu a i {
+                margin-right: 10px;
+            }
+            
+            .admin-sidebar.expanded .sidebar-menu a {
+                justify-content: flex-start;
+                padding: 10px 15px;
+            }
+            
+            .admin-sidebar.expanded + .admin-content {
+                margin-left: var(--admin-sidebar-width);
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-brand">
+                <div class="d-flex align-items-center">
+                    {% if site_settings.logo_url %}
+                        <img src="{{ site_settings.logo_url }}" alt="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}" class="admin-logo me-2" style="max-height: 35px; max-width: 100px;" onerror="this.style.display='none'">
+                    {% endif %}
+                    <h3 class="mb-0">{{ site_settings.site_name or 'DOUKA KM' }} Admin</h3>
+                </div>
+                <button class="btn btn-link text-white d-md-none" id="closeMobileSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="sidebar-menu">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('admin_dashboard') }}" class="{{ 'active' if request.endpoint == 'admin_dashboard' else '' }}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Tableau de bord</span>
+                        </a>
+                    </li>
+                    
+                    <li class="menu-header">Marchands</li>
+                    <li>
+                        <a href="{{ url_for('admin_merchants') }}" class="{{ 'active' if request.endpoint == 'admin_merchants' or request.endpoint == 'admin_merchant_detail' else '' }}">
+                            <i class="fas fa-store"></i>
+                            <span>Gérer les marchands</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_withdrawals') }}" class="{{ 'active' if request.endpoint in ['admin_withdrawals', 'admin_withdrawal_update'] else '' }}">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <span>Demandes de retrait</span>
+                        </a>
+                    </li>
+                    
+                    <li class="menu-header">Produits</li>
+                    <li>
+                        <a href="{{ url_for('admin_products') }}" class="{{ 'active' if request.endpoint in ['admin_products', 'admin_product_add', 'admin_product_edit'] else '' }}">
+                            <i class="fas fa-box"></i>
+                            <span>Tous les produits</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_admin_products') }}" class="{{ 'active' if request.endpoint == 'admin_admin_products' else '' }}">
+                            <i class="fas fa-crown"></i>
+                            <span>Mes Produits Admin</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_product_add') }}" class="{{ 'active' if request.endpoint == 'admin_product_add' else '' }}">
+                            <i class="fas fa-plus"></i>
+                            <span>Ajouter un produit</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_categories') }}" class="{{ 'active' if request.endpoint in ['admin_categories', 'admin_category_detail'] else '' }}">
+                            <i class="fas fa-tags"></i>
+                            <span>Catégories</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_subcategories') }}" class="{{ 'active' if request.endpoint == 'admin_subcategories' else '' }}">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Sous-Catégories</span>
+                        </a>
+                    </li>
+                    
+                    <li class="menu-header">Commandes</li>
+                    <li>
+                        <a href="{{ url_for('admin_orders') }}" class="{{ 'active' if request.endpoint == 'admin_orders' else '' }}">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Toutes les commandes</span>
+                        </a>
+                    </li>
+                    
+                    <li class="menu-header">Utilisateurs</li>
+                    <li>
+                        <a href="{{ url_for('admin_users') }}" class="{{ 'active' if request.endpoint == 'admin_users' else '' }}">
+                            <i class="fas fa-users"></i>
+                            <span>Gérer les utilisateurs</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_employees') }}" class="{{ 'active' if request.endpoint in ['admin_employees', 'admin_add_employee', 'admin_edit_employee'] else '' }}">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Employés</span>
+                        </a>
+                    </li>
+                    
+                    <li class="menu-header">Système</li>
+                    <li>
+                        <a href="{{ url_for('admin_promo_codes') }}" class="{{ 'active' if request.endpoint in ['admin_promo_codes', 'admin_add_promo_code', 'admin_edit_promo_code'] else '' }}">
+                            <i class="fas fa-tags"></i>
+                            <span>Codes Promo</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin_settings') }}" class="{{ 'active' if request.endpoint == 'admin_settings' else '' }}">
+                            <i class="fas fa-cog"></i>
+                            <span>Paramètres</span>
+                        </a>
+                    </li>
+                    
+                    <li class="menu-separator"></li>
+                    <li>
+                        <a href="{{ url_for('admin_logout') }}" class="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Déconnexion</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Content -->
+        <div class="admin-content" id="adminContent">
+            <!-- Navbar -->
+            <nav class="admin-navbar">
+                <div class="d-flex align-items-center">
+                    <div class="toggle-sidebar me-3" id="toggleSidebar">
+                        <i class="fas fa-bars"></i>
+                    </div>
+                    <h5 class="mb-0 d-none d-md-block">{% block page_title %}Administration{% endblock %}</h5>
+                </div>
+                <div class="admin-user">
+                    <div class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
+                            <span class="d-none d-md-inline">{{ admin.first_name }} {{ admin.last_name }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('admin_profile') }}">
+                                    <i class="fas fa-user fa-sm fa-fw me-2 text-gray-400"></i>
+                                    Profil
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('admin_settings') }}">
+                                    <i class="fas fa-cogs fa-sm fa-fw me-2 text-gray-400"></i>
+                                    Paramètres
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('admin_logout') }}">
+                                    <i class="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400"></i>
+                                    Déconnexion
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Flash messages -->
+            <div class="container-fluid mt-3">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Main content -->
+            <div class="container-fluid py-4">
+                {% block admin_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('adminSidebar');
+            const content = document.getElementById('adminContent');
+            const toggleBtn = document.getElementById('toggleSidebar');
+            const closeMobileBtn = document.getElementById('closeMobileSidebar');
+            
+            // Toggle sidebar
+            toggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+                content.classList.toggle('expanded');
+                
+                // On mobile, show full sidebar when toggled
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.toggle('expanded');
+                }
+            });
+            
+            // Close mobile sidebar
+            if (closeMobileBtn) {
+                closeMobileBtn.addEventListener('click', function() {
+                    sidebar.classList.remove('expanded');
+                });
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+    {% block admin_extra_js %}{% endblock %}
+</body>
+</html>

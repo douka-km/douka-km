@@ -1,0 +1,348 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Détail de la demande de retrait - DOUKA KM Marchands{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Détail de la demande de retrait</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_dashboard') }}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_payments') }}">Paiements</a></li>
+        <li class="breadcrumb-item active">{{ withdrawal_request.id }}</li>
+    </ol>
+
+    <!-- Informations de la demande de retrait -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Informations de la demande
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">ID de la demande:</div>
+                        <div class="col-md-8">{{ withdrawal_request.id }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Date de demande:</div>
+                        <div class="col-md-8">{{ withdrawal_request.requested_at }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Montant:</div>
+                        <div class="col-md-8">{{ withdrawal_request.amount|format_number }} KMF</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Méthode:</div>
+                        <div class="col-md-8">
+                            {% if withdrawal_request.method == 'bank_transfer' %}
+                            <span class="badge bg-info">Virement bancaire</span>
+                            {% elif withdrawal_request.method == 'mobile_money' %}
+                            <span class="badge bg-success">Mobile Money</span>
+                            {% elif withdrawal_request.method == 'cash_pickup' %}
+                            <span class="badge bg-primary">Retrait en espèces</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ withdrawal_request.method }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Statut:</div>
+                        <div class="col-md-8">
+                            {% if withdrawal_request.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">En attente</span>
+                            {% elif withdrawal_request.status == 'approved' %}
+                            <span class="badge bg-primary">Approuvé</span>
+                            {% elif withdrawal_request.status == 'processing' %}
+                            <span class="badge bg-info">En traitement</span>
+                            {% elif withdrawal_request.status == 'completed' %}
+                            <span class="badge bg-success">Complété</span>
+                            {% elif withdrawal_request.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejeté</span>
+                            {% elif withdrawal_request.status == 'cancelled' %}
+                            <span class="badge bg-secondary">Annulé</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if withdrawal_request.processed_at %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Date de traitement:</div>
+                        <div class="col-md-8">{{ withdrawal_request.processed_at }}</div>
+                    </div>
+                    {% endif %}
+                    {% if withdrawal_request.reference %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Référence:</div>
+                        <div class="col-md-8">{{ withdrawal_request.reference }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-university me-1"></i>
+                    Informations bancaires
+                </div>
+                <div class="card-body">
+                    {% if merchant.bank_info %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Banque:</div>
+                        <div class="col-md-8">{{ merchant.bank_info.bank_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Titulaire:</div>
+                        <div class="col-md-8">{{ merchant.bank_info.account_holder }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Numéro de compte:</div>
+                        <div class="col-md-8">{{ merchant.bank_info.account_number }}</div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Aucune information bancaire enregistrée.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes -->
+    {% if withdrawal_request.notes or withdrawal_request.admin_notes %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-sticky-note me-1"></i>
+            Notes
+        </div>
+        <div class="card-body">
+            {% if withdrawal_request.notes %}
+            <div class="mb-3">
+                <h6 class="fw-bold">Vos notes:</h6>
+                <p class="mb-0">{{ withdrawal_request.notes }}</p>
+            </div>
+            {% endif %}
+            {% if withdrawal_request.admin_notes %}
+            <div>
+                <h6 class="fw-bold">Notes de l'administration:</h6>
+                <p class="mb-0 text-muted">{{ withdrawal_request.admin_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Chronologie -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-history me-1"></i>
+            Chronologie
+        </div>
+        <div class="card-body">
+            <ul class="timeline">
+                <li class="timeline-item">
+                    <div class="timeline-marker bg-primary"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Demande soumise</h4>
+                        <p class="timeline-date">{{ withdrawal_request.requested_at }}</p>
+                        <p>La demande de retrait a été soumise pour un montant de {{ withdrawal_request.amount|format_number }} KMF.</p>
+                    </div>
+                </li>
+                
+                {% if withdrawal_request.status == 'approved' %}
+                <li class="timeline-item">
+                    <div class="timeline-marker bg-primary"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Demande approuvée</h4>
+                        <p class="timeline-date">{{ withdrawal_request.processed_at or withdrawal_request.requested_at }}</p>
+                        <p>La demande a été approuvée par l'administration.</p>
+                    </div>
+                </li>
+                {% endif %}
+                
+                {% if withdrawal_request.status == 'processing' or withdrawal_request.status == 'completed' %}
+                <li class="timeline-item">
+                    <div class="timeline-marker bg-info"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Demande en traitement</h4>
+                        <p class="timeline-date">{{ withdrawal_request.processed_at or withdrawal_request.requested_at }}</p>
+                        <p>La demande est en cours de traitement par notre service financier.</p>
+                    </div>
+                </li>
+                {% endif %}
+                
+                {% if withdrawal_request.status == 'completed' %}
+                <li class="timeline-item">
+                    <div class="timeline-marker bg-success"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Retrait complété</h4>
+                        <p class="timeline-date">{{ withdrawal_request.processed_at }}</p>
+                        <p>Le retrait a été effectué avec succès vers votre compte bancaire.</p>
+                    </div>
+                </li>
+                {% elif withdrawal_request.status == 'rejected' %}
+                <li class="timeline-item">
+                    <div class="timeline-marker bg-danger"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Demande rejetée</h4>
+                        <p class="timeline-date">{{ withdrawal_request.processed_at }}</p>
+                        <p>La demande de retrait a été rejetée. Consultez les notes de l'administration pour plus de détails.</p>
+                    </div>
+                </li>
+                {% elif withdrawal_request.status == 'cancelled' %}
+                <li class="timeline-item">
+                    <div class="timeline-marker bg-secondary"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Demande annulée</h4>
+                        <p class="timeline-date">{{ withdrawal_request.processed_at }}</p>
+                        <p>La demande de retrait a été annulée.</p>
+                    </div>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card mb-4">
+        <div class="card-body text-center">
+            <a href="{{ url_for('merchant_payments') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Retour aux paiements
+            </a>
+            
+            {% if withdrawal_request.status == 'pending' %}
+            <button type="button" class="btn btn-warning" id="cancelWithdrawalBtn" 
+                    data-request-id="{{ withdrawal_request.id }}">
+                <i class="fas fa-times me-1"></i> Annuler la demande
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation d'annulation -->
+<div class="modal fade" id="cancelWithdrawalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer l'annulation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir annuler cette demande de retrait ?</p>
+                <p><strong>Montant :</strong> {{ withdrawal_request.amount|format_number }} KMF</p>
+                <p class="text-muted">Cette action ne peut pas être annulée.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmCancelBtn">Confirmer l'annulation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    list-style: none;
+    padding: 0;
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    height: 100%;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+    padding-left: 60px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 12px;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+}
+
+.timeline-title {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.timeline-date {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cancelBtn = document.getElementById('cancelWithdrawalBtn');
+    const cancelModal = new bootstrap.Modal(document.getElementById('cancelWithdrawalModal'));
+    const confirmBtn = document.getElementById('confirmCancelBtn');
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            cancelModal.show();
+        });
+    }
+    
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            const requestId = cancelBtn.dataset.requestId;
+            
+            // Désactiver le bouton pendant la requête
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Annulation en cours...';
+            
+            fetch(`/merchant/withdrawal/${requestId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: requestId
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Erreur lors de l\'annulation de la demande.');
+            })
+            .then(data => {
+                if (data.success) {
+                    // Mettre à jour l'interface utilisateur
+                    confirmBtn.innerHTML = '<i class="fas fa-check me-1"></i> Annulation confirmée';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    throw new Error(data.message || 'Erreur inconnue.');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Confirmer l\'annulation';
+                alert('Une erreur est survenue. Veuillez réessayer plus tard.');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Page non trouvée - DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="error-page text-center py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <h1 class="display-1 text-primary">404</h1>
+                <h2 class="mb-4">Page non trouvée</h2>
+                <p class="lead mb-5">Désolé, la page que vous cherchez n'existe pas ou a été déplacée.</p>
+                <div class="d-flex justify-content-center">
+                    <a href="/" class="btn btn-primary me-3">Retour à l'accueil</a>
+                    <a href="/products" class="btn btn-outline-primary">Voir nos produits</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<p>Bonjour {{ customer_name }},</p>
+
+<p>{{ message }}</p>
+
+<div class="order-details">
+    <h3>Détails de la commande #{{ order_id }}</h3>
+    
+    <p><strong>Statut :</strong> 
+        <span class="status-badge status-{{ new_status }}">{{ status_text }}</span>
+    </p>
+    
+    <p><strong>Date de commande :</strong> {{ order_date }}</p>
+    <p><strong>Total :</strong> {{ total|format_number }} KMF</p>
+    
+    {% if tracking_info %}
+    <p><strong>Informations de suivi :</strong> {{ tracking_info }}</p>
+    {% endif %}
+    
+    <h4>Articles commandés :</h4>
+    {% for item in order_items %}
+    <div class="order-item">
+        <strong>{{ item.product_name }}</strong><br>
+        Quantité : {{ item.quantity }} | Prix : {{ item.price|format_number }} KMF<br>
+        <small>Vendeur : {{ item.merchant_name }}</small>
+    </div>
+    {% endfor %}
+</div>
+
+{% if new_status in ['shipped', 'delivered'] %}
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ order_url }}" class="button">Voir ma commande</a>
+</div>
+{% endif %}
+
+<p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
+
+<p>Cordialement,<br>L'équipe {{ site_name or 'DOUKA KM' }}</p>
+{% endblock %}

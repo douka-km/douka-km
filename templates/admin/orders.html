@@ -1,0 +1,360 @@
+{% extends "admin/layout.html" %}
+
+{% block page_title %}Toutes les Commandes{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-shopping-cart me-2"></i>Toutes les Commandes</h2>
+    
+    <!-- Statistiques rapides -->
+    <div class="d-flex gap-3">
+        <div class="badge bg-primary fs-6">{{ stats.total_orders }} Total</div>
+        <div class="badge bg-warning fs-6">{{ stats.processing_orders }} En cours</div>
+        <div class="badge bg-success fs-6">{{ stats.delivered_orders }} Livrées</div>
+    </div>
+</div>
+
+<!-- Statistiques détaillées -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-shopping-cart fa-2x me-3"></i>
+                    <div>
+                        <h5 class="card-title">{{ stats.total_orders }}</h5>
+                        <p class="card-text">Total Commandes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-clock fa-2x me-3"></i>
+                    <div>
+                        <h5 class="card-title">{{ stats.processing_orders }}</h5>
+                        <p class="card-text">En Traitement</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle fa-2x me-3"></i>
+                    <div>
+                        <h5 class="card-title">{{ stats.delivered_orders }}</h5>
+                        <p class="card-text">Livrées</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-dollar-sign fa-2x me-3"></i>
+                    <div>
+                        <h5 class="card-title">{{ stats.total_revenue|format_number }} KMF</h5>
+                        <p class="card-text">Chiffre d'Affaires</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres et recherche -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label for="search" class="form-label">Rechercher</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ current_search }}" 
+                       placeholder="N° commande, client, marchand...">
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Statut</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Tous les statuts</option>
+                    <option value="processing" {% if current_status_filter == 'processing' %}selected{% endif %}>En préparation</option>
+                    <option value="shipped" {% if current_status_filter == 'shipped' %}selected{% endif %}>Expédiée</option>
+                    <option value="delivered" {% if current_status_filter == 'delivered' %}selected{% endif %}>Livrée</option>
+                    <option value="cancelled" {% if current_status_filter == 'cancelled' %}selected{% endif %}>Annulée</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="per_page" class="form-label">Par page</label>
+                <select class="form-select" id="per_page" name="per_page" onchange="this.form.submit()">
+                    <option value="10" {% if pagination.per_page == 10 %}selected{% endif %}>10</option>
+                    <option value="25" {% if pagination.per_page == 25 %}selected{% endif %}>25</option>
+                    <option value="50" {% if pagination.per_page == 50 %}selected{% endif %}>50</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Rechercher
+                </button>
+                <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tableau des commandes -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Liste des Commandes
+            <span class="badge bg-secondary ms-2">{{ pagination.total }} résultat(s)</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if orders %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>N° Commande</th>
+                        <th>Client</th>
+                        <th>Marchand</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Statut</th>
+                        <th>Paiement</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>
+                            <strong>{{ order.order_number or 'CMD-' + order.id|string }}</strong>
+                        </td>
+                        <td>
+                            <div>
+                                <strong>{{ order.customer_name or 'Client' }}</strong>
+                                <br><small class="text-muted">{{ order.customer_email or '' }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-store me-2 text-primary"></i>
+                                <div>
+                                    <strong>{{ order.merchant_name }}</strong>
+                                    {% if order.merchant_verified %}
+                                    <i class="fas fa-check-circle text-success ms-1" title="Marchand vérifié"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <small>{{ order.date or order.created_at }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ order.total|format_number }} KMF</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ order.status_color or 'secondary' }}">
+                                {{ order.status_text or order.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% set payment_status = order.payment_status or 'pending' %}
+                            {% if payment_status == 'completed' %}
+                                <span class="badge bg-success text-dark">Payé</span>
+                            {% elif payment_status == 'pending' %}
+                                <span class="badge bg-warning text-dark">En attente</span>
+                            {% elif payment_status == 'failed' %}
+                                <span class="badge bg-danger text-white">Échec</span>
+                            {% else %}
+                                <span class="badge bg-secondary text-dark">{{ payment_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('admin_order_detail', order_id=order.id) }}" 
+                                   class="btn btn-sm btn-outline-primary" title="Voir détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if order.status in ['processing', 'shipped'] %}
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        data-bs-toggle="modal" data-bs-target="#updateStatusModal"
+                                        data-order-id="{{ order.id }}" 
+                                        data-order-number="{{ order.order_number or 'CMD-' + order.id|string }}"
+                                        title="Modifier statut">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.total_pages > 1 %}
+        <nav aria-label="Pagination des commandes" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin_orders', page=pagination.prev_num, per_page=pagination.per_page, search=current_search, status=current_status_filter) }}">
+                        <i class="fas fa-chevron-left"></i> Précédent
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in range(1, pagination.total_pages + 1) %}
+                    {% if page_num == pagination.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% elif page_num <= 3 or page_num > pagination.total_pages - 3 or (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_orders', page=page_num, per_page=pagination.per_page, search=current_search, status=current_status_filter) }}">{{ page_num }}</a>
+                    </li>
+                    {% elif page_num == 4 or page_num == pagination.total_pages - 3 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin_orders', page=pagination.next_num, per_page=pagination.per_page, search=current_search, status=current_status_filter) }}">
+                        Suivant <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+            <h5>Aucune commande trouvée</h5>
+            <p class="text-muted">
+                {% if current_search or current_status_filter %}
+                Aucune commande ne correspond à vos critères de recherche.
+                {% else %}
+                Il n'y a aucune commande dans le système pour le moment.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal pour modifier le statut -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier le Statut</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="updateStatusForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="orderNumber" class="form-label">Commande</label>
+                        <input type="text" class="form-control" id="orderNumber" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newStatus" class="form-label">Nouveau Statut</label>
+                        <select class="form-select" id="newStatus" name="status" required>
+                            <option value="processing">En cours de préparation</option>
+                            <option value="shipped">Expédiée</option>
+                            <option value="delivered">Livrée</option>
+                            <option value="cancelled">Annulée</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="adminNotes" class="form-label">Notes (optionnel)</label>
+                        <textarea class="form-control" id="adminNotes" name="notes" rows="3" 
+                                  placeholder="Ajouter une note pour cette mise à jour..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Gestion de la modal de mise à jour du statut
+const updateStatusModal = document.getElementById('updateStatusModal');
+const updateStatusForm = document.getElementById('updateStatusForm');
+
+updateStatusModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const orderId = button.getAttribute('data-order-id');
+    const orderNumber = button.getAttribute('data-order-number');
+    
+    document.getElementById('orderNumber').value = orderNumber;
+    updateStatusForm.action = `/admin/orders/${orderId}/update-status`;
+});
+
+updateStatusForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    console.log('Envoi de la requête de mise à jour du statut...');
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Réponse reçue:', response.status, response.statusText);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Données reçues:', data);
+        if (data.success) {
+            // Fermer la modal
+            bootstrap.Modal.getInstance(updateStatusModal).hide();
+            
+            // Afficher le message de succès
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('h2').parentNode);
+            
+            // Recharger la page après 2 secondes
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur détaillée:', error);
+        alert('Une erreur est survenue lors de la mise à jour du statut: ' + error.message);
+    });
+});
+</script>
+{% endblock %}

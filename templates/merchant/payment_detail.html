@@ -1,0 +1,261 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Détail du paiement - DOUKA KM Marchands{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Détail du paiement</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_dashboard') }}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_payments') }}">Paiements</a></li>
+        <li class="breadcrumb-item active">{{ payment.id }}</li>
+    </ol>
+
+    <!-- Informations du paiement -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Informations du paiement
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">ID du paiement:</div>
+                        <div class="col-md-8">{{ payment.id }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Date de demande:</div>
+                        <div class="col-md-8">{{ payment.date }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Montant:</div>
+                        <div class="col-md-8">{{ payment.amount|format_number }} KMF</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Méthode:</div>
+                        <div class="col-md-8">
+                            {% if payment.method == 'bank_transfer' %}
+                            <span class="badge bg-info">Virement bancaire</span>
+                            {% elif payment.method == 'mobile_money' %}
+                            <span class="badge bg-success">Mobile Money</span>
+                            {% elif payment.method == 'cash' %}
+                            <span class="badge bg-primary">Espèces</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ payment.method }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Statut:</div>
+                        <div class="col-md-8">
+                            {% if payment.status == 'completed' %}
+                            <span class="badge bg-success">Complété</span>
+                            {% elif payment.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">En attente</span>
+                            {% elif payment.status == 'processing' %}
+                            <span class="badge bg-info">En traitement</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ payment.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Référence:</div>
+                        <div class="col-md-8">{{ payment.reference }}</div>
+                    </div>
+                    {% if payment.completed_date %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Date de paiement:</div>
+                        <div class="col-md-8">{{ payment.completed_date }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-university me-1"></i>
+                    Informations bancaires
+                </div>
+                <div class="card-body">
+                    {% if bank_info %}
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Banque:</div>
+                        <div class="col-md-8">{{ bank_info.bank_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Numéro de compte:</div>
+                        <div class="col-md-8">{{ bank_info.account_number }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 fw-bold">Titulaire du compte:</div>
+                        <div class="col-md-8">{{ bank_info.account_holder }}</div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Aucune information bancaire enregistrée. Veuillez ajouter vos informations pour recevoir vos paiements.
+                    </div>
+                    <a href="{{ url_for('merchant_payments') }}" class="btn btn-primary mt-3">
+                        <i class="fas fa-plus-circle me-1"></i> Ajouter mes informations bancaires
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commandes associées à ce paiement -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-shopping-cart me-1"></i>
+            Commandes associées
+        </div>
+        <div class="card-body">
+            {% if associated_orders %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>N° Commande</th>
+                            <th>Date</th>
+                            <th>Client</th>
+                            <th>Total</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in associated_orders %}
+                        <tr>
+                            <td>{{ order.order_number }}</td>
+                            <td>{{ order.created_at }}</td>
+                            <td>{{ order.customer_name }}</td>
+                            <td>{{ order.total|format_number }} KMF</td>
+                            <td>
+                                <span class="badge 
+                                    {% if order.status == 'processing' %}bg-warning
+                                    {% elif order.status == 'shipped' %}bg-info
+                                    {% elif order.status == 'delivered' %}bg-success
+                                    {% elif order.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ order.status_text|default(order.status) }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('merchant_order_detail', order_id=order.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune commande associée à ce paiement.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Chronologie du paiement -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-history me-1"></i>
+            Chronologie
+        </div>
+        <div class="card-body">
+            <ul class="timeline">
+                <li class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Paiement demandé</h4>
+                        <p class="timeline-date">{{ payment.date }}</p>
+                        <p>La demande de paiement a été initiée pour un montant de {{ payment.amount|format_number }} KMF.</p>
+                    </div>
+                </li>
+                
+                {% if payment.status == 'processing' or payment.status == 'completed' %}
+                <li class="timeline-item">
+                    <div class="timeline-marker bg-info"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Paiement en traitement</h4>
+                        <p class="timeline-date">{{ (payment.date|string)|add_days(1) }}</p>
+                        <p>Le paiement est en cours de traitement par notre service financier.</p>
+                    </div>
+                </li>
+                {% endif %}
+                
+                {% if payment.status == 'completed' %}
+                <li class="timeline-item">
+                    <div class="timeline-marker bg-success"></div>
+                    <div class="timeline-content">
+                        <h4 class="timeline-title">Paiement complété</h4>
+                        <p class="timeline-date">{{ payment.completed_date }}</p>
+                        <p>Le paiement a été effectué avec succès vers votre compte bancaire.</p>
+                        <p><strong>Référence:</strong> {{ payment.reference }}</p>
+                    </div>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Style pour la chronologie */
+.timeline {
+    list-style: none;
+    padding: 1.5rem 0;
+    position: relative;
+}
+.timeline:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 1.25rem; /* Ajusté pour s'aligner avec le marqueur */
+    width: 2px;
+    background: #e9ecef;
+}
+.timeline-item {
+    position: relative;
+    padding-left: 3rem;
+    margin-bottom: 2rem;
+}
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #6c757d;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #6c757d;
+}
+.timeline-content {
+    padding: 0 1rem;
+}
+.timeline-title {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+.timeline-date {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Aucun JavaScript supplémentaire requis pour cette page
+</script>
+{% endblock %}

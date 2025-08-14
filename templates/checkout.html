@@ -1,0 +1,840 @@
+{% extends 'base.html' %}
+
+{% block title %}Finaliser la commande | DOUKA KM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .checkout-section {
+        margin-bottom: 30px;
+    }
+    
+    .checkout-summary-card {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .cart-item-small {
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .cart-item-small:last-child {
+        border-bottom: none;
+    }
+    
+    .payment-option {
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .payment-option:hover {
+        border-color: #adb5bd;
+    }
+    
+    .payment-option.selected {
+        border-color: var(--primary-color);
+        background-color: rgba(26, 35, 126, 0.05);
+    }
+    
+    .payment-option label {
+        cursor: pointer;
+        margin-bottom: 0;
+        width: 100%;
+    }
+    
+    /* Correction pour l'alignement des champs de carte bancaire */
+    @media (max-width: 767.98px) {
+        #card-payment-details .row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+        
+        #card-payment-details .col-md-6 {
+            padding-left: 0;
+            padding-right: 0;
+        }
+    }
+    
+    /* Amélioration de l'apparence des champs de la carte bancaire */
+    #cardExpiry, #cardCVC {
+        letter-spacing: 1px;
+        font-family: monospace;
+    }
+    
+    /* Assurer que le CVC et la date d'expiration sont alignés correctement */
+    #card-payment-details .row .col-md-6 {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #card-payment-details .row .col-md-6 label {
+        margin-bottom: 0.5rem;
+    }
+    
+    #card-payment-details .input-group {
+        flex: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Finaliser votre commande</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <form id="checkout-form" method="post" action="{{ url_for('complete_order') }}">
+                <!-- Jeton de protection contre les soumissions multiples -->
+                <input type="hidden" name="order_token" value="{{ order_token }}">
+                
+                <!-- Informations de livraison -->
+                <div class="checkout-section">
+                    <h4>Informations de livraison</h4>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="firstName" class="form-label">Prénom</label>
+                                    <input type="text" class="form-control" id="firstName" name="firstName" value="{{ user.first_name if user else '' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="lastName" class="form-label">Nom</label>
+                                    <input type="text" class="form-control" id="lastName" name="lastName" value="{{ user.last_name if user else '' }}" required>
+                                </div>
+                                <div class="col-12">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email if user else '' }}" required>
+                                </div>
+                                <div class="col-12">
+                                    <label for="phone" class="form-label">Téléphone</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone if user else '' }}" required>
+                                </div>
+                                <div class="col-12">
+                                    <label for="address" class="form-label">Adresse</label>
+                                    <input type="text" class="form-control" id="address" name="address" value="{{ user.address if user and user.address else '' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="city" class="form-label">Ville</label>
+                                    <input type="text" class="form-control" id="city" name="city" value="{{ user.city if user and user.city else '' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="region" class="form-label">Région/Île</label>
+                                    <select class="form-select" id="region" name="region" required>
+                                        <option value="">Choisir...</option>
+                                        <option value="grande-comore" {% if user and user.region == 'grande-comore' %}selected{% endif %}>Grande Comore</option>
+                                        <option value="anjouan" {% if user and user.region == 'anjouan' %}selected{% endif %}>Anjouan</option>
+                                        <option value="moheli" {% if user and user.region == 'moheli' %}selected{% endif %}>Mohéli</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Options de livraison -->
+                <div class="checkout-section">
+                    <h4>Mode de livraison</h4>
+                    <div class="card">
+                        <div class="card-body">
+                            {% for option in shipping_options %}
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="shipping_method" id="shipping{{ option.id }}" value="{{ option.name }}" {% if loop.first %}checked{% endif %}>
+                                <label class="form-check-label d-flex justify-content-between" for="shipping{{ option.id }}">
+                                    <div>{{ option.name }}</div>
+                                    <div class="fw-bold">{{ option.price|format_number }} KMF</div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mode de paiement -->
+                <div class="checkout-section">
+                    <h4>Mode de paiement</h4>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="payment-option selected">
+                                <input type="radio" name="payment" id="payment1" value="cash" class="d-none" checked>
+                                <label for="payment1" class="d-flex align-items-center">
+                                    <i class="fas fa-money-bill-wave me-3 text-success"></i>
+                                    <div>
+                                        <div class="fw-bold">Paiement à la livraison</div>
+                                        <div class="text-muted small">Payez en espèces lors de la réception de votre commande</div>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <div class="payment-option">
+                                <input type="radio" name="payment" id="payment2" value="mobile" class="d-none">
+                                <label for="payment2" class="d-flex align-items-center">
+                                    <i class="fas fa-mobile-alt me-3 text-primary"></i>
+                                    <div>
+                                        <div class="fw-bold">Paiement mobile (Holo)</div>
+                                        <div class="text-muted small">Payez via votre compte Holo</div>
+                                    </div>
+                                </label>
+                                
+                                <!-- Détails du paiement Holo - intégrés directement dans l'option -->
+                                <div id="holo-payment-details" class="payment-method-details border rounded p-3 mt-2" style="display: none;">
+                                    <h5 class="mb-3">Détails du paiement Holo</h5>
+                                    <div class="mb-3">
+                                        <label for="holoNumber" class="form-label">Numéro de téléphone</label>
+                                        <input type="tel" class="form-control" id="holoNumber" name="holoNumber" placeholder="ex: 076 12 34 56">
+                                    </div>
+                                    <p class="text-muted small">Vous recevrez une notification sur votre téléphone pour confirmer le paiement.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="payment-option">
+                                <input type="radio" name="payment" id="payment3" value="mvola" class="d-none">
+                                <label for="payment3" class="d-flex align-items-center">
+                                    <i class="fas fa-wallet me-3 text-warning"></i>
+                                    <div>
+                                        <div class="fw-bold">Mvola</div>
+                                        <div class="text-muted small">Payez avec votre compte Mvola</div>
+                                    </div>
+                                </label>
+                                
+                                <!-- Détails du paiement Mvola - intégrés directement dans l'option -->
+                                <div id="mvola-payment-details" class="payment-method-details border rounded p-3 mt-2" style="display: none;">
+                                    <h5 class="mb-3">Détails du paiement Mvola</h5>
+                                    <div class="mb-3">
+                                        <label for="mvolaNumber" class="form-label">Numéro Mvola</label>
+                                        <input type="tel" class="form-control" id="mvolaNumber" name="mvolaNumber" placeholder="ex: 032 12 34 56">
+                                    </div>
+                                    <p class="text-muted small">Vous recevrez une notification sur votre téléphone pour confirmer le paiement.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="payment-option">
+                                <input type="radio" name="payment" id="payment4" value="card" class="d-none">
+                                <label for="payment4" class="d-flex align-items-center">
+                                    <i class="fas fa-credit-card me-3 text-danger"></i>
+                                    <div>
+                                        <div class="fw-bold">Carte bancaire</div>
+                                        <div class="text-muted small">Payez par carte Visa ou Mastercard</div>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <img src="/static/img/visa.png" alt="Visa" height="20" class="me-1">
+                                        <img src="/static/img/mastercard.png" alt="Mastercard" height="20">
+                                    </div>
+                                </label>
+                                
+                                <!-- Détails du paiement par carte - intégrés directement dans l'option -->
+                                <div id="card-payment-details" class="payment-method-details border rounded p-3 mt-2" style="display: none;">
+                                    <h5 class="mb-3">Détails de la carte bancaire</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label for="cardNumber" class="form-label">Numéro de carte</label>
+                                        <input type="text" class="form-control" id="cardNumber" name="cardNumber" placeholder="1234 5678 9012 3456">
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-3 mb-md-0">
+                                            <label for="cardExpiry" class="form-label">Date d'expiration</label>
+                                            <input type="text" class="form-control" id="cardExpiry" name="cardExpiry" placeholder="MM/AA">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="cardCVC" class="form-label">CVC</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="cardCVC" name="cardCVC" placeholder="123" maxlength="4">
+                                                <span class="input-group-text" data-bs-toggle="tooltip" title="Le code de sécurité à 3 ou 4 chiffres au dos de votre carte">
+                                                    <i class="fas fa-question-circle"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="cardName" class="form-label">Nom sur la carte</label>
+                                        <input type="text" class="form-control" id="cardName" name="cardName" placeholder="JOHN DOE">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="checkout-summary-card">
+                <h4 class="mb-3">Récapitulatif de la commande</h4>
+                
+                <!-- Liste des produits -->
+                <div class="mb-3">
+                    {% for product in products %}
+                    <div class="cart-item-small d-flex justify-content-between">
+                        <div>
+                            <div>{{ product.name }}</div>
+                            <div class="text-muted small">Qté: {{ product.quantity }}</div>
+                        </div>
+                        <div class="text-end fw-bold">{{ product.subtotal|format_number }} KMF</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Totaux -->
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Sous-total</span>
+                    <strong id="subtotal-amount">{{ total|format_number }} KMF</strong>
+                </div>
+                
+                <!-- Code promo -->
+                <div class="mb-3">
+                    <div class="d-flex gap-2 mb-2">
+                        <input type="text" id="promo-code" class="form-control form-control-sm" 
+                               placeholder="Code promo" maxlength="20" style="text-transform: uppercase;">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyPromoCode()">
+                            Appliquer
+                        </button>
+                    </div>
+                    <div id="promo-message" class="small"></div>
+                    <div id="promo-discount" class="d-flex justify-content-between text-success" style="display: none !important;">
+                        <span>Réduction (<span id="promo-code-name"></span>)</span>
+                        <span id="promo-discount-amount">-0 KMF</span>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger" onclick="removePromoCode()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span id="shipping-method-name">Livraison ({{ shipping_options[0].name }})</span>
+                    <span id="shipping-cost">{{ shipping_options[0].price|format_number }} KMF</span>
+                </div>
+                
+                <!-- Message de livraison gratuite -->
+                <div id="free-shipping-message"></div>
+                
+                <hr>
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="h5 mb-0">Total</span>
+                    <span class="h5 mb-0" id="total-amount">{{ (total + shipping_options[0].price)|format_number }} KMF</span>
+                </div>
+                
+                <button type="submit" form="checkout-form" class="btn btn-primary w-100" id="submit-order-btn">
+                    <span id="btn-text">Confirmer la commande</span>
+                    <span id="btn-spinner" class="spinner-border spinner-border-sm ms-2" role="status" style="display: none;">
+                        <span class="visually-hidden">Chargement...</span>
+                    </span>
+                </button>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('cart') }}" class="text-decoration-none">
+                        <i class="fas fa-arrow-left me-2"></i> Retour au panier
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion des options de paiement
+        const paymentOptions = document.querySelectorAll('.payment-option');
+        const holoPaymentDetails = document.getElementById('holo-payment-details');
+        const mvolaPaymentDetails = document.getElementById('mvola-payment-details');
+        const cardPaymentDetails = document.getElementById('card-payment-details');
+        
+        paymentOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // Retirer la classe selected de toutes les options
+                paymentOptions.forEach(opt => {
+                    opt.classList.remove('selected');
+                    // Cacher tous les détails de paiement
+                    const details = opt.querySelector('.payment-method-details');
+                    if (details) {
+                        details.style.display = 'none';
+                    }
+                });
+                
+                // Ajouter la classe selected à l'option cliquée
+                this.classList.add('selected');
+                
+                // Sélectionner le radio bouton
+                const radioInput = this.querySelector('input[type="radio"]');
+                radioInput.checked = true;
+                
+                // Afficher les détails spécifiques selon le mode de paiement sélectionné
+                const paymentMethod = radioInput.value;
+                
+                if (paymentMethod === 'mobile') {
+                    holoPaymentDetails.style.display = 'block';
+                } else if (paymentMethod === 'mvola') {
+                    mvolaPaymentDetails.style.display = 'block';
+                } else if (paymentMethod === 'card') {
+                    cardPaymentDetails.style.display = 'block';
+                }
+            });
+        });
+        
+        // Gestion des options de livraison
+        const shippingOptions = document.querySelectorAll('input[name="shipping_method"]');
+        const totalAmount = document.getElementById('total-amount');
+        const shippingCost = document.getElementById('shipping-cost');
+        const shippingMethodName = document.getElementById('shipping-method-name');
+        const regionSelect = document.getElementById('region');
+        
+        // Définir les options de livraison disponibles (données passées du serveur)
+        const shippingData = JSON.parse('{{ shipping_options | tojson | safe }}');
+        
+        // Tarifs régionaux passés du serveur
+        const regionalRates = JSON.parse('{{ regional_rates|tojson|safe }}');
+        const freeShippingThreshold = parseInt('{{ free_shipping_threshold|default(50000) }}');
+        
+        // Initialiser avec la première option
+        const firstOption = shippingOptions[0];
+        let currentTotal = parseFloat('{{ total|default(0) }}');
+        
+        // Mettre à jour le total avec le prix de livraison initial
+        if (firstOption && shippingData.length > 0) {
+            const firstShippingOption = shippingData.find(option => option.name === firstOption.value) || shippingData[0];
+            updateShippingDisplay(firstShippingOption);
+        }
+        
+        function updateShippingDisplay(selectedOption) {
+            shippingMethodName.textContent = `Livraison (${selectedOption.name})`;
+            
+            // Vérifier si la livraison est gratuite
+            const isShippingFree = currentTotal >= freeShippingThreshold;
+            const displayPrice = isShippingFree ? 0 : selectedOption.price;
+            
+            if (isShippingFree) {
+                shippingCost.innerHTML = `<span class="text-success fw-bold">GRATUIT</span> <small class="text-muted">(${selectedOption.price.toLocaleString().replace(/,/g, ' ')} KMF)</small>`;
+            } else {
+                shippingCost.textContent = `${selectedOption.price.toLocaleString().replace(/,/g, ' ')} KMF`;
+            }
+            
+            // Mettre à jour le total
+            const newTotal = currentTotal + displayPrice;
+            totalAmount.textContent = `${newTotal.toLocaleString().replace(/,/g, ' ')} KMF`;
+            
+            // Afficher message de livraison gratuite si proche du seuil
+            const amountNeeded = freeShippingThreshold - currentTotal;
+            const freeShippingMessage = document.getElementById('free-shipping-message');
+            if (freeShippingMessage) {
+                if (!isShippingFree && amountNeeded > 0 && amountNeeded <= 10000) {
+                    freeShippingMessage.innerHTML = `<div class="alert alert-info small mt-2"><i class="fas fa-info-circle me-1"></i>Ajoutez ${amountNeeded.toLocaleString().replace(/,/g, ' ')} KMF pour bénéficier de la livraison gratuite !</div>`;
+                } else {
+                    freeShippingMessage.innerHTML = '';
+                }
+            }
+        }
+        
+        function updateShippingRatesForRegion() {
+            const selectedRegion = regionSelect.value || 'default';
+            
+            // Appeler l'API pour obtenir les tarifs mis à jour
+            fetch('/api/shipping-rates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    region: selectedRegion,
+                    cart_total: currentTotal
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mettre à jour les données de livraison locales
+                    const rates = data.rates;
+                    
+                    // Parcourir les options de livraison et mettre à jour les prix
+                    shippingOptions.forEach(option => {
+                        // Trouver l'option correspondante dans shippingData par nom
+                        const optionData = shippingData.find(shipping => shipping.name === option.value);
+                        if (optionData) {
+                            const rateKey = optionData.type; // 'standard' ou 'express'
+                            if (rates[rateKey]) {
+                                optionData.price = rates[rateKey].final_price;
+                                optionData.base_price = rates[rateKey].base_price;
+                                optionData.is_free = rates[rateKey].is_free;
+                                
+                                // Mettre à jour l'affichage du prix dans le DOM
+                                const label = option.nextElementSibling;
+                                const priceSpan = label.querySelector('.fw-bold');
+                                if (priceSpan) {
+                                    if (rates[rateKey].is_free) {
+                                        priceSpan.innerHTML = `<span class="text-success">GRATUIT</span> <small class="text-muted">(${rates[rateKey].base_price.toLocaleString().replace(/,/g, ' ')} KMF)</small>`;
+                                    } else {
+                                        priceSpan.textContent = `${optionData.price.toLocaleString().replace(/,/g, ' ')} KMF`;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Mettre à jour l'affichage du résumé avec l'option actuellement sélectionnée
+                    const selectedShippingOption = document.querySelector('input[name="shipping_method"]:checked');
+                    if (selectedShippingOption) {
+                        const selectedData = shippingData.find(shipping => shipping.name === selectedShippingOption.value);
+                        if (selectedData) {
+                            updateShippingDisplay(selectedData);
+                        }
+                    }
+                    
+                    // Afficher des informations sur le système de prix utilisé
+                    if (data.price_ranges_enabled) {
+                        console.log('Système de tranches de prix activé');
+                        if (data.price_range_used) {
+                            console.log('Tranche utilisée:', data.price_range_used.range_text);
+                        }
+                    } else {
+                        console.log('Système de tarifs régionaux utilisé pour la région:', selectedRegion);
+                    }
+                } else {
+                    console.error('Erreur lors de la récupération des tarifs:', data.error);
+                    // Fallback aux tarifs statiques
+                    const rates = regionalRates[selectedRegion] || regionalRates['default'];
+                    
+                    shippingOptions.forEach(option => {
+                        const optionData = shippingData.find(shipping => shipping.name === option.value);
+                        if (optionData && rates[optionData.type]) {
+                            optionData.price = rates[optionData.type];
+                            
+                            const label = option.nextElementSibling;
+                            const priceSpan = label.querySelector('.fw-bold');
+                            if (priceSpan) {
+                                const isShippingFree = currentTotal >= freeShippingThreshold;
+                                if (isShippingFree) {
+                                    priceSpan.innerHTML = `<span class="text-success">GRATUIT</span> <small class="text-muted">(${optionData.price.toLocaleString().replace(/,/g, ' ')} KMF)</small>`;
+                                } else {
+                                    priceSpan.textContent = `${optionData.price.toLocaleString().replace(/,/g, ' ')} KMF`;
+                                }
+                            }
+                        }
+                    });
+                    
+                    const selectedShippingOption = document.querySelector('input[name="shipping_method"]:checked');
+                    if (selectedShippingOption) {
+                        const selectedData = shippingData.find(shipping => shipping.name === selectedShippingOption.value);
+                        if (selectedData) {
+                            updateShippingDisplay(selectedData);
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la récupération des tarifs:', error);
+                // Fallback aux tarifs statiques
+                const rates = regionalRates[selectedRegion] || regionalRates['default'];
+                
+                shippingOptions.forEach(option => {
+                    const optionData = shippingData.find(shipping => shipping.name === option.value);
+                    if (optionData && rates[optionData.type]) {
+                        optionData.price = rates[optionData.type];
+                        
+                        const label = option.nextElementSibling;
+                        const priceSpan = label.querySelector('.fw-bold');
+                        if (priceSpan) {
+                            const isShippingFree = currentTotal >= freeShippingThreshold;
+                            if (isShippingFree) {
+                                priceSpan.innerHTML = `<span class="text-success">GRATUIT</span> <small class="text-muted">(${optionData.price.toLocaleString().replace(/,/g, ' ')} KMF)</small>`;
+                            } else {
+                                priceSpan.textContent = `${optionData.price.toLocaleString().replace(/,/g, ' ')} KMF`;
+                            }
+                        }
+                    }
+                });
+                
+                const selectedShippingOption = document.querySelector('input[name="shipping_method"]:checked');
+                if (selectedShippingOption) {
+                    const selectedData = shippingData.find(shipping => shipping.name === selectedShippingOption.value);
+                    if (selectedData) {
+                        updateShippingDisplay(selectedData);
+                    }
+                }
+            });
+        }
+        
+        // Écouter les changements de région
+        if (regionSelect) {
+            regionSelect.addEventListener('change', updateShippingRatesForRegion);
+            // Mettre à jour initialement si une région est déjà sélectionnée
+            updateShippingRatesForRegion();
+        }
+        
+        shippingOptions.forEach(option => {
+            option.addEventListener('change', function() {
+                // Trouver l'option correspondante dans shippingData par nom
+                const selectedData = shippingData.find(shipping => shipping.name === this.value);
+                if (selectedData) {
+                    updateShippingDisplay(selectedData);
+                } else {
+                    console.error('Option de livraison non trouvée:', this.value);
+                    // Fallback: utiliser la première option disponible
+                    if (shippingData.length > 0) {
+                        updateShippingDisplay(shippingData[0]);
+                    }
+                }
+            });
+        });
+        
+        // Validation et soumission du formulaire
+        const checkoutForm = document.getElementById('checkout-form');
+        
+        checkoutForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Récupérer le mode de paiement sélectionné
+            const selectedPaymentMethod = document.querySelector('input[name="payment"]:checked').value;
+            
+            // Validation spécifique selon le mode de paiement
+            let isValid = true;
+            let errorMessage = '';
+            
+            if (selectedPaymentMethod === 'mobile') {
+                const holoNumber = document.getElementById('holoNumber').value;
+                if (!holoNumber) {
+                    isValid = false;
+                    errorMessage = 'Veuillez entrer votre numéro Holo';
+                }
+            } else if (selectedPaymentMethod === 'mvola') {
+                const mvolaNumber = document.getElementById('mvolaNumber').value;
+                if (!mvolaNumber) {
+                    isValid = false;
+                    errorMessage = 'Veuillez entrer votre numéro Mvola';
+                }
+            } else if (selectedPaymentMethod === 'card') {
+                const cardNumber = document.getElementById('cardNumber').value;
+                const cardExpiry = document.getElementById('cardExpiry').value;
+                const cardCVC = document.getElementById('cardCVC').value;
+                const cardName = document.getElementById('cardName').value;
+                
+                if (!cardNumber || !cardExpiry || !cardCVC || !cardName) {
+                    isValid = false;
+                    errorMessage = 'Veuillez remplir tous les champs de la carte bancaire';
+                }
+            }
+            
+            if (!isValid) {
+                // Afficher le message d'erreur
+                if (window.showCartNotification) {
+                    showCartNotification(errorMessage, 'error');
+                } else {
+                    alert(errorMessage);
+                }
+                return;
+            }
+            
+            // Si tout est valide, procéder à l'envoi de la commande
+            // Récupérer tous les données du formulaire
+            const formData = new FormData(checkoutForm);
+            
+            // Ajouter le mode de paiement sélectionné
+            formData.set('payment_method', selectedPaymentMethod);
+            
+            // Ajouter les informations de code promo si appliqué
+            if (appliedPromoCode) {
+                formData.set('promo_code', appliedPromoCode);
+                formData.set('promo_discount', promoDiscount);
+            }
+            
+            // Envoyer la requête de finalisation de commande
+            fetch('/complete-order', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Afficher un toast de confirmation
+                    if (window.showCartNotification) {
+                        showCartNotification("Votre commande a été reçue! Un mail de confirmation vous sera envoyé sous peu.");
+                    }
+                    
+                    // Rediriger vers la page de confirmation
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la finalisation de la commande:', error);
+            });
+        });
+        
+        // Variables globales pour les codes promo
+        let appliedPromoCode = null;
+        let promoDiscount = 0;
+        let baseSubtotal = parseFloat('{{ total|default(0) }}');
+        
+        // Fonction pour appliquer un code promo
+        window.applyPromoCode = function() {
+            const promoInput = document.getElementById('promo-code');
+            const promoCode = promoInput.value.trim().toUpperCase();
+            const messageDiv = document.getElementById('promo-message');
+            
+            if (!promoCode) {
+                messageDiv.innerHTML = '<span class="text-danger">Veuillez saisir un code promo</span>';
+                return;
+            }
+            
+            // Afficher un loader
+            messageDiv.innerHTML = '<span class="text-muted">Vérification en cours...</span>';
+            
+            // Préparer les informations du panier pour la validation
+            const cartItems = JSON.parse('{{ products | tojson | safe }}');
+            
+            // Appel AJAX pour valider le code
+            fetch('/validate-promo-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    code: promoCode,
+                    total: getCurrentTotal(),
+                    cart_items: cartItems
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Code valide
+                    appliedPromoCode = promoCode;
+                    promoDiscount = data.discount;
+                    
+                    // Afficher le message de succès
+                    messageDiv.innerHTML = `<span class="text-success"><i class="fas fa-check"></i> ${data.message}</span>`;
+                    
+                    // Afficher la ligne de réduction
+                    const promoDiv = document.getElementById('promo-discount');
+                    const promoCodeName = document.getElementById('promo-code-name');
+                    const promoDiscountAmount = document.getElementById('promo-discount-amount');
+                    
+                    promoCodeName.textContent = promoCode;
+                    promoDiscountAmount.textContent = `-${data.discount.toLocaleString().replace(/,/g, ' ')} KMF`;
+                    promoDiv.style.display = 'flex';
+                    
+                    // Masquer le champ de saisie
+                    promoInput.style.display = 'none';
+                    promoInput.nextElementSibling.style.display = 'none';
+                    
+                    // Mettre à jour le total
+                    updateTotalWithPromo();
+                } else {
+                    // Code invalide
+                    messageDiv.innerHTML = `<span class="text-danger"><i class="fas fa-times"></i> ${data.message}</span>`;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la validation du code promo:', error);
+                messageDiv.innerHTML = '<span class="text-danger">Erreur lors de la validation du code</span>';
+            });
+        };
+        
+        // Fonction pour supprimer un code promo
+        window.removePromoCode = function() {
+            appliedPromoCode = null;
+            promoDiscount = 0;
+            
+            // Masquer la ligne de réduction
+            document.getElementById('promo-discount').style.display = 'none';
+            
+            // Réafficher le champ de saisie
+            const promoInput = document.getElementById('promo-code');
+            promoInput.style.display = 'block';
+            promoInput.nextElementSibling.style.display = 'block';
+            promoInput.value = '';
+            
+            // Effacer les messages
+            document.getElementById('promo-message').innerHTML = '';
+            
+            // Mettre à jour le total
+            updateTotalWithPromo();
+        };
+        
+        // Fonction pour obtenir le total actuel (sous-total + livraison)
+        function getCurrentTotal() {
+            const shippingCost = parseFloat(document.getElementById('shipping-cost').textContent.replace(/[^0-9]/g, '')) || 0;
+            return baseSubtotal + shippingCost;
+        }
+        
+        // Fonction pour mettre à jour le total avec la réduction
+        function updateTotalWithPromo() {
+            const shippingCost = parseFloat(document.getElementById('shipping-cost').textContent.replace(/[^0-9]/g, '')) || 0;
+            const newTotal = baseSubtotal + shippingCost - promoDiscount;
+            
+            document.getElementById('total-amount').textContent = newTotal.toLocaleString().replace(/,/g, ' ') + ' KMF';
+        }
+        
+        // Permettre l'application du code promo avec la touche Entrée
+        document.getElementById('promo-code').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyPromoCode();
+            }
+        });
+        
+        // Convertir automatiquement en majuscules
+        document.getElementById('promo-code').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+        
+        // **PROTECTION CONTRE LES CLICS MULTIPLES**
+        const orderForm = document.getElementById('checkout-form');
+        const submitBtn = document.getElementById('submit-order-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnSpinner = document.getElementById('btn-spinner');
+        
+        let isSubmitting = false;
+        
+        orderForm.addEventListener('submit', function(e) {
+            // Empêcher la soumission multiple
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Marquer comme en cours de soumission
+            isSubmitting = true;
+            
+            // Désactiver le bouton et afficher le spinner
+            submitBtn.disabled = true;
+            submitBtn.classList.add('disabled');
+            btnText.textContent = 'Traitement en cours...';
+            btnSpinner.style.display = 'inline-block';
+            
+            // Si pour une raison quelconque la soumission échoue, réactiver après 10 secondes
+            setTimeout(function() {
+                if (isSubmitting) {
+                    console.log('Timeout: réactivation du bouton après 10 secondes');
+                    resetSubmitButton();
+                }
+            }, 10000);
+        });
+        
+        function resetSubmitButton() {
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('disabled');
+            btnText.textContent = 'Confirmer la commande';
+            btnSpinner.style.display = 'none';
+        }
+        
+        // Réactiver le bouton en cas d'erreur de validation côté client
+        window.addEventListener('beforeunload', function() {
+            resetSubmitButton();
+        });
+    });
+</script>
+{% endblock %}

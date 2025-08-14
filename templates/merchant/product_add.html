@@ -1,0 +1,708 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Ajouter un produit - DOUKA KM Marchands{% endblock %}
+
+{% block extra_css %}
+<style>
+.image-preview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+    margin-top: 10px;
+}
+
+.image-preview-container {
+    position: relative;
+    display: inline-block;
+}
+
+.image-preview-error {
+    width: 100px;
+    height: 100px;
+    background-color: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 10px;
+    text-align: center;
+}
+
+.image-input-group {
+    margin-bottom: 15px;
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+}
+
+.image-input-group:first-child {
+    background-color: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.main-image-label {
+    color: #1976d2;
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Ajouter un nouveau produit</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_dashboard') }}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_products') }}">Produits</a></li>
+        <li class="breadcrumb-item active">Ajouter un produit</li>
+    </ol>
+
+    <div class="row">
+        <div class="col-xl-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-plus-circle me-1"></i>
+                    Informations du produit
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <!-- Informations de base -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="name" class="form-label">Nom du produit *</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="description" class="form-label">Description *</label>
+                                <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="price" class="form-label">Prix de base (KMF) *</label>
+                                <input type="number" class="form-control" id="price" name="price" min="0" required>
+                                <div class="form-text">Prix affiché si aucune option spécifique n'est sélectionnée</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="stock" class="form-label">Stock *</label>
+                                <input type="number" class="form-control" id="stock" name="stock" min="0" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="category_id" class="form-label">Catégorie *</label>
+                                <select class="form-select" id="category_id" name="category_id" required>
+                                    <option value="">Choisir une catégorie</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="subcategory_id" class="form-label">Sous-catégorie</label>
+                                <select class="form-select" id="subcategory_id" name="subcategory_id">
+                                    <option value="">Choisir une sous-catégorie</option>
+                                    <!-- Les sous-catégories seront remplies dynamiquement -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Images du produit -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Images du produit *</label>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Ajoutez des liens vers les images de votre produit. La première image sera utilisée comme image principale.
+                                </div>
+                                <div id="images-container">
+                                    <div class="image-input-group">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-8">
+                                                <label class="form-label main-image-label">
+                                                    <i class="fas fa-star me-1"></i>Image principale
+                                                </label>
+                                                <input type="url" class="form-control image-url-input" name="image_url[]" 
+                                                       placeholder="https://exemple.com/image.jpg" required>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-outline-danger remove-image" disabled>
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="image-preview-container">
+                                                    <img class="image-preview" style="display: none;" alt="Aperçu">
+                                                    <div class="image-preview-error" style="display: none;">
+                                                        Image non valide
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-image">
+                                    <i class="fas fa-plus"></i> Ajouter une image
+                                </button>
+                                <div class="form-text mt-2">
+                                    <strong>Conseils :</strong>
+                                    <ul class="mb-0 mt-1">
+                                        <li>Utilisez des images de haute qualité (minimum 800x800 pixels)</li>
+                                        <li>Formats supportés : JPG, PNG, WebP</li>
+                                        <li>Vous pouvez utiliser des services comme <a href="https://unsplash.com" target="_blank">Unsplash</a> pour des images gratuites</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Options du produit -->
+                        <h5 class="mb-3">Options du produit (optionnel)</h5>
+                        
+                        <!-- Couleurs -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Couleurs disponibles</label>
+                                <div id="colors-container">
+                                    <div class="color-option mb-2">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <input type="text" class="form-control" name="color_name[]" placeholder="Nom de la couleur (ex: Rouge)">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <input type="color" class="form-control form-control-color" name="color_hex[]" value="#000000">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-outline-danger remove-color">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-color">
+                                    <i class="fas fa-plus"></i> Ajouter une couleur
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tailles -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Tailles disponibles</label>
+                                <div id="sizes-container">
+                                    <div class="size-option mb-2">
+                                        <div class="row">
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control" name="size_value[]" placeholder="Taille (ex: S, M, L)">
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control" name="size_label[]" placeholder="Description (ex: Small)">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-outline-danger remove-size">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-size">
+                                    <i class="fas fa-plus"></i> Ajouter une taille
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Options supplémentaires -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Spécifications techniques</label>
+                                <div id="specs-container">
+                                    <div class="spec-option mb-2">
+                                        <div class="row">
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control" name="spec_name[]" placeholder="Nom (ex: Matériau)">
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control" name="spec_value[]" placeholder="Valeur (ex: Coton 100%)">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-outline-danger remove-spec">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-spec">
+                                    <i class="fas fa-plus"></i> Ajouter une spécification
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Prix par combinaisons d'options -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <h6 class="mb-3">Prix spécifiques par combinaison (optionnel)</h6>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Définissez des prix différents pour des combinaisons spécifiques de couleur et taille. Si aucun prix spécifique n'est défini, le prix de base sera utilisé.
+                                </div>
+                                <div id="price-combinations-container">
+                                    <!-- Les combinaisons de prix seront ajoutées ici dynamiquement -->
+                                </div>
+                                <button type="button" class="btn btn-outline-success btn-sm" id="add-price-combination">
+                                    <i class="fas fa-plus"></i> Ajouter un prix spécifique
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Statut -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="status" class="form-label">Statut</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="active">Actif</option>
+                                    <option value="inactive">Inactif</option>
+                                    <option value="draft">Brouillon</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i>
+                                    Ajouter le produit
+                                </button>
+                                <a href="{{ url_for('merchant_products') }}" class="btn btn-secondary ms-2">
+                                    <i class="fas fa-times me-1"></i>
+                                    Annuler
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panneau d'aide -->
+        <div class="col-xl-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-lightbulb me-1"></i>
+                    Conseils pour un bon produit
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Utilisez un nom clair et descriptif
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Ajoutez une description détaillée
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Fixez un prix compétitif
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Choisissez la bonne catégorie
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Ajoutez des images de qualité
+                        </li>
+                        <li class="mb-0">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Maintenez le stock à jour
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Information
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Une fois ajouté, votre produit sera automatiquement visible sur le site principal de DOUKA KM.
+                    </p>
+                    <p class="card-text">
+                        Les champs marqués d'un astérisque (*) sont obligatoires.
+                    </p>
+                    <hr>
+                    <h6>Conseils pour les images :</h6>
+                    <ul class="small mb-0">
+                        <li>Utilisez des images de haute qualité (minimum 800x600px)</li>
+                        <li>Formats recommandés : JPG, PNG</li>
+                        <li>Vous pouvez utiliser des services comme Unsplash, Pixabay, ou votre propre hébergement</li>
+                        <li>Exemple d'URL : https://images.unsplash.com/photo-123.jpg</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des sous-catégories dynamiques
+    const categorySelect = document.getElementById('category_id');
+    const subcategorySelect = document.getElementById('subcategory_id');
+    
+    const subcategories = {
+        {% for category in categories %}
+            '{{ category.id }}': [
+                {% for subcategory in category.subcategories %}
+                    { id: '{{ subcategory.id }}', name: '{{ subcategory.name }}' },
+                {% endfor %}
+            ],
+        {% endfor %}
+    };
+    
+    categorySelect.addEventListener('change', function() {
+        const categoryId = this.value;
+        subcategorySelect.innerHTML = '<option value="">Choisir une sous-catégorie</option>';
+        
+        if (categoryId && subcategories[categoryId]) {
+            subcategories[categoryId].forEach(function(subcategory) {
+                const option = document.createElement('option');
+                option.value = subcategory.id;
+                option.textContent = subcategory.name;
+                subcategorySelect.appendChild(option);
+            });
+        }
+    });
+
+    // Gestion des couleurs
+    document.getElementById('add-color').addEventListener('click', function() {
+        const container = document.getElementById('colors-container');
+        const newColor = document.createElement('div');
+        newColor.className = 'color-option mb-2';
+        newColor.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" name="color_name[]" placeholder="Nom de la couleur">
+                </div>
+                <div class="col-md-4">
+                    <input type="color" class="form-control form-control-color" name="color_hex[]" value="#000000">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger remove-color">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newColor);
+    });
+
+    // Gestion des images avec prévisualisation
+    document.getElementById('add-image').addEventListener('click', function() {
+        const container = document.getElementById('images-container');
+        const imageCount = container.children.length;
+        const newImage = document.createElement('div');
+        newImage.className = 'image-input-group';
+        newImage.innerHTML = `
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <label class="form-label">Image ${imageCount + 1}</label>
+                    <input type="url" class="form-control image-url-input" name="image_url[]" 
+                           placeholder="https://exemple.com/image.jpg">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger remove-image">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <div class="image-preview-container">
+                        <img class="image-preview" style="display: none;" alt="Aperçu">
+                        <div class="image-preview-error" style="display: none;">
+                            Image non valide
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(newImage);
+        
+        // Ajouter l'événement de prévisualisation pour la nouvelle image
+        const newInput = newImage.querySelector('.image-url-input');
+        addImagePreviewListener(newInput);
+    });
+
+    // Fonction pour ajouter un listener de prévisualisation d'image
+    function addImagePreviewListener(input) {
+        input.addEventListener('input', function() {
+            const url = this.value.trim();
+            const container = this.closest('.image-input-group');
+            const preview = container.querySelector('.image-preview');
+            const errorDiv = container.querySelector('.image-preview-error');
+            
+            if (url) {
+                // Créer une nouvelle image pour tester si l'URL est valide
+                const testImg = new Image();
+                
+                testImg.onload = function() {
+                    preview.src = url;
+                    preview.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                };
+                
+                testImg.onerror = function() {
+                    preview.style.display = 'none';
+                    errorDiv.style.display = 'flex';
+                    errorDiv.textContent = 'Image non disponible';
+                };
+                
+                testImg.src = url;
+            } else {
+                preview.style.display = 'none';
+                errorDiv.style.display = 'none';
+            }
+        });
+    }
+
+    // Ajouter les listeners pour les champs d'image existants
+    document.querySelectorAll('.image-url-input').forEach(addImagePreviewListener);
+
+    // Supprimer image
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-image')) {
+            const container = document.getElementById('images-container');
+            // Empêcher la suppression s'il n'y a qu'une seule image
+            if (container.children.length > 1) {
+                e.target.closest('.image-input-group').remove();
+                // Mettre à jour les labels des images restantes
+                updateImageLabels();
+            } else {
+                alert('Au moins une image est requise');
+            }
+        }
+    });
+
+    // Fonction pour mettre à jour les labels des images
+    function updateImageLabels() {
+        const container = document.getElementById('images-container');
+        const imageGroups = container.querySelectorAll('.image-input-group');
+        
+        imageGroups.forEach((group, index) => {
+            const label = group.querySelector('label');
+            const removeBtn = group.querySelector('.remove-image');
+            
+            if (index === 0) {
+                label.innerHTML = '<i class="fas fa-star me-1"></i>Image principale';
+                label.className = 'form-label main-image-label';
+                removeBtn.disabled = true;
+            } else {
+                label.textContent = `Image ${index + 1}`;
+                label.className = 'form-label';
+                removeBtn.disabled = false;
+            }
+        });
+    }
+
+    // Supprimer couleur
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-color')) {
+            e.target.closest('.color-option').remove();
+        }
+    });
+
+    // Gestion des tailles
+    document.getElementById('add-size').addEventListener('click', function() {
+        const container = document.getElementById('sizes-container');
+        const newSize = document.createElement('div');
+        newSize.className = 'size-option mb-2';
+        newSize.innerHTML = `
+            <div class="row">
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="size_value[]" placeholder="Taille">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="size_label[]" placeholder="Description">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger remove-size">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newSize);
+    });
+
+    // Supprimer taille
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-size')) {
+            e.target.closest('.size-option').remove();
+        }
+    });
+
+    // Gestion des spécifications
+    document.getElementById('add-spec').addEventListener('click', function() {
+        const container = document.getElementById('specs-container');
+        const newSpec = document.createElement('div');
+        newSpec.className = 'spec-option mb-2';
+        newSpec.innerHTML = `
+            <div class="row">
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="spec_name[]" placeholder="Nom">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="spec_value[]" placeholder="Valeur">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger remove-spec">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newSpec);
+    });
+
+    // Supprimer spécification
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-spec')) {
+            e.target.closest('.spec-option').remove();
+        }
+    });
+
+    // Gestion des combinaisons de prix
+    document.getElementById('add-price-combination').addEventListener('click', function() {
+        const container = document.getElementById('price-combinations-container');
+        const combinationIndex = container.children.length;
+        const newCombination = document.createElement('div');
+        newCombination.className = 'price-combination mb-3 p-3 border rounded';
+        newCombination.innerHTML = `
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Couleur</label>
+                    <select class="form-control combination-color" name="combination_color[]">
+                        <option value="">Toutes les couleurs</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Taille</label>
+                    <select class="form-control combination-size" name="combination_size[]">
+                        <option value="">Toutes les tailles</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Prix (KMF)</label>
+                    <input type="number" class="form-control" name="combination_price[]" placeholder="Prix spécifique" min="0" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Action</label>
+                    <button type="button" class="btn btn-outline-danger w-100 remove-combination">
+                        <i class="fas fa-trash"></i> Supprimer
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newCombination);
+        updateCombinationSelects();
+    });
+
+    // Supprimer combinaison de prix
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-combination')) {
+            e.target.closest('.price-combination').remove();
+        }
+    });
+
+    // Fonction pour mettre à jour les sélecteurs de combinaisons
+    function updateCombinationSelects() {
+        // Récupérer toutes les couleurs actuelles
+        const colorInputs = document.querySelectorAll('input[name="color_name[]"]');
+        const colorOptions = Array.from(colorInputs)
+            .map(input => input.value.trim())
+            .filter(value => value !== '');
+
+        // Récupérer toutes les tailles actuelles
+        const sizeInputs = document.querySelectorAll('input[name="size_value[]"]');
+        const sizeOptions = Array.from(sizeInputs)
+            .map(input => input.value.trim())
+            .filter(value => value !== '');
+
+        // Mettre à jour tous les sélecteurs de couleur dans les combinaisons
+        document.querySelectorAll('.combination-color').forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Toutes les couleurs</option>';
+            colorOptions.forEach(color => {
+                const option = document.createElement('option');
+                option.value = color;
+                option.textContent = color;
+                if (color === currentValue) option.selected = true;
+                select.appendChild(option);
+            });
+        });
+
+        // Mettre à jour tous les sélecteurs de taille dans les combinaisons
+        document.querySelectorAll('.combination-size').forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Toutes les tailles</option>';
+            sizeOptions.forEach(size => {
+                const option = document.createElement('option');
+                option.value = size;
+                option.textContent = size;
+                if (size === currentValue) option.selected = true;
+                select.appendChild(option);
+            });
+        });
+    }
+
+    // Mettre à jour les combinaisons quand on modifie les couleurs ou tailles
+    document.addEventListener('input', function(e) {
+        if (e.target.name === 'color_name[]' || e.target.name === 'size_value[]') {
+            setTimeout(updateCombinationSelects, 100); // Petit délai pour laisser le temps à la valeur de se mettre à jour
+        }
+    });
+
+    // Charger les sous-catégories quand une catégorie est sélectionnée
+    document.getElementById('category_id').addEventListener('change', function() {
+        const categoryId = this.value;
+        const subcategorySelect = document.getElementById('subcategory_id');
+        
+        // Réinitialiser les sous-catégories
+        subcategorySelect.innerHTML = '<option value="">Choisir une sous-catégorie</option>';
+        
+        if (categoryId) {
+            // Charger les sous-catégories pour cette catégorie
+            fetch(`/api/subcategories/${categoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    data.subcategories.forEach(subcategory => {
+                        const option = document.createElement('option');
+                        option.value = subcategory.id;
+                        option.textContent = subcategory.name;
+                        subcategorySelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des sous-catégories:', error);
+                });
+        }
+    });
+});
+</script>
+{% endblock %}

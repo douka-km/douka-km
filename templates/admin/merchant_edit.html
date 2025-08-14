@@ -1,0 +1,259 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Modifier {{ merchant.store_name }} - Admin DOUKA KM{% endblock %}
+{% block page_title %}Modifier les informations du marchand{% endblock %}
+
+{% block admin_content %}
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_merchants') }}">Marchands</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_merchant_detail', merchant_id=merchant.id) }}">{{ merchant.store_name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Modifier</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        Modifier les informations de {{ merchant.store_name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="merchantEditForm">
+                        <!-- Informations personnelles -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-user me-2"></i>Informations personnelles</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="first_name" class="form-label">Prénom *</label>
+                                            <input type="text" class="form-control" id="first_name" name="first_name" 
+                                                   value="{{ merchant.first_name }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="last_name" class="form-label">Nom *</label>
+                                            <input type="text" class="form-control" id="last_name" name="last_name" 
+                                                   value="{{ merchant.last_name }}" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="phone" class="form-label">Téléphone *</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           value="{{ merchant.phone }}" required>
+                                    <div class="form-text">Format : +269 XX XX XX XX</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" value="{{ merchant.email }}" disabled>
+                                    <div class="form-text">L'adresse email ne peut pas être modifiée</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations de la boutique -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-store me-2"></i>Informations de la boutique</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="store_name" class="form-label">Nom de la boutique *</label>
+                                    <input type="text" class="form-control" id="store_name" name="store_name" 
+                                           value="{{ merchant.store_name }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="store_description" class="form-label">Description de la boutique</label>
+                                    <textarea class="form-control" id="store_description" name="store_description" 
+                                              rows="3" maxlength="500">{{ merchant.store_description }}</textarea>
+                                    <div class="form-text">Maximum 500 caractères</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="store_address" class="form-label">Adresse</label>
+                                    <input type="text" class="form-control" id="store_address" name="store_address" 
+                                           value="{{ merchant.store_address }}">
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="store_city" class="form-label">Ville</label>
+                                            <input type="text" class="form-control" id="store_city" name="store_city" 
+                                                   value="{{ merchant.store_city }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="store_region" class="form-label">Région</label>
+                                            <select class="form-select" id="store_region" name="store_region">
+                                                <option value="">Sélectionner une région</option>
+                                                <option value="grande-comore" {% if merchant.store_region == 'grande-comore' %}selected{% endif %}>
+                                                    Grande Comore
+                                                </option>
+                                                <option value="anjouan" {% if merchant.store_region == 'anjouan' %}selected{% endif %}>
+                                                    Anjouan
+                                                </option>
+                                                <option value="moheli" {% if merchant.store_region == 'moheli' %}selected{% endif %}>
+                                                    Mohéli
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statut de vérification -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>Statut de vérification</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="store_verified" name="store_verified" 
+                                           {% if merchant.store_verified %}checked{% endif %}>
+                                    <label class="form-check-label" for="store_verified">
+                                        <strong>Boutique vérifiée</strong>
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    Les boutiques vérifiées ont un badge de confiance et apparaissent en priorité dans les résultats
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations bancaires -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-university me-2"></i>Informations bancaires</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Ces informations sont utilisées pour les virements de solde
+                                </div>
+                                <div class="mb-3">
+                                    <label for="bank_name" class="form-label">Nom de la banque</label>
+                                    <input type="text" class="form-control" id="bank_name" name="bank_name" 
+                                           value="{{ merchant.bank_info.bank_name if merchant.bank_info else '' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="account_number" class="form-label">Numéro de compte</label>
+                                    <input type="text" class="form-control" id="account_number" name="account_number" 
+                                           value="{{ merchant.bank_info.account_number if merchant.bank_info else '' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="account_holder" class="form-label">Nom du titulaire</label>
+                                    <input type="text" class="form-control" id="account_holder" name="account_holder" 
+                                           value="{{ merchant.bank_info.account_holder if merchant.bank_info else '' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_merchant_detail', merchant_id=merchant.id) }}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer les modifications
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block admin_extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation du formulaire
+    const form = document.getElementById('merchantEditForm');
+    
+    form.addEventListener('submit', function(e) {
+        const requiredFields = ['first_name', 'last_name', 'phone', 'store_name'];
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            const input = document.getElementById(field);
+            const value = input.value.trim();
+            
+            if (!value) {
+                isValid = false;
+                input.classList.add('is-invalid');
+                
+                // Créer le message d'erreur s'il n'existe pas
+                let feedback = input.nextElementSibling;
+                if (!feedback || !feedback.classList.contains('invalid-feedback')) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'invalid-feedback';
+                    input.parentNode.insertBefore(feedback, input.nextSibling);
+                }
+                feedback.textContent = 'Ce champ est obligatoire';
+            } else {
+                input.classList.remove('is-invalid');
+                const feedback = input.nextElementSibling;
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    feedback.remove();
+                }
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            // Scroller vers le premier champ avec erreur
+            const firstError = document.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
+        }
+    });
+    
+    // Validation en temps réel
+    const inputs = document.querySelectorAll('input[required], textarea[required]');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                this.classList.remove('is-invalid');
+                const feedback = this.nextElementSibling;
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    feedback.remove();
+                }
+            }
+        });
+    });
+    
+    // Compteur de caractères pour la description
+    const description = document.getElementById('store_description');
+    const maxLength = 500;
+    
+    function updateCharCount() {
+        const remaining = maxLength - description.value.length;
+        const formText = description.parentNode.querySelector('.form-text');
+        formText.textContent = `${remaining} caractères restants (${description.value.length}/${maxLength})`;
+        
+        if (remaining < 50) {
+            formText.classList.add('text-warning');
+        } else {
+            formText.classList.remove('text-warning');
+        }
+    }
+    
+    description.addEventListener('input', updateCharCount);
+    updateCharCount(); // Initialiser le compteur
+});
+</script>
+{% endblock %}

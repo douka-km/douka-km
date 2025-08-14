@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block title %}Mon profil | DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Menu latéral -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Mon compte</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-user me-2"></i> Informations personnelles
+                    </a>
+                    <a href="{{ url_for('orders') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-box me-2"></i> Mes commandes
+                    </a>
+                    <a href="{{ url_for('addresses') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-map-marker-alt me-2"></i> Mes adresses
+                    </a>
+                    <a href="{{ url_for('wishlist') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-heart me-2"></i> Ma liste d'envies
+                    </a>
+                    <a href="{{ url_for('change_password') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-lock me-2"></i> Changer de mot de passe
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Mes informations personnelles</h4>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="edit-profile-btn">
+                        <i class="fas fa-edit me-1"></i> Modifier
+                    </button>
+                </div>
+                <div class="card-body">
+                    <!-- Alerte pour les messages de succès/erreur -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Mode affichage -->
+                    <div id="profile-view">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <p class="text-muted mb-1">Prénom</p>
+                                <p class="fw-bold">{{ user.first_name }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="text-muted mb-1">Nom</p>
+                                <p class="fw-bold">{{ user.last_name }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <p class="text-muted mb-1">Email</p>
+                                <p class="fw-bold">{{ user.email }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="text-muted mb-1">Téléphone</p>
+                                <p class="fw-bold">{{ user.phone }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h5>Adresse principale</h5>
+                            {% if user.address %}
+                                <p>{{ user.address }}</p>
+                                <p>{{ user.city }} - {{ user.region|capitalize }}</p>
+                            {% else %}
+                                <p class="text-muted">Aucune adresse enregistrée</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Mode édition -->
+                    <div id="profile-edit" style="display: none;">
+                        <form method="post" action="{{ url_for('profile') }}">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="first_name" class="form-label">Prénom</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="last_name" class="form-label">Nom</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" readonly>
+                                    <small class="text-muted">L'email ne peut pas être modifié</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="phone" class="form-label">Téléphone</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone }}" required>
+                                </div>
+                            </div>
+
+                            <h5 class="mt-4">Adresse principale</h5>
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Adresse</label>
+                                <input type="text" class="form-control" id="address" name="address" value="{{ user.address }}">
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="city" class="form-label">Ville</label>
+                                    <input type="text" class="form-control" id="city" name="city" value="{{ user.city }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="region" class="form-label">Région/Île</label>
+                                    <select class="form-select" id="region" name="region">
+                                        <option value="">Choisir...</option>
+                                        <option value="grande-comore" {% if user.region == 'grande-comore' %}selected{% endif %}>Grande Comore</option>
+                                        <option value="anjouan" {% if user.region == 'anjouan' %}selected{% endif %}>Anjouan</option>
+                                        <option value="moheli" {% if user.region == 'moheli' %}selected{% endif %}>Mohéli</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="d-flex mt-4">
+                                <button type="submit" class="btn btn-primary me-2">Enregistrer les modifications</button>
+                                <button type="button" class="btn btn-outline-secondary" id="cancel-edit-btn">Annuler</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques du compte (section facultative) -->
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card bg-light text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-shopping-cart fa-2x text-primary mb-3"></i>
+                            <h5>Commandes</h5>
+                            <p class="h2 mb-0">{{ user_stats.orders|default(0) }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-heart fa-2x text-danger mb-3"></i>
+                            <h5>Favoris</h5>
+                            <p class="h2 mb-0">{{ user_stats.wishlist|default(0) }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-star fa-2x text-warning mb-3"></i>
+                            <h5>Avis</h5>
+                            <p class="h2 mb-0">{{ user_stats.reviews|default(0) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Éléments du DOM
+        const profileView = document.getElementById('profile-view');
+        const profileEdit = document.getElementById('profile-edit');
+        const editBtn = document.getElementById('edit-profile-btn');
+        const cancelBtn = document.getElementById('cancel-edit-btn');
+        
+        // Basculer en mode édition
+        editBtn.addEventListener('click', function() {
+            profileView.style.display = 'none';
+            profileEdit.style.display = 'block';
+            editBtn.style.display = 'none';
+        });
+        
+        // Annuler l'édition
+        cancelBtn.addEventListener('click', function() {
+            profileView.style.display = 'block';
+            profileEdit.style.display = 'none';
+            editBtn.style.display = 'inline-block';
+        });
+    });
+</script>
+{% endblock %}

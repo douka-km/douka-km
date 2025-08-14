@@ -1,0 +1,748 @@
+{% extends 'base.html' %}
+
+{% block title %}Détails de la commande #{{ order['order_number'] }} | DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Menu latéral -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Mon compte</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user me-2"></i> Informations personnelles
+                    </a>
+                    <a href="{{ url_for('orders') }}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-box me-2"></i> Mes commandes
+                    </a>
+                    <a href="{{ url_for('addresses') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-map-marker-alt me-2"></i> Mes adresses
+                    </a>
+                    <a href="{{ url_for('wishlist') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-heart me-2"></i> Ma liste d'envies
+                    </a>
+                    <a href="{{ url_for('change_password') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-lock me-2"></i> Changer de mot de passe
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="col-md-9">
+            <nav aria-label="breadcrumb" class="d-print-none">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('orders') }}">Mes commandes</a></li>
+                    <li class="breadcrumb-item active">{{ order['order_number'] }}</li>
+                </ol>
+            </nav>
+
+            <!-- Carte d'état de la commande -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body status-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="mb-1">Commande #{{ order['order_number'] }}</h3>
+                            <p class="text-muted mb-2">Passée le {{ order['date'] }}</p>
+                            <div class="d-flex align-items-center">
+                                <span class="status-indicator bg-{{ order['status_color'] }}"></span>
+                                <span class="status-text ms-2">{{ order['status_text'] }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <button onclick="printOrderDetails()" class="btn btn-sm btn-outline-secondary me-2 d-print-none">
+                                <i class="fas fa-print"></i> Imprimer
+                            </button>
+                            <a href="{{ url_for('orders') }}" class="btn btn-sm btn-outline-primary d-print-none">
+                                <i class="fas fa-arrow-left"></i> Retour aux commandes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suivi de la commande - design amélioré -->
+            <div class="card shadow-sm mb-4 d-print-none">
+                <div class="card-body p-0">
+                    <div class="order-tracking-new">
+                        <div class="step-container{% if order['status'] in ['processing', 'shipped', 'delivered'] %} completed{% endif %}">
+                            <div class="step">
+                                <div class="step-icon">
+                                    <i class="fas fa-clipboard-check"></i>
+                                </div>
+                                <div class="step-date">{{ order['date'] }}</div>
+                            </div>
+                            <div class="step-label">Commande confirmée</div>
+                        </div>
+                        
+                        <div class="step-container{% if order['status'] in ['processing', 'shipped', 'delivered'] %} completed{% endif %}{% if order['status'] == 'processing' %} current{% endif %}">
+                            <div class="step">
+                                <div class="step-icon">
+                                    <i class="fas fa-box"></i>
+                                </div>
+                                <div class="step-date">{% if order['processing_date'] %}{{ order['processing_date'] }}{% else %}--{% endif %}</div>
+                            </div>
+                            <div class="step-label">En préparation</div>
+                        </div>
+                        
+                        <div class="step-container{% if order['status'] in ['shipped', 'delivered'] %} completed{% endif %}{% if order['status'] == 'shipped' %} current{% endif %}">
+                            <div class="step">
+                                <div class="step-icon">
+                                    <i class="fas fa-shipping-fast"></i>
+                                </div>
+                                <div class="step-date">{% if order['shipping_date'] %}{{ order['shipping_date'] }}{% else %}--{% endif %}</div>
+                            </div>
+                            <div class="step-label">Expédiée</div>
+                        </div>
+                        
+                        <div class="step-container{% if order['status'] == 'delivered' %} completed current{% endif %}">
+                            <div class="step">
+                                <div class="step-icon">
+                                    <i class="fas fa-home"></i>
+                                </div>
+                                <div class="step-date">{% if order['delivery_date'] %}{{ order['delivery_date'] }}{% else %}--{% endif %}</div>
+                            </div>
+                            <div class="step-label">Livrée</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <!-- Colonne d'informations sur la commande -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="info-section mb-4">
+                                <h5 class="section-title">Adresse de livraison</h5>
+                                <div class="address-card">
+                                    <p class="mb-1"><strong>{{ order['shipping_address']['full_name'] }}</strong></p>
+                                    <p class="mb-1">{{ order['shipping_address']['street'] }}</p>
+                                    <p class="mb-1">{{ order['shipping_address']['city'] }}, {{ order['shipping_address']['region']|capitalize }}</p>
+                                    <p class="mb-1">Tél: {{ order['shipping_address']['phone'] }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="info-section">
+                                <h5 class="section-title">Informations de paiement</h5>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <p class="detail-label">Méthode de paiement</p>
+                                        <p class="detail-value">{{ order['payment_method'] }}</p>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <p class="detail-label">Statut du paiement</p>
+                                        <p class="detail-value">
+                                            <span class="badge bg-{{ 'success' if order['payment_status'] == 'completed' else 'warning' }}">
+                                                {{ 'Payé' if order['payment_status'] == 'completed' else 'En attente' }}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div class="col-sm-12 mt-2">
+                                        <p class="detail-label">Méthode de livraison</p>
+                                        <p class="detail-value">{{ order['shipping_method'] }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Résumé de la commande -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="section-title">Résumé de la commande</h5>
+                            <div class="order-summary">
+                                <div class="summary-row">
+                                    <span>Sous-total</span>
+                                    <span>{{ order['subtotal'] | format_number }} KMF</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Frais de livraison</span>
+                                    <span>{{ order['shipping_fee'] | format_number }} KMF</span>
+                                </div>
+                                {% if order['discount'] > 0 %}
+                                <div class="summary-row">
+                                    <span>Réduction</span>
+                                    <span>-{{ order['discount'] | format_number }} KMF</span>
+                                </div>
+                                {% endif %}
+                                <div class="summary-row total">
+                                    <span>Total</span>
+                                    <span>{{ order['total'] | format_number }} KMF</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Articles commandés - Design repensé -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Articles commandés</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="order-items">
+                        {% for item in order['items'] %}
+                        <div class="order-item">
+                            <div class="order-item-image">
+                                {% if item['image'] %}
+                                    {% if item['image'].startswith('http') %}
+                                        <!-- Image via URL -->
+                                        <img src="{{ item['image'] }}" 
+                                             alt="{{ item['name'] }}" 
+                                             class="img-thumbnail"
+                                             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit';">
+                                    {% else %}
+                                        <!-- Image locale -->
+                                        <img src="{{ url_for('static', filename=item['image'].replace('static/', '') if item['image'].startswith('static/') else item['image']) }}" 
+                                             alt="{{ item['name'] }}" 
+                                             class="img-thumbnail"
+                                             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit';">
+                                    {% endif %}
+                                {% else %}
+                                    <!-- Image placeholder -->
+                                    <img src="https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit" 
+                                         alt="Aucune image" 
+                                         class="img-thumbnail">
+                                {% endif %}
+                            </div>
+                            <div class="order-item-details">
+                                <h6 class="item-name">{{ item['name'] }}</h6>
+                                {% if 'options' in item and item['options'] %}
+                                <div class="item-options">
+                                    {% for key, value in item['options'].items() %}
+                                        {% if key == 'color' %}
+                                        <span class="option-badge badge bg-primary text-white me-1">
+                                            <i class="fas fa-palette me-1"></i>{{ value }}
+                                        </span>
+                                        {% elif key == 'size' %}
+                                        <span class="option-badge badge bg-success text-white me-1">
+                                            <i class="fas fa-ruler me-1"></i>{{ value }}
+                                        </span>
+                                        {% elif key == 'storage' %}
+                                        <span class="option-badge badge bg-info text-white me-1">
+                                            <i class="fas fa-hdd me-1"></i>{{ value }}
+                                        </span>
+                                        {% else %}
+                                        <span class="option-badge badge bg-secondary text-white me-1">{{ key }}: {{ value }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="order-item-price">
+                                <div class="price">{{ item['price'] | format_number }} KMF</div>
+                                <div class="quantity">x {{ item['quantity'] }}</div>
+                            </div>
+                            <div class="order-item-total">
+                                {{ item['subtotal'] | format_number }} KMF
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boutons d'actions -->
+            <div class="d-flex justify-content-between mt-4 d-print-none">
+                <a href="{{ url_for('orders') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Retour à mes commandes
+                </a>
+
+                <div>
+                    {% if order['status'] == 'processing' %}
+                    <button type="button" class="btn btn-outline-danger me-2" id="cancel-order-btn" onclick="checkAndCancelOrder({{ order['id'] }})">
+                        <i class="fas fa-times me-2"></i> Annuler la commande
+                    </button>
+                    <div id="cancellation-message" class="mt-2" style="display: none;"></div>
+                    {% endif %}
+                    {% if order['status'] == 'delivered' %}
+                    <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reviewModal">
+                        <i class="fas fa-star me-2"></i> Évaluer les produits
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'évaluation -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reviewModalLabel">Évaluer les produits</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="review-form" action="{{ url_for('submit_order_review') }}" method="POST">
+                    <input type="hidden" name="order_id" value="{{ order['id'] }}">
+                    {% for item in order['items'] %}
+                    <div class="mb-4" data-product-id="{{ item.get('id', item.get('product_id')) }}">
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="{{ item.get('image', '') }}" alt="{{ item['name'] }}" class="img-fluid rounded" width="50">
+                            <h6 class="mb-0 ms-3">{{ item['name'] }}</h6>
+                        </div>
+                        <div class="rating">
+                            <input type="radio" id="star5-{{ loop.index }}" name="rating-{{ loop.index }}" value="5" />
+                            <label for="star5-{{ loop.index }}"><i class="far fa-star"></i></label>
+                            <input type="radio" id="star4-{{ loop.index }}" name="rating-{{ loop.index }}" value="4" />
+                            <label for="star4-{{ loop.index }}"><i class="far fa-star"></i></label>
+                            <input type="radio" id="star3-{{ loop.index }}" name="rating-{{ loop.index }}" value="3" />
+                            <label for="star3-{{ loop.index }}"><i class="far fa-star"></i></label>
+                            <input type="radio" id="star2-{{ loop.index }}" name="rating-{{ loop.index }}" value="2" />
+                            <label for="star2-{{ loop.index }}"><i class="far fa-star"></i></label>
+                            <input type="radio" id="star1-{{ loop.index }}" name="rating-{{ loop.index }}" value="1" />
+                            <label for="star1-{{ loop.index }}"><i class="far fa-star"></i></label>
+                        </div>
+                        <textarea class="form-control mt-2 review-comment" rows="3" placeholder="Partagez votre avis sur ce produit (optionnel)"></textarea>
+                    </div>
+                    {% endfor %}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="submitOrderReviewsFromDetail()">Soumettre</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Status Card */
+    .status-card {
+        border-left: 4px solid var(--bs-primary);
+    }
+    .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    .status-text {
+        font-weight: 500;
+    }
+    
+    /* Sections d'information */
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #eee;
+    }
+    .info-section {
+        margin-bottom: 20px;
+    }
+    .detail-label {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+    }
+    .detail-value {
+        font-weight: 500;
+        margin-bottom: 12px;
+    }
+    .address-card {
+        background-color: #f8f9fa;
+        padding: 12px;
+        border-radius: 4px;
+    }
+
+    /* Order Summary */
+    .order-summary {
+        padding-top: 8px;
+    }
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .summary-row.total {
+        font-weight: bold;
+        border-top: 2px solid #dee2e6;
+        margin-top: 8px;
+        border-bottom: none;
+    }
+
+    /* Order Items */
+    .order-items {
+        position: relative;
+    }
+    .order-item {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .order-item:last-child {
+        border-bottom: none;
+    }
+    .order-item-image {
+        width: 80px;
+        flex-shrink: 0;
+    }
+    .order-item-image img {
+        width: 100%;
+    }
+    .order-item-details {
+        flex-grow: 1;
+        padding: 0 16px;
+    }
+    .item-name {
+        margin-bottom: 8px;
+    }
+    .item-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .option-badge {
+        font-size: 0.8rem;
+        background-color: #f0f0f0;
+        padding: 2px 8px;
+        border-radius: 12px;
+        white-space: nowrap;
+    }
+    .order-item-price {
+        width: 120px;
+        text-align: right;
+    }
+    .order-item-price .price {
+        font-weight: 500;
+    }
+    .order-item-price .quantity {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .order-item-total {
+        width: 120px;
+        text-align: right;
+        font-weight: 600;
+    }
+
+    /* Nouveau design de suivi de commande */
+    .order-tracking-new {
+        display: flex;
+        justify-content: space-between;
+        padding: 20px 40px;
+        position: relative;
+    }
+    .order-tracking-new::before {
+        content: '';
+        position: absolute;
+        top: 50px;
+        left: 60px;
+        right: 60px;
+        height: 4px;
+        background-color: #e9ecef;
+        z-index: 1;
+    }
+    .step-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+    }
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .step-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #f8f9fa;
+        border: 4px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+        position: relative;
+    }
+    .step-date {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .step-label {
+        font-weight: 500;
+        margin-top: 8px;
+        white-space: nowrap;
+    }
+    .step-container.completed .step-icon {
+        background-color: var(--bs-success);
+        border-color: var(--bs-success);
+        color: white;
+    }
+    .step-container.current .step-icon {
+        border-color: var(--bs-primary);
+        color: var(--bs-primary);
+        border-width: 6px;
+    }
+    .step-container.completed .step-label {
+        color: var(--bs-success);
+    }
+    .step-container.current .step-label {
+        color: var(--bs-primary);
+        font-weight: 600;
+    }
+
+    /* Styles pour l'impression */
+    @media print {
+        body {
+            padding: 0;
+            margin: 0;
+            font-size: 12pt;
+        }
+        
+        .d-print-none, .col-md-3, .breadcrumb, button, a.btn {
+            display: none !important;
+        }
+        
+        .container, .row, .col-md-9, .col-lg-6 {
+            width: 100% !important;
+            max-width: 100% !important;
+            flex: 0 0 100% !important;
+            padding: 0 !important;
+            margin-bottom: 15px !important;
+        }
+        
+        .card, .shadow-sm {
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+            margin-bottom: 15px !important;
+        }
+        
+        .order-tracking-new::before {
+            display: none;
+        }
+        
+        .order-item {
+            break-inside: avoid;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function printOrderDetails() {
+        window.print();
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Système d'évaluation des produits
+        const ratings = document.querySelectorAll('.rating input');
+        ratings.forEach(input => {
+            input.addEventListener('change', function() {
+                const parentRating = this.closest('.rating');
+                const stars = parentRating.querySelectorAll('label i');
+                
+                // Réinitialiser toutes les étoiles
+                stars.forEach(star => star.className = 'far fa-star');
+                
+                // Remplir les étoiles jusqu'à la note sélectionnée
+                const value = parseInt(this.value);
+                for (let i = 0; i < value; i++) {
+                    stars[4 - i].className = 'fas fa-star';
+                }
+            });
+        });
+    });
+    
+    // Fonction pour soumettre les avis d'une commande depuis la page de détail
+    function submitOrderReviewsFromDetail() {
+        const form = document.getElementById('review-form');
+        const products = form.querySelectorAll('[data-product-id]');
+        const reviews = [];
+        const orderId = form.querySelector('input[name="order_id"]').value;
+        
+        // Collecter les données de chaque produit
+        products.forEach((productDiv, index) => {
+            const productId = productDiv.getAttribute('data-product-id');
+            const ratingInput = productDiv.querySelector('input[type="radio"]:checked');
+            const commentTextarea = productDiv.querySelector('.review-comment');
+            
+            if (ratingInput) {
+                reviews.push({
+                    product_id: productId,
+                    rating: parseInt(ratingInput.value),
+                    comment: commentTextarea.value.trim()
+                });
+            }
+        });
+        
+        if (reviews.length === 0) {
+            alert('Veuillez donner au moins une note avant de soumettre.');
+            return;
+        }
+        
+        // Désactiver le bouton
+        const submitBtn = document.querySelector('#reviewModal .btn-primary');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Envoi en cours...';
+        
+        // Envoyer les données
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                reviews: reviews
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fermer le modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('reviewModal'));
+                modal.hide();
+                
+                // Afficher un message de succès
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
+                
+                // Cacher le bouton d'évaluation
+                const evaluateBtn = document.querySelector('button[data-bs-target="#reviewModal"]');
+                if (evaluateBtn) {
+                    evaluateBtn.style.display = 'none';
+                    // Ajouter un badge "Évalué"
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-success ms-2';
+                    badge.textContent = 'Évalué';
+                    evaluateBtn.parentNode.appendChild(badge);
+                }
+            } else {
+                throw new Error(data.message || 'Erreur lors de l\'envoi des avis');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert(error.message || 'Erreur lors de l\'envoi des avis. Veuillez réessayer.');
+        })
+        .finally(() => {
+            // Réactiver le bouton
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        });
+    }
+    
+    // Fonction pour vérifier et annuler une commande
+    function checkAndCancelOrder(orderId) {
+        const cancelBtn = document.getElementById('cancel-order-btn');
+        const messageDiv = document.getElementById('cancellation-message');
+        
+        // Vérifier d'abord si la commande peut être annulée
+        fetch(`/api/order/${orderId}/can-cancel`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.message || 'Erreur lors de la vérification');
+            }
+            
+            if (!data.can_cancel) {
+                // La commande ne peut pas être annulée
+                messageDiv.className = 'alert alert-warning mt-2';
+                messageDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${data.reason}
+                `;
+                messageDiv.style.display = 'block';
+                
+                // Désactiver le bouton d'annulation
+                cancelBtn.disabled = true;
+                cancelBtn.innerHTML = '<i class="fas fa-ban me-2"></i> Annulation non autorisée';
+                cancelBtn.className = 'btn btn-secondary me-2';
+                
+                return;
+            }
+            
+            // La commande peut être annulée, procéder avec la confirmation
+            const paymentInfo = data.payment_info;
+            let confirmMessage = 'Êtes-vous sûr de vouloir annuler cette commande ?';
+            
+            if (paymentInfo && paymentInfo.allows_cancellation) {
+                confirmMessage += '\n\nCette action ne peut pas être annulée.';
+            }
+            
+            if (confirm(confirmMessage)) {
+                cancelOrderFromDetail(orderId);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            messageDiv.className = 'alert alert-danger mt-2';
+            messageDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle me-2"></i>
+                ${error.message || 'Erreur lors de la vérification de la commande'}
+            `;
+            messageDiv.style.display = 'block';
+        });
+    }
+    
+    // Fonction pour annuler une commande depuis la page de détail
+    function cancelOrderFromDetail(orderId) {
+        
+        // Envoyer la requête d'annulation
+        fetch(`/cancel-order/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Afficher un message de succès
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
+                
+                // Rediriger vers la page des commandes après 2 secondes
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('orders') }}";
+                }, 2000);
+            } else {
+                throw new Error(data.message || 'Erreur lors de l\'annulation de la commande');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert(error.message || 'Erreur lors de l\'annulation. Veuillez réessayer.');
+        });
+    }
+</script>
+{% endblock %}

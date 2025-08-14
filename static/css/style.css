@@ -1,0 +1,1376 @@
+/* Custom styles for DOUKA KM e-commerce */
+
+:root {
+    --primary-color: #1a237e;
+    --secondary-color: #03a9f4;
+    --accent-color: #ff9800;
+    --green-comoros: #3d9c35;
+    --yellow-comoros: #ffd700;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    color: #333;
+}
+
+/* Navbar styling */
+.navbar-dark.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+/* Logo styling - improved visibility */
+.navbar-logo {
+    max-height: 40px;
+    width: auto;
+    margin-right: 10px;
+    /* Remove the filter if it makes your logo invisible */
+    /* filter: brightness(0) invert(1); */
+    transition: transform 0.3s ease;
+    display: inline-block !important; /* Ensure visibility */
+}
+
+.navbar-brand:hover .navbar-logo {
+    transform: rotate(10deg);
+}
+
+/* Hero section */
+.hero-section {
+    margin-bottom: 2rem;
+}
+
+.hero-section .carousel-item {
+    height: 500px;
+}
+
+.hero-section .carousel-item img {
+    object-fit: cover;
+    height: 100%;
+    filter: brightness(0.7);
+}
+
+.carousel-caption {
+    bottom: 30%;
+}
+
+.carousel-caption h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+}
+
+.carousel-caption p {
+    font-size: 1.5rem;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Featured products */
+.featured-products h2,
+.features h2,
+.categories h2 {
+    position: relative;
+    padding-bottom: 15px;
+}
+
+.featured-products h2::after,
+.features h2::after,
+.categories h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background-color: var(--accent-color);
+}
+
+/* Style pour la section des produits recommandés */
+.personalized-products h2 {
+    position: relative;
+    padding-bottom: 15px;
+}
+
+.personalized-products h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background-color: var(--secondary-color); /* Couleur différente pour distinguer cette section */
+}
+
+.personalized-products .card {
+    border: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+}
+
+.personalized-products .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.personalized-products .card-img-top {
+    height: 180px;
+    object-fit: cover;
+}
+
+/* Feature boxes */
+.feature-box {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+    height: 100%;
+}
+
+.feature-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+/* Category cards */
+.categories .card {
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.categories .card img {
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.categories .card:hover img {
+    transform: scale(1.05);
+}
+
+/* Styles pour la barre de catégories et sous-catégories */
+.category-nav {
+    position: relative;
+    z-index: 100;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    overflow: visible !important;
+}
+
+.category-wrapper {
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible !important;
+    white-space: nowrap;
+}
+
+/* Style de la liste principale de catégories */
+.category-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.category-item {
+    position: relative !important;
+    text-align: center;
+    flex: 1 1 auto;
+}
+
+.category-link {
+    display: block;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+    cursor: pointer; /* Indiquer que c'est cliquable */
+}
+
+.category-link i {
+    display: block;
+    margin: 0 auto 5px;
+    font-size: 1.2rem;
+}
+
+.category-link:hover {
+    color: var(--primary-color);
+}
+
+/* Sous-catégories - comportement au clic au lieu du survol */
+.subcategory-menu {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0;
+    z-index: 9999 !important;
+    width: 650px !important;
+    max-width: 90vw !important;
+    background-color: #fff !important;
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+    display: none;
+    text-align: left;
+}
+
+/* Supprimer le comportement au survol */
+.category-item:hover .subcategory-menu {
+    display: none;
+}
+
+/* Ajouter le comportement au clic */
+.category-item.active .subcategory-menu {
+    display: block !important;
+}
+
+/* Ajouter un style pour indiquer que c'est cliquable */
+.category-link {
+    cursor: pointer;
+}
+
+/* En-tête de sous-catégories */
+.subcategory-header {
+    background-color: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 4px 4px 0 0;
+}
+
+.subcategory-header h5 {
+    margin-bottom: 5px;
+    color: #1a237e;
+}
+
+.subcategory-header p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Contenu des sous-catégories */
+.subcategory-content {
+    padding: 20px;
+}
+
+.subcategory-group {
+    margin-bottom: 15px;
+}
+
+.subcategory-group h6 {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.subcategory-group h6 i {
+    margin-right: 5px;
+    color: var(--primary-color);
+}
+
+.subcategory-group ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.subcategory-group ul li {
+    margin-bottom: 6px;
+}
+
+.subcategory-group ul li a {
+    color: #495057;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: block;
+    padding: 3px 0;
+}
+
+.subcategory-group ul li a:hover {
+    color: #1a237e;
+}
+
+.subcategory-footer {
+    padding-top: 10px;
+    margin-top: 10px;
+    text-align: center;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Correction pour les menus qui débordent à droite */
+@media (min-width: 992px) {
+    .category-item:nth-child(n+3) .subcategory-menu {
+        left: auto;
+        right: 0;
+    }
+}
+
+@media (min-width: 992px) {
+    .category-list {
+        justify-content: space-evenly;
+    }
+    
+    .category-item {
+        padding: 0 10px;
+    }
+}
+
+/* Ajustement pour les appareils mobiles */
+@media (max-width: 991px) {
+    .subcategory-menu {
+        display: none !important;
+    }
+    
+    .category-item:hover .subcategory-menu {
+        display: none !important;
+    }
+    
+    .category-list {
+        justify-content: flex-start;
+        padding: 5px 0;
+    }
+    
+    .category-item {
+        flex: 0 0 auto;
+        min-width: 100px;
+        text-align: center;
+    }
+    
+    .category-link {
+        padding: 10px 8px;
+        color: #333;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .category-link:active {
+        background-color: rgba(0,0,0,0.05);
+    }
+    
+    .category-link i {
+        display: block;
+        margin: 0 auto 5px;
+        font-size: 1.2rem;
+        color: var(--primary-color);
+    }
+    
+    .mobile-toggle, 
+    .mobile-toggle-btn {
+        display: none !important;
+    }
+    
+    .category-wrapper {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 5px; /* Pour éviter que le texte soit coupé */
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    
+    .category-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Améliorations pour la navigation mobile des catégories */
+    .category-link {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .category-item {
+        position: relative;
+        cursor: pointer;
+    }
+    
+    /* Augmenter la zone cliquable */
+    .category-item .category-link:after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 5;
+    }
+    
+    /* État actif pour la catégorie sélectionnée */
+    .category-item.active {
+        background-color: rgba(0,0,0,0.05);
+    }
+    
+    /* Améliorer le contraste des icônes */
+    .category-link i {
+        font-size: 1.4rem;
+        margin-bottom: 8px;
+        color: var(--primary-color);
+    }
+}
+
+/* Ajustements pour petits écrans */
+@media (max-width: 576px) {
+    .category-link i {
+        margin-bottom: 2px;
+        font-size: 1rem;
+    }
+    
+    .category-link {
+        font-size: 0.8rem;
+        padding: 8px 5px;
+    }
+}
+
+/* Styles pour le menu mobile slide-in */
+.offcanvas-menu {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 280px;
+    height: 100%;
+    background: #fff;
+    z-index: 2000;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+    overflow-y: auto;
+}
+
+.offcanvas-menu.active {
+    left: 0;
+}
+
+.offcanvas-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--primary-color);
+    color: white;
+}
+
+.offcanvas-body {
+    padding: 0;
+}
+
+.mobile-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1999;
+    display: none;
+}
+
+.mobile-menu-overlay.active {
+    display: block;
+}
+
+.offcanvas-menu .navbar-nav {
+    padding: 0;
+}
+
+.offcanvas-menu .nav-item {
+    border-bottom: 1px solid #eee;
+}
+
+.offcanvas-menu .nav-link {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    color: #333;
+}
+
+.offcanvas-menu .nav-link i {
+    margin-right: 15px;
+    width: 20px;
+    text-align: center;
+}
+
+.offcanvas-menu .btn {
+    margin: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.offcanvas-menu .btn i {
+    margin-right: 10px;
+}
+
+/* Styles pour les notifications toast */
+.toast-container {
+    z-index: 11000;
+}
+
+.toast {
+    opacity: 1 !important;
+    background-color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 8px;
+    min-width: 280px;
+}
+
+.toast-header {
+    border-radius: 8px 8px 0 0;
+    border-bottom: none;
+    padding: 12px 15px;
+}
+
+.toast-header .btn-close {
+    margin-right: -8px;
+}
+
+.toast-body {
+    padding: 15px;
+    font-size: 14px;
+}
+
+/* Animation pour le toast */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 20px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.toast.showing {
+    animation: fadeInUp 0.3s ease;
+}
+
+/* Styles pour le compteur du panier */
+.cart-count {
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* Correction pour l'affichage mobile */
+@media (max-width: 991px) {
+    .cart-count {
+        position: relative !important;
+        top: -0.5em !important;
+        display: inline-block !important;
+        transform: none !important;
+    }
+    
+    .btn .cart-count {
+        margin-left: 5px;
+        margin-right: -5px;
+    }
+    
+    #mobile-menu .cart-count {
+        position: relative;
+        display: inline;
+        top: -1px;
+    }
+}
+
+/* Styles pour les options de paiement */
+.payment-option {
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.payment-option:hover {
+    border-color: #adb5bd;
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.payment-option.selected {
+    border-color: var(--primary-color);
+    background-color: rgba(26, 35, 126, 0.05);
+}
+
+.payment-option label {
+    cursor: pointer;
+    margin-bottom: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.payment-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.payment-method-details {
+    background-color: #f9f9f9;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Styles pour les notifications d'erreur */
+.toast.toast-error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.toast.toast-error .toast-header {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Styles pour les détails d'option dans le panier */
+.product-options {
+    margin-bottom: 5px;
+}
+
+.product-options div {
+    margin-bottom: 2px;
+}
+
+.product-options strong {
+    color: #666;
+}
+
+/* Style pour les cartes des produits dans le panier */
+.cart-item {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 0.5rem;
+    transition: box-shadow 0.3s ease;
+}
+
+.cart-item:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Styles pour la page de détail de commande */
+.order-tracking {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+    position: relative;
+}
+
+.order-tracking::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #dee2e6;
+    z-index: 1;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+}
+
+.step .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 10px;
+}
+
+.step.active .icon {
+    background: var(--bs-success);
+}
+
+.step .details {
+    text-align: center;
+}
+
+.step .date {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.step .title {
+    font-weight: 500;
+}
+
+/* Styles pour le système d'évaluation */
+.rating {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+
+.rating input {
+    display: none;
+}
+
+.rating label {
+    color: #ddd;
+    font-size: 24px;
+    padding: 0 3px;
+    cursor: pointer;
+}
+
+.rating input:checked ~ label,
+.rating label:hover,
+.rating label:hover ~ label {
+    color: #ffc107;
+}
+
+/* Styles pour les pages d'authentification */
+.authentication-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.authentication-wrapper main {
+    flex: 1;
+}
+
+.authentication-wrapper .card {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.authentication-wrapper .card-header {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+/* Modifier l'apparence des boutons sur les pages d'authentification */
+.authentication-wrapper .btn-primary {
+    padding: 0.75rem 1.5rem;
+}
+
+.authentication-wrapper .btn-outline-primary {
+    padding: 0.75rem 1.5rem;
+}
+
+/* Animation pour le logo */
+.authentication-wrapper img {
+    transition: transform 0.3s ease;
+}
+
+.authentication-wrapper img:hover {
+    transform: scale(1.05);
+}
+
+/* Footer pour les pages d'authentification */
+.authentication-wrapper footer {
+    margin-top: auto;
+}
+
+/* Media queries pour l'adaptabilité mobile */
+@media (max-width: 576px) {
+    .authentication-wrapper .card {
+        border-radius: 0;
+    }
+    
+    .authentication-wrapper .container {
+        padding: 0;
+    }
+    
+    .authentication-wrapper .card {
+        box-shadow: none !important;
+    }
+}
+
+/* ====================================
+   FOOTER STYLES
+   ==================================== */
+
+/* Newsletter Section */
+.newsletter-section {
+    position: relative;
+    overflow: hidden;
+}
+
+.newsletter-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+    opacity: 0.3;
+}
+
+.newsletter-content,
+.newsletter-form {
+    position: relative;
+    z-index: 1;
+}
+
+.newsletter-form .input-group {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+.newsletter-form .form-control {
+    border: none;
+    padding: 15px 20px;
+    font-size: 16px;
+}
+
+.newsletter-form .btn {
+    border: none;
+    padding: 15px 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.newsletter-form .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+/* Main Footer */
+.main-footer {
+    position: relative;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+}
+
+.footer-widget {
+    padding: 0 20px; /* Augmentation du padding horizontal pour plus d'espace */
+}
+
+.footer-title {
+    font-size: 20px; /* Augmentation de 18px à 20px */
+    font-weight: 700;
+    margin-bottom: 20px;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.footer-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 30px;
+    height: 3px;
+    background: linear-gradient(45deg, #ffc107, #ff9800);
+    border-radius: 2px;
+}
+
+.footer-links {
+    margin: 0;
+    padding: 0;
+}
+
+.footer-links li {
+    margin-bottom: 12px; /* Augmentation de 8px à 12px */
+    transition: all 0.3s ease;
+}
+
+.footer-link {
+    color: #bdc3c7 !important;
+    text-decoration: none;
+    font-size: 16px; /* Augmentation de 14px à 16px */
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.footer-link:hover {
+    color: #ffc107 !important;
+    transform: translateX(5px);
+}
+
+.footer-link i {
+    font-size: 12px; /* Augmentation de 10px à 12px */
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+.footer-link:hover i {
+    opacity: 1;
+    color: #ffc107;
+}
+
+/* Social Links */
+.social-links {
+    display: flex;
+    gap: 10px;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    color: #bdc3c7 !important;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.social-link:hover {
+    background: #ffc107;
+    color: #2c3e50 !important;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(255,193,7,0.3);
+}
+
+/* Contact Info */
+.contact-item {
+    display: flex;
+    align-items: flex-start;
+    color: #bdc3c7;
+    font-size: 16px; /* Augmentation de 14px à 16px */
+    line-height: 1.8; /* Augmentation de 1.6 à 1.8 pour plus d'espace */
+    margin-bottom: 15px; /* Ajout d'un margin-bottom pour plus d'espace */
+}
+
+.contact-item i {
+    margin-top: 2px;
+    width: 22px; /* Augmentation de 20px à 22px */
+    flex-shrink: 0;
+    font-size: 16px; /* Ajout d'une taille explicite pour les icônes */
+}
+
+/* Description de l'entreprise */
+.footer-widget p.text-light {
+    font-size: 15px; /* Augmentation de la taille par défaut */
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+
+/* Logo et nom de l'entreprise */
+.footer-widget .footer-logo h5 {
+    font-size: 22px; /* Augmentation pour le nom de l'entreprise */
+}
+
+/* Payment Methods */
+.payment-methods {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.payment-icon {
+    height: 30px;
+    width: auto;
+    background: white;
+    padding: 5px;
+    border-radius: 5px;
+    transition: transform 0.3s ease;
+}
+
+.payment-icon:hover {
+    transform: scale(1.1);
+}
+
+/* Guarantees */
+.guarantees {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.badge.bg-outline-warning {
+    background: transparent !important;
+    border: 1px solid #ffc107;
+    color: #ffc107;
+    transition: all 0.3s ease;
+}
+
+.badge.bg-outline-warning:hover {
+    background: #ffc107 !important;
+    color: #2c3e50;
+}
+
+/* Bottom Footer */
+.bottom-footer {
+    background: #1a252f !important;
+}
+
+.footer-legal a {
+    color: #bdc3c7;
+    text-decoration: none;
+    font-size: 13px;
+    transition: color 0.3s ease;
+}
+
+.footer-legal a:hover {
+    color: #ffc107;
+}
+
+/* Footer Responsive */
+@media (max-width: 768px) {
+    .newsletter-section .row {
+        text-align: center;
+    }
+    
+    .newsletter-content {
+        margin-bottom: 20px;
+    }
+    
+    .footer-widget {
+        margin-bottom: 40px;
+        text-align: center;
+    }
+    
+    .social-links {
+        justify-content: center;
+    }
+    
+    .payment-methods,
+    .guarantees {
+        justify-content: center;
+    }
+    
+    .bottom-footer .row {
+        text-align: center;
+    }
+    
+    .footer-legal {
+        margin-top: 15px;
+    }
+    
+    /* Sur mobile, centrer tous les éléments */
+    .main-footer .row.justify-content-center .col-md-6 .footer-widget {
+        text-align: center !important;
+    }
+    
+    .footer-widget .contact-item {
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+@media (min-width: 992px) {
+    /* Améliorer l'espacement sur desktop */
+    .main-footer .row.justify-content-center {
+        align-items: flex-start;
+    }
+    
+    /* Espacement vertical uniforme avec plus d'espace */
+    .footer-widget {
+        min-height: 300px; /* Augmentation de 280px à 300px */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 0 25px; /* Augmentation du padding horizontal */
+    }
+    
+    /* Alignement à gauche pour la section DOUKA KM */
+    .main-footer .row.justify-content-center .col-md-6:first-child .footer-widget {
+        text-align: left;
+    }
+    
+    /* Alignement à gauche pour la section Contact */
+    .main-footer .row.justify-content-center .col-md-6:last-child .footer-widget {
+        text-align: left;
+    }
+    
+    /* Centrer le contenu des informations de contact */
+    .footer-widget .contact-info {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+    
+    .footer-widget .contact-item {
+        width: 100%;
+        text-align: left;
+    }
+    
+    /* Alignement des réseaux sociaux à gauche */
+    .footer-widget .social-links {
+        justify-content: flex-start;
+    }
+}
+
+/* Amélioration de l'espacement avec gutters Bootstrap */
+@media (min-width: 1200px) {
+    .main-footer .row.g-4 {
+        --bs-gutter-x: 2rem; /* Espacement horizontal plus large sur XL screens */
+    }
+    
+    .footer-widget {
+        padding: 0 30px; /* Encore plus d'espace sur les très grands écrans */
+    }
+}
+
+@media (max-width: 576px) {
+    .newsletter-form .input-group {
+        flex-direction: column;
+        border-radius: 10px;
+    }
+    
+    .newsletter-form .form-control,
+    .newsletter-form .btn {
+        border-radius: 10px !important;
+        margin-bottom: 10px;
+    }
+    
+    .newsletter-form .btn {
+        margin-bottom: 0;
+    }
+    
+    .social-link {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .contact-item {
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+/* Animation for footer elements */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.footer-widget {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.footer-widget:nth-child(1) { animation-delay: 0.1s; }
+.footer-widget:nth-child(2) { animation-delay: 0.2s; }
+.footer-widget:nth-child(3) { animation-delay: 0.3s; }
+.footer-widget:nth-child(4) { animation-delay: 0.4s; }
+.footer-widget:nth-child(5) { animation-delay: 0.5s; }
+
+/* ========================================
+   CODES PROMO PUBLICS
+======================================== */
+
+.promo-codes-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    padding: 2rem 1rem;
+    margin: 2rem 0;
+}
+
+.promo-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.promo-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Couleurs selon l'urgence */
+.promo-urgent {
+    border-left: 5px solid #dc3545;
+    animation: pulse-urgent 2s infinite;
+}
+
+.promo-medium {
+    border-left: 5px solid #ffc107;
+}
+
+.promo-normal {
+    border-left: 5px solid #28a745;
+}
+
+.promo-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.promo-card-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+}
+
+.promo-code-display {
+    position: relative;
+    z-index: 2;
+}
+
+.promo-code-text {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 15px;
+    border-radius: 25px;
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    display: inline-block;
+}
+
+.promo-discount-badge {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.copy-code-btn {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: white !important;
+    transition: all 0.3s ease;
+}
+
+.copy-code-btn:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: scale(1.1);
+}
+
+.promo-title {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.promo-description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.promo-details {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.promo-details > div {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.promo-details > div:last-child {
+    margin-bottom: 0;
+}
+
+.use-promo-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.use-promo-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* Animations */
+@keyframes pulse-urgent {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+}
+
+@keyframes shine {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .promo-codes-section {
+        padding: 1.5rem 0.5rem;
+    }
+    
+    .promo-code-text {
+        font-size: 1rem;
+        padding: 6px 12px;
+    }
+    
+    .promo-discount-badge {
+        font-size: 1.3rem;
+    }
+}
+
+/* Notification pour copie de code */
+.code-copied-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #28a745;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+}
+
+.code-copied-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Badge de popularité */
+.promo-popular-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ff6b35;
+    color: white;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    z-index: 3;
+}

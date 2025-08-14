@@ -1,0 +1,296 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Résumé des Stocks | Administration{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stock-card {
+        border-left: 4px solid #007bff;
+    }
+    .low-stock {
+        border-left-color: #ffc107;
+    }
+    .out-of-stock {
+        border-left-color: #dc3545;
+    }
+    .stock-high {
+        border-left-color: #28a745;
+    }
+    
+    .stock-badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-boxes me-2"></i>Résumé des Stocks</h1>
+        <button onclick="window.location.reload()" class="btn btn-outline-secondary">
+            <i class="fas fa-sync-alt me-2"></i>Actualiser
+        </button>
+    </div>
+
+    <!-- Statistiques générales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stock-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Produits</h5>
+                    <h2 class="text-primary">{{ stats.total_products }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stock-card stock-high">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Stock Moyen</h5>
+                    <h2 class="text-success">{{ "%.1f"|format(stats.average_stock) }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stock-card low-stock">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Stock Faible</h5>
+                    <h2 class="text-warning">{{ stats.low_stock_count }}</h2>
+                    <small class="text-muted">< 10 unités</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stock-card out-of-stock">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Rupture Stock</h5>
+                    <h2 class="text-danger">{{ stats.out_of_stock_count }}</h2>
+                    <small class="text-muted">0 unités</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertes de stock -->
+    {% if out_of_stock %}
+    <div class="alert alert-danger" role="alert">
+        <h5><i class="fas fa-exclamation-triangle me-2"></i>Rupture de Stock</h5>
+        <p>{{ out_of_stock|length }} produit(s) sont en rupture de stock et nécessitent un réapprovisionnement urgent.</p>
+    </div>
+    {% endif %}
+
+    {% if low_stock %}
+    <div class="alert alert-warning" role="alert">
+        <h5><i class="fas fa-exclamation-circle me-2"></i>Stock Faible</h5>
+        <p>{{ low_stock|length }} produit(s) ont un stock faible (moins de 10 unités).</p>
+    </div>
+    {% endif %}
+
+    <!-- Onglets -->
+    <ul class="nav nav-tabs" id="stockTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                Tous les Produits ({{ stock_summary|length }})
+            </button>
+        </li>
+        {% if out_of_stock %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-danger" id="out-stock-tab" data-bs-toggle="tab" data-bs-target="#out-stock" type="button" role="tab">
+                Rupture de Stock ({{ out_of_stock|length }})
+            </button>
+        </li>
+        {% endif %}
+        {% if low_stock %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-warning" id="low-stock-tab" data-bs-toggle="tab" data-bs-target="#low-stock" type="button" role="tab">
+                Stock Faible ({{ low_stock|length }})
+            </button>
+        </li>
+        {% endif %}
+    </ul>
+
+    <div class="tab-content" id="stockTabsContent">
+        <!-- Tous les produits -->
+        <div class="tab-pane fade show active" id="all" role="tabpanel">
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Tous les Produits</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nom du Produit</th>
+                                    <th>Stock</th>
+                                    <th>Prix</th>
+                                    <th>Source</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in stock_summary %}
+                                <tr>
+                                    <td>{{ item.id }}</td>
+                                    <td>
+                                        <strong>{{ item.name }}</strong>
+                                        {% if item.source == 'merchant' %}
+                                        <br><small class="text-muted">{{ item.merchant_name }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold">{{ item.stock }}</span>
+                                    </td>
+                                    <td>{{ item.price|format_number }} KMF</td>
+                                    <td>
+                                        {% if item.source == 'admin' %}
+                                        <span class="badge bg-primary">Admin</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Marchand</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.stock == 0 %}
+                                        <span class="badge bg-danger stock-badge">Rupture</span>
+                                        {% elif item.stock < 10 %}
+                                        <span class="badge bg-warning stock-badge">Faible</span>
+                                        {% else %}
+                                        <span class="badge bg-success stock-badge">Disponible</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rupture de stock -->
+        {% if out_of_stock %}
+        <div class="tab-pane fade" id="out-stock" role="tabpanel">
+            <div class="card mt-3">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Produits en Rupture de Stock</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nom du Produit</th>
+                                    <th>Prix</th>
+                                    <th>Source</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in out_of_stock %}
+                                <tr>
+                                    <td>{{ item.id }}</td>
+                                    <td>
+                                        <strong>{{ item.name }}</strong>
+                                        {% if item.source == 'merchant' %}
+                                        <br><small class="text-muted">{{ item.merchant_name }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.price|format_number }} KMF</td>
+                                    <td>
+                                        {% if item.source == 'admin' %}
+                                        <span class="badge bg-primary">Admin</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Marchand</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="alert('Fonctionnalité de réapprovisionnement à venir')">
+                                            <i class="fas fa-plus me-1"></i>Réapprovisionner
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Stock faible -->
+        {% if low_stock %}
+        <div class="tab-pane fade" id="low-stock" role="tabpanel">
+            <div class="card mt-3">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Produits avec Stock Faible</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nom du Produit</th>
+                                    <th>Stock Actuel</th>
+                                    <th>Prix</th>
+                                    <th>Source</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in low_stock %}
+                                <tr>
+                                    <td>{{ item.id }}</td>
+                                    <td>
+                                        <strong>{{ item.name }}</strong>
+                                        {% if item.source == 'merchant' %}
+                                        <br><small class="text-muted">{{ item.merchant_name }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-warning">{{ item.stock }}</span>
+                                    </td>
+                                    <td>{{ item.price|format_number }} KMF</td>
+                                    <td>
+                                        {% if item.source == 'admin' %}
+                                        <span class="badge bg-primary">Admin</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Marchand</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="alert('Fonctionnalité de réapprovisionnement à venir')">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Surveiller
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh every 5 minutes
+    setTimeout(function() {
+        window.location.reload();
+    }, 300000); // 5 minutes
+});
+</script>
+{% endblock %}

@@ -1,0 +1,378 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Gestion des Codes Promo - Admin DOUKA KM{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-tags me-2"></i>Codes Promo
+            </h1>
+            <p class="text-muted mb-0">Gérez les codes de réduction et promotions</p>
+        </div>
+        <a href="{{ url_for('admin_add_promo_code') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Nouveau Code Promo
+        </a>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Codes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_codes }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-tags fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Codes Actifs
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.active_codes }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Codes Expirés
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.expired_codes }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Utilisations Totales
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_usage }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-bar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h6 class="m-0 font-weight-bold text-primary">Filtres et Recherche</h6>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Rechercher</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           value="{{ current_search }}" placeholder="Code, nom ou description...">
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Statut</label>
+                    <select class="form-control" id="status" name="status">
+                        <option value="all" {% if current_status_filter == 'all' %}selected{% endif %}>Tous</option>
+                        <option value="active" {% if current_status_filter == 'active' %}selected{% endif %}>Actifs</option>
+                        <option value="inactive" {% if current_status_filter == 'inactive' %}selected{% endif %}>Inactifs</option>
+                        <option value="expired" {% if current_status_filter == 'expired' %}selected{% endif %}>Expirés</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Filtrer
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <a href="{{ url_for('admin_promo_codes') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Réinitialiser
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table des codes promo -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Liste des Codes Promo 
+                        <span class="badge badge-secondary ms-2">{{ pagination.total }}</span>
+                    </h6>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if codes %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Code</th>
+                            <th>Nom</th>
+                            <th>Type</th>
+                            <th>Valeur</th>
+                            <th>Utilisations</th>
+                            <th>Validité</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for promo in codes %}
+                        <tr>
+                            <td>
+                                <strong class="text-primary">{{ promo.code }}</strong>
+                            </td>
+                            <td>
+                                {{ promo.name }}
+                                {% if promo.description %}
+                                <br><small class="text-muted">{{ promo.description[:50] }}{% if promo.description|length > 50 %}...{% endif %}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.type == 'percentage' %}
+                                    <span class="badge bg-info text-light">Pourcentage</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Montant fixe</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.type == 'percentage' %}
+                                    {{ promo.value }}%
+                                    {% if promo.max_discount %}
+                                    <br><small class="text-muted">Max: {{ promo.max_discount|format_number }} KMF</small>
+                                    {% endif %}
+                                {% else %}
+                                    {{ promo.value|format_number }} KMF
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ promo.used_count|default(0) }}
+                                {% if promo.usage_limit %}
+                                / {{ promo.usage_limit }} <small class="text-muted">(global)</small>
+                                {% endif %}
+                                {% if promo.user_limit %}
+                                <br><small class="text-info">Max {{ promo.user_limit }} par client</small>
+                                {% endif %}
+                                {% if promo.usage_limit and promo.used_count >= promo.usage_limit %}
+                                <br><small class="text-danger">Limite atteinte</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.start_date %}
+                                <small>Du {{ promo.start_date }}</small><br>
+                                {% endif %}
+                                {% if promo.end_date %}
+                                <small>Au {{ promo.end_date }}</small>
+                                {% else %}
+                                <small class="text-muted">Pas de fin</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.active %}
+                                    {% if promo.end_date and promo.end_date < today %}
+                                        <span class="badge bg-warning text-dark">Expiré</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Actif</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactif</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin_edit_promo_code', code=promo.code) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    
+                                    <button class="btn btn-sm {% if promo.active %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
+                                            onclick="togglePromoStatus('{{ promo.code }}')" 
+                                            title="{% if promo.active %}Désactiver{% else %}Activer{% endif %}">
+                                        <i class="fas {% if promo.active %}fa-pause{% else %}fa-play{% endif %}"></i>
+                                    </button>
+                                    
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deletePromo('{{ promo.code }}')" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if pagination.total_pages > 1 %}
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_promo_codes', page=pagination.prev_num, search=current_search, status=current_status_filter) }}">
+                            Précédent
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in range(1, pagination.total_pages + 1) %}
+                        {% if page_num == pagination.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_promo_codes', page=page_num, search=current_search, status=current_status_filter) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_promo_codes', page=pagination.next_num, search=current_search, status=current_status_filter) }}">
+                            Suivant
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-tags fa-3x text-gray-300 mb-3"></i>
+                <h5 class="text-gray-600">Aucun code promo trouvé</h5>
+                <p class="text-muted">Commencez par créer votre premier code promo.</p>
+                <a href="{{ url_for('admin_add_promo_code') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Créer un Code Promo
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Scripts JavaScript -->
+<script>
+function togglePromoStatus(code) {
+    if (confirm('Êtes-vous sûr de vouloir changer le statut de ce code promo ?')) {
+        fetch('/admin/promo-codes/' + code + '/toggle-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert('danger', data.message);
+            }
+        })
+        .catch(error => {
+            showAlert('danger', 'Erreur lors de la modification du statut');
+        });
+    }
+}
+
+function deletePromo(code) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce code promo ? Cette action est irréversible.')) {
+        fetch('/admin/promo-codes/' + code + '/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert('danger', data.message);
+            }
+        })
+        .catch(error => {
+            showAlert('danger', 'Erreur lors de la suppression');
+        });
+    }
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(function() {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

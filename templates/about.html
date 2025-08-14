@@ -1,0 +1,737 @@
+{% extends 'base.html' %}
+
+{% block title %}À propos - DOUKA KM{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #007bff;
+        --secondary-color: #6c757d;
+        --success-color: #28a745;
+        --info-color: #17a2b8;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --dark-color: #343a40;
+        --light-color: #f8f9fa;
+    }
+
+    .hero-section {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #0056b3 100%);
+        color: white;
+        padding: 100px 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover;
+        opacity: 0.1;
+        z-index: 1;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .hero-subtitle {
+        font-size: 1.3rem;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+    }
+
+    .stats-section {
+        background: var(--light-color);
+        padding: 80px 0;
+    }
+
+    .stat-card {
+        text-align: center;
+        padding: 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    }
+
+    .stat-number {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .stat-label {
+        font-size: 1.1rem;
+        color: var(--secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .section-padding {
+        padding: 80px 0;
+    }
+
+    .section-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: var(--dark-color);
+    }
+
+    .section-subtitle {
+        font-size: 1.2rem;
+        color: var(--secondary-color);
+        margin-bottom: 3rem;
+    }
+
+    .story-content {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #555;
+    }
+
+    .story-image {
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .mission-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        height: 100%;
+    }
+
+    .mission-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .mission-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, var(--primary-color), #0056b3);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        color: white;
+        font-size: 2rem;
+    }
+
+    .values-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+
+    .value-card {
+        text-align: center;
+        padding: 2.5rem 1.5rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+        border-top: 4px solid var(--primary-color);
+    }
+
+    .value-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .value-icon {
+        font-size: 3.5rem;
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+    }
+
+    .testimonials-section {
+        background: white;
+    }
+
+    .testimonial-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        height: 100%;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .testimonial-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .testimonial-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin-bottom: 1.5rem;
+        object-fit: cover;
+        border: 4px solid var(--light-color);
+    }
+
+    .testimonial-text {
+        font-style: italic;
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+        color: #555;
+    }
+
+    .testimonial-rating {
+        color: #ffc107;
+        margin-bottom: 1rem;
+    }
+
+    .team-section {
+        background: var(--light-color);
+    }
+
+    .team-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .team-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+
+    .team-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        margin: 0 auto 1.5rem;
+        object-fit: cover;
+        border: 4px solid var(--primary-color);
+    }
+
+    .team-name {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--dark-color);
+    }
+
+    .team-role {
+        color: var(--primary-color);
+        font-weight: 500;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .team-description {
+        color: var(--secondary-color);
+        margin-bottom: 1.5rem;
+    }
+
+    .social-links a {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 40px;
+        margin: 0 5px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .social-links a:hover {
+        background: var(--dark-color);
+        transform: translateY(-2px);
+    }
+
+    .partners-section {
+        background: white;
+    }
+
+    .partner-card {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+        border: 1px solid #e9ecef;
+    }
+
+    .partner-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        border-color: var(--primary-color);
+    }
+
+    .partner-logo {
+        height: 60px;
+        object-fit: contain;
+        margin-bottom: 1rem;
+    }
+
+    .partner-type {
+        color: var(--secondary-color);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .cta-section {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #0056b3 100%);
+        color: white;
+        padding: 100px 0;
+        text-align: center;
+    }
+
+    .cta-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .cta-subtitle {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+    }
+
+    .btn-cta {
+        background: white;
+        color: var(--primary-color);
+        border: none;
+        padding: 15px 30px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        margin: 0 10px;
+    }
+
+    .btn-cta:hover {
+        background: var(--light-color);
+        color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+
+    .animate-on-scroll {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.6s ease;
+    }
+
+    .animate-on-scroll.animated {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.1rem;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="hero-content animate-on-scroll">
+                    <h1 class="hero-title">DOUKA KM</h1>
+                    <p class="hero-subtitle">
+                        La marketplace qui connecte les Comores au monde digital.
+                        Découvrez, achetez et vendez en toute confiance.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="{{ url_for('products') }}" class="btn btn-light btn-lg me-3">
+                            <i class="fas fa-shopping-bag me-2"></i>Découvrir nos produits
+                        </a>
+                        <a href="{{ url_for('contact') }}" class="btn btn-outline-light btn-lg">
+                            <i class="fas fa-phone me-2"></i>Nous contacter
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="text-center animate-on-scroll">
+                    <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" 
+                         alt="E-commerce aux Comores" class="img-fluid rounded shadow-lg">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="stats-section">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="stat-card animate-on-scroll">
+                    <span class="stat-number">{{ total_products|format_number }}+</span>
+                    <div class="stat-label">Produits disponibles</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card animate-on-scroll">
+                    <span class="stat-number">{{ total_merchants|format_number }}+</span>
+                    <div class="stat-label">Marchands partenaires</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card animate-on-scroll">
+                    <span class="stat-number">{{ total_categories|format_number }}+</span>
+                    <div class="stat-label">Catégories</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Story Section -->
+<section class="section-padding">
+    <div class="container">
+        <div class="row align-items-center mb-5">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <div class="animate-on-scroll">
+                    <h2 class="section-title">Notre histoire</h2>
+                    <div class="story-content">
+                        <p class="lead">DOUKA KM est né d'une vision simple : rendre le commerce en ligne accessible et pratique aux Comores.</p>
+                        <p>Lancé en 2023 par une équipe de jeunes entrepreneurs comoriens passionnés par la technologie, DOUKA KM vise à connecter les consommateurs de l'archipel avec des produits locaux et internationaux de qualité.</p>
+                        <p>Notre mission est de contribuer au développement économique des Comores en digitalisant le commerce et en offrant de nouvelles opportunités aux artisans et entrepreneurs locaux.</p>
+                        <p>Aujourd'hui, nous sommes fiers d'être la première marketplace comorienne à offrir une expérience d'achat moderne et sécurisée.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="animate-on-scroll">
+                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" 
+                         alt="Notre équipe" class="img-fluid story-image">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Mission Section -->
+<section class="section-padding" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title animate-on-scroll">Notre mission</h2>
+            <p class="section-subtitle animate-on-scroll">Nous nous engageons pour un commerce équitable et durable</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="mission-card animate-on-scroll">
+                    <div class="mission-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h4>Promouvoir le local</h4>
+                    <p>Valoriser les produits locaux et le savoir-faire artisanal comorien en leur offrant une vitrine moderne et accessible.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="mission-card animate-on-scroll">
+                    <div class="mission-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h4>Garantir la sécurité</h4>
+                    <p>Offrir une plateforme fiable et sécurisée pour le commerce en ligne avec des moyens de paiement adaptés.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="mission-card animate-on-scroll">
+                    <div class="mission-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h4>Connecter les îles</h4>
+                    <p>Faciliter l'accès aux produits pour tous les Comoriens, de Grande Comore à Mohéli en passant par Anjouan.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="mission-card animate-on-scroll">
+                    <div class="mission-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h4>Stimuler l'économie</h4>
+                    <p>Contribuer au développement de l'économie numérique aux Comores et créer de nouveaux emplois.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="mission-card animate-on-scroll">
+                    <div class="mission-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h4>Accompagner les entrepreneurs</h4>
+                    <p>Créer des opportunités pour les artisans et entrepreneurs locaux en leur donnant accès au marché digital.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="mission-card animate-on-scroll">
+                    <div class="mission-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h4>Respecter l'environnement</h4>
+                    <p>Promouvoir une économie durable et respectueuse de l'environnement unique des Comores.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Values Section -->
+<section class="values-section section-padding">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title animate-on-scroll">Nos valeurs</h2>
+            <p class="section-subtitle animate-on-scroll">Les principes qui guident notre action quotidienne</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="value-card animate-on-scroll">
+                    <div class="value-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h4>Confiance</h4>
+                    <p>Nous bâtissons des relations de confiance durables avec nos clients et partenaires.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="value-card animate-on-scroll">
+                    <div class="value-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h4>Excellence</h4>
+                    <p>Nous visons l'excellence dans tous nos services et produits proposés.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="value-card animate-on-scroll">
+                    <div class="value-icon">
+                        <i class="fas fa-seedling"></i>
+                    </div>
+                    <h4>Durabilité</h4>
+                    <p>Nous nous engageons pour une économie durable et respectueuse de l'environnement.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="value-card animate-on-scroll">
+                    <div class="value-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <h4>Innovation</h4>
+                    <p>Nous innovons constamment pour améliorer l'expérience de nos utilisateurs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+ <!--
+<section class="testimonials-section section-padding">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title animate-on-scroll">Ce que disent nos clients</h2>
+            <p class="section-subtitle animate-on-scroll">Des témoignages authentiques de notre communauté</p>
+        </div>
+        
+        <div class="row g-4">
+            {% for testimonial in testimonials %}
+            <div class="col-lg-4">
+                <div class="testimonial-card animate-on-scroll">
+                    <img src="{{ testimonial.avatar }}" alt="{{ testimonial.name }}" class="testimonial-avatar">
+                    <div class="testimonial-rating">
+                        {% for i in range(testimonial.rating) %}
+                        <i class="fas fa-star"></i>
+                        {% endfor %}
+                    </div>
+                    <p class="testimonial-text">"{{ testimonial.comment }}"</p>
+                    <h5>{{ testimonial.name }}</h5>
+                    <small class="text-muted">{{ testimonial.location }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+-->
+
+<!-- Team Section -->
+<section class="team-section section-padding">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title animate-on-scroll">Notre équipe</h2>
+            <p class="section-subtitle animate-on-scroll">Les visionnaires derrière DOUKA KM</p>
+        </div>
+        
+        <div class="row g-4">
+            {% for member in team_members %}
+            <div class="col-lg-4">
+                <div class="team-card animate-on-scroll">
+                    <img src="{{ member.avatar }}" alt="{{ member.name }}" class="team-avatar">
+                    <h4 class="team-name">{{ member.name }}</h4>
+                    <div class="team-role">{{ member.role }}</div>
+                    <p class="team-description">{{ member.description }}</p>
+                    <div class="social-links">
+                        <a href="{{ member.linkedin }}" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="{{ member.twitter }}" title="Twitter"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Partners Section -->
+<section class="partners-section section-padding">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title animate-on-scroll">Nos partenaires</h2>
+            <p class="section-subtitle animate-on-scroll">Ils nous font confiance et nous accompagnent</p>
+        </div>
+        
+        <div class="row g-4">
+            {% for partner in partners %}
+            <div class="col-lg-3 col-md-6">
+                <div class="partner-card animate-on-scroll">
+                    <img src="{{ partner.logo }}" alt="{{ partner.name }}" class="partner-logo">
+                    <h5>{{ partner.name }}</h5>
+                    <p class="partner-type">{{ partner.type }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <div class="container">
+        <div class="animate-on-scroll">
+            <h2 class="cta-title">Rejoignez l'aventure DOUKA KM</h2>
+            <p class="cta-subtitle">
+                Que vous soyez consommateur ou entrepreneur, nous avons une place pour vous
+            </p>
+            <div class="cta-buttons">
+                <a href="{{ url_for('register') }}" class="btn-cta">
+                    <i class="fas fa-user-plus me-2"></i>Créer un compte
+                </a>
+                <a href="/merchant/register" class="btn-cta">
+                    <i class="fas fa-store me-2"></i>Devenir marchand
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Animation on scroll
+document.addEventListener('DOMContentLoaded', function() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animated');
+            }
+        });
+    }, observerOptions);
+
+    // Observer tous les éléments avec la classe animate-on-scroll
+    document.querySelectorAll('.animate-on-scroll').forEach(el => {
+        observer.observe(el);
+    });
+
+    // Animation des compteurs
+    function animateCounter(element) {
+        const target = parseInt(element.textContent.replace(/[^\d]/g, ''));
+        const duration = 2000;
+        const step = target / (duration / 16);
+        let current = 0;
+
+        const timer = setInterval(() => {
+            current += step;
+            if (current >= target) {
+                element.textContent = target.toLocaleString() + '+';
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(current).toLocaleString() + '+';
+            }
+        }, 16);
+    }
+
+    // Observer pour les statistiques
+    const statsObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const statNumber = entry.target.querySelector('.stat-number');
+                if (statNumber && !statNumber.classList.contains('animated')) {
+                    statNumber.classList.add('animated');
+                    animateCounter(statNumber);
+                }
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.stat-card').forEach(card => {
+        statsObserver.observe(card);
+    });
+});
+</script>
+{% endblock %}

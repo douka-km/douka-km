@@ -1,0 +1,516 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}
+{% if edit_mode %}Modifier le Code Promo{% else %}Nouveau Code Promo{% endif %} - Admin DOUKA KM
+{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-tags me-2"></i>
+                {% if edit_mode %}
+                    Modifier le Code Promo
+                {% else %}
+                    Nouveau Code Promo
+                {% endif %}
+            </h1>
+            <p class="text-muted mb-0">
+                {% if edit_mode %}
+                    Modifiez les paramètres du code promo
+                {% else %}
+                    Créez un nouveau code de réduction
+                {% endif %}
+            </p>
+        </div>
+        <a href="{{ url_for('admin_promo_codes') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+        </a>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        {% if edit_mode %}
+                            Modification du code promo
+                        {% else %}
+                            Informations du nouveau code promo
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="promoForm">
+                        <!-- Informations de base -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="code" class="form-label">Code Promo <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="code" name="code" 
+                                               value="{{ promo.code if edit_mode else '' }}" 
+                                               {% if edit_mode %}readonly{% endif %}
+                                               required maxlength="20" style="text-transform: uppercase;">
+                                        {% if not edit_mode %}
+                                        <button type="button" class="btn btn-outline-secondary" onclick="generateCode()">
+                                            <i class="fas fa-random"></i> Générer
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-text">Le code doit être unique et en majuscules</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Nom du Code <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           value="{{ promo.name if edit_mode else '' }}" 
+                                           required maxlength="100" placeholder="Ex: Code de bienvenue">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      maxlength="500" placeholder="Description optionnelle du code promo">{{ promo.description if edit_mode else '' }}</textarea>
+                        </div>
+
+                        <!-- Type et valeur de réduction -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="type" class="form-label">Type de Réduction <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="type" name="type" required onchange="toggleDiscountFields()">
+                                        <option value="">Sélectionner un type</option>
+                                        <option value="percentage" {% if edit_mode and promo.type == 'percentage' %}selected{% endif %}>
+                                            Pourcentage (%)
+                                        </option>
+                                        <option value="fixed" {% if edit_mode and promo.type == 'fixed' %}selected{% endif %}>
+                                            Montant fixe (KMF)
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="value" class="form-label">Valeur <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="value" name="value" 
+                                               value="{{ promo.value if edit_mode else '' }}" 
+                                               required min="0" step="0.01">
+                                        <span class="input-group-text" id="valueUnit">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Réduction maximale (pour pourcentage) -->
+                        <div class="row" id="maxDiscountRow" style="display: none;">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="max_discount" class="form-label">Réduction Maximum (KMF)</label>
+                                    <input type="number" class="form-control" id="max_discount" name="max_discount" 
+                                           value="{{ promo.max_discount if edit_mode else '' }}" 
+                                           min="0" step="1" placeholder="Optionnel">
+                                    <div class="form-text">Limite la réduction maximale pour les codes pourcentage</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Montant minimum de commande -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="min_order_amount" class="form-label">Montant Minimum de Commande (KMF)</label>
+                                    <input type="number" class="form-control" id="min_order_amount" name="min_order_amount" 
+                                           value="{{ promo.min_amount if edit_mode else '' }}" 
+                                           min="0" step="1" placeholder="0 = Aucun minimum">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="usage_limit" class="form-label">Limite d'Utilisation Globale</label>
+                                    <input type="number" class="form-control" id="usage_limit" name="usage_limit" 
+                                           value="{{ promo.usage_limit if edit_mode else '' }}" 
+                                           min="1" step="1" placeholder="Illimité">
+                                    <div class="form-text">Nombre maximum total d'utilisations du code</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Limite par utilisateur -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="user_limit" class="form-label">Limite par Utilisateur</label>
+                                    <input type="number" class="form-control" id="user_limit" name="user_limit" 
+                                           value="{{ promo.user_limit if edit_mode else '1' }}" 
+                                           min="1" step="1" placeholder="1">
+                                    <div class="form-text">Nombre maximum d'utilisations par client (recommandé: 1)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dates de validité -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="start_date" class="form-label">Date de Début</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                                           value="{{ promo.start_date if edit_mode else '' }}">
+                                    <div class="form-text">Laisser vide pour activer immédiatement</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="end_date" class="form-label">Date de Fin</label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                                           value="{{ promo.end_date if edit_mode else '' }}">
+                                    <div class="form-text">Laisser vide pour une durée illimitée</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Restrictions d'application -->
+                        <div class="card mb-4" style="border: 1px solid #e3e6f0;">
+                            <div class="card-header py-2" style="background-color: #f8f9fc;">
+                                <h6 class="m-0 font-weight-bold text-primary">
+                                    <i class="fas fa-filter me-2"></i>Restrictions d'Application
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="applicable_to" class="form-label">Appliquer à <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="applicable_to" name="applicable_to" required onchange="toggleApplicabilityFields()">
+                                        <option value="all" {% if not edit_mode or promo.applicable_to == 'all' %}selected{% endif %}>
+                                            Tous les produits
+                                        </option>
+                                        <option value="categories" {% if edit_mode and promo.applicable_to == 'categories' %}selected{% endif %}>
+                                            Catégories spécifiques
+                                        </option>
+                                        <option value="subcategories" {% if edit_mode and promo.applicable_to == 'subcategories' %}selected{% endif %}>
+                                            Sous-catégories spécifiques
+                                        </option>
+                                        <option value="products" {% if edit_mode and promo.applicable_to == 'products' %}selected{% endif %}>
+                                            Produits spécifiques
+                                        </option>
+                                        <option value="merchants" {% if edit_mode and promo.applicable_to == 'merchants' %}selected{% endif %}>
+                                            Marchands spécifiques
+                                        </option>
+                                    </select>
+                                    <div class="form-text">Choisissez si le code s'applique à tous les produits ou seulement à certaines catégories/produits</div>
+                                </div>
+
+                                <!-- Sélection des catégories -->
+                                <div id="categoriesSelection" style="display: none;">
+                                    <label class="form-label">Catégories Autorisées <span class="text-danger">*</span></label>
+                                    <div class="row">
+                                        {% for category in categories %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="cat_{{ category.id }}" name="applicable_categories" 
+                                                       value="{{ category.id }}"
+                                                       {% if edit_mode and category.id in promo.applicable_categories %}checked{% endif %}>
+                                                <label class="form-check-label" for="cat_{{ category.id }}">
+                                                    {{ category.name }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-text">Sélectionnez les catégories où le code promo peut être utilisé</div>
+                                </div>
+
+                                <!-- Sélection des sous-catégories -->
+                                <div id="subcategoriesSelection" style="display: none;">
+                                    <label class="form-label">Sous-catégories Autorisées <span class="text-danger">*</span></label>
+                                    <div class="row">
+                                        {% for subcategory in subcategories %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="subcat_{{ subcategory.id }}" name="applicable_subcategories" 
+                                                       value="{{ subcategory.id }}"
+                                                       {% if edit_mode and subcategory.id in promo.applicable_subcategories %}checked{% endif %}>
+                                                <label class="form-check-label" for="subcat_{{ subcategory.id }}">
+                                                    {{ subcategory.name }}
+                                                    {% if subcategory.category_name %}
+                                                        <small class="text-muted">({{ subcategory.category_name }})</small>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-text">Sélectionnez les sous-catégories où le code promo peut être utilisé</div>
+                                </div>
+
+                                <!-- Sélection des produits -->
+                                <div id="productsSelection" style="display: none;">
+                                    <label class="form-label">Produits Autorisés <span class="text-danger">*</span></label>
+                                    <div class="mb-2">
+                                        <input type="text" class="form-control" id="productSearch" placeholder="Rechercher un produit..." onkeyup="filterProducts()">
+                                    </div>
+                                    <div class="row" id="productsList" style="max-height: 300px; overflow-y: auto;">
+                                        {% for product in products %}
+                                        <div class="col-12 product-item">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="prod_{{ product.id }}" name="applicable_products" 
+                                                       value="{{ product.id }}"
+                                                       {% if edit_mode and product.id in promo.applicable_products %}checked{% endif %}>
+                                                <label class="form-check-label" for="prod_{{ product.id }}">
+                                                    <strong>{{ product.name }}</strong>
+                                                    <span class="text-muted">- {{ product.price|format_number }} KMF</span>
+                                                    {% if product.merchant_name %}
+                                                        <small class="text-info">({{ product.merchant_name }})</small>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-text">Sélectionnez les produits spécifiques où le code promo peut être utilisé</div>
+                                </div>
+
+                                <!-- Sélection des marchands -->
+                                <div id="merchantsSelection" style="display: none;">
+                                    <label class="form-label">Marchands Autorisés <span class="text-danger">*</span></label>
+                                    <div class="row">
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="admin_products" name="applicable_merchants" 
+                                                       value="admin_products"
+                                                       {% if edit_mode and 'admin_products' in promo.applicable_merchants %}checked{% endif %}>
+                                                <label class="form-check-label" for="admin_products">
+                                                    <strong>DOUKA KM (Admin)</strong>
+                                                    <small class="text-primary d-block">Produits officiels</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="static_products" name="applicable_merchants" 
+                                                       value="static_products"
+                                                       {% if edit_mode and 'static_products' in promo.applicable_merchants %}checked{% endif %}>
+                                                <label class="form-check-label" for="static_products">
+                                                    <strong>DOUKA KM</strong>
+                                                    <small class="text-primary d-block">Produits statiques</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% for merchant in merchants %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       id="merchant_{{ loop.index }}" name="applicable_merchants" 
+                                                       value="{{ merchant.email }}"
+                                                       {% if edit_mode and merchant.email in promo.applicable_merchants %}checked{% endif %}>
+                                                <label class="form-check-label" for="merchant_{{ loop.index }}">
+                                                    <strong>{{ merchant.store_name }}</strong>
+                                                    <small class="text-muted d-block">{{ merchant.email }}</small>
+                                                    {% if merchant.store_verified %}
+                                                        <span class="badge badge-success">Vérifié</span>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-text">Sélectionnez les marchands dont les produits peuvent bénéficier du code promo</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statut -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="active" name="active" 
+                                       {% if not edit_mode or promo.active %}checked{% endif %}>
+                                <label class="form-check-label" for="active">
+                                    Code promo actif
+                                </label>
+                                <div class="form-text">Un code inactif ne peut pas être utilisé par les clients</div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_promo_codes') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if edit_mode %}
+                                    Modifier le Code
+                                {% else %}
+                                    Créer le Code
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts JavaScript -->
+<script>
+// Fonction pour générer un code aléatoire
+function generateCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('code').value = code;
+}
+
+// Fonction pour gérer l'affichage des champs selon le type
+function toggleDiscountFields() {
+    const type = document.getElementById('type').value;
+    const valueUnit = document.getElementById('valueUnit');
+    const maxDiscountRow = document.getElementById('maxDiscountRow');
+    const valueInput = document.getElementById('value');
+    const maxDiscountInput = document.getElementById('max_discount');
+    
+    if (type === 'percentage') {
+        valueUnit.textContent = '%';
+        maxDiscountRow.style.display = 'block';
+        valueInput.max = '100';
+        valueInput.placeholder = 'Ex: 10 pour 10%';
+    } else if (type === 'fixed') {
+        valueUnit.textContent = 'KMF';
+        maxDiscountRow.style.display = 'none';
+        valueInput.removeAttribute('max');
+        valueInput.placeholder = 'Ex: 1000';
+        maxDiscountInput.value = '';
+    }
+}
+
+// Fonction pour gérer l'affichage des restrictions
+function toggleApplicabilityFields() {
+    const applicableTo = document.getElementById('applicable_to').value;
+    
+    // Masquer tous les panneaux de sélection
+    document.getElementById('categoriesSelection').style.display = 'none';
+    document.getElementById('subcategoriesSelection').style.display = 'none';
+    document.getElementById('productsSelection').style.display = 'none';
+    document.getElementById('merchantsSelection').style.display = 'none';
+    
+    // Afficher le panneau approprié
+    if (applicableTo === 'categories') {
+        document.getElementById('categoriesSelection').style.display = 'block';
+    } else if (applicableTo === 'subcategories') {
+        document.getElementById('subcategoriesSelection').style.display = 'block';
+    } else if (applicableTo === 'products') {
+        document.getElementById('productsSelection').style.display = 'block';
+    } else if (applicableTo === 'merchants') {
+        document.getElementById('merchantsSelection').style.display = 'block';
+    }
+}
+
+// Fonction pour filtrer les produits
+function filterProducts() {
+    const searchTerm = document.getElementById('productSearch').value.toLowerCase();
+    const productItems = document.querySelectorAll('.product-item');
+    
+    productItems.forEach(function(item) {
+        const label = item.querySelector('label');
+        const text = label.textContent.toLowerCase();
+        
+        if (text.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+// Validation du formulaire
+document.getElementById('promoForm').addEventListener('submit', function(e) {
+    const type = document.getElementById('type').value;
+    const value = parseFloat(document.getElementById('value').value);
+    
+    if (type === 'percentage' && value > 100) {
+        e.preventDefault();
+        alert('Le pourcentage ne peut pas dépasser 100%');
+        return false;
+    }
+    
+    if (value <= 0) {
+        e.preventDefault();
+        alert('La valeur doit être supérieure à 0');
+        return false;
+    }
+    
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    if (startDate && endDate && startDate > endDate) {
+        e.preventDefault();
+        alert('La date de début ne peut pas être postérieure à la date de fin');
+        return false;
+    }
+    
+    // Validation des restrictions
+    const applicableTo = document.getElementById('applicable_to').value;
+    
+    if (applicableTo === 'categories') {
+        const selectedCategories = document.querySelectorAll('input[name="applicable_categories"]:checked');
+        if (selectedCategories.length === 0) {
+            e.preventDefault();
+            alert('Veuillez sélectionner au moins une catégorie');
+            return false;
+        }
+    }
+    
+    if (applicableTo === 'subcategories') {
+        const selectedSubcategories = document.querySelectorAll('input[name="applicable_subcategories"]:checked');
+        if (selectedSubcategories.length === 0) {
+            e.preventDefault();
+            alert('Veuillez sélectionner au moins une sous-catégorie');
+            return false;
+        }
+    }
+    
+    if (applicableTo === 'products') {
+        const selectedProducts = document.querySelectorAll('input[name="applicable_products"]:checked');
+        if (selectedProducts.length === 0) {
+            e.preventDefault();
+            alert('Veuillez sélectionner au moins un produit');
+            return false;
+        }
+    }
+    
+    if (applicableTo === 'merchants') {
+        const selectedMerchants = document.querySelectorAll('input[name="applicable_merchants"]:checked');
+        if (selectedMerchants.length === 0) {
+            e.preventDefault();
+            alert('Veuillez sélectionner au moins un marchand');
+            return false;
+        }
+    }
+});
+
+// Conversion automatique en majuscules pour le code
+document.getElementById('code').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase();
+});
+
+// Initialiser l'affichage des champs au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    toggleDiscountFields();
+    toggleApplicabilityFields();
+});
+</script>
+{% endblock %}

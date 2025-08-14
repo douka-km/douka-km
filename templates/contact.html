@@ -1,0 +1,810 @@
+{% extends 'base.html' %}
+
+{% block title %}Contact - DOUKA KM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contact-hero {
+        background: linear-gradient(135deg, #0066cc, #004499);
+        color: white;
+        padding: 4rem 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .contact-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        opacity: 0.3;
+    }
+    
+    .contact-hero h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .contact-hero p {
+        font-size: 1.2rem;
+        margin-bottom: 0;
+        position: relative;
+        z-index: 1;
+        opacity: 0.9;
+    }
+    
+    .contact-container {
+        margin-top: -3rem;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .contact-form-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        border: none;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .contact-form-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    }
+    
+    .contact-info-card {
+        background: linear-gradient(135deg, #f8f9fa, #ffffff);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        padding: 2.5rem;
+        border: none;
+        height: 100%;
+    }
+    
+    .form-floating {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-floating > .form-control {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1rem 0.75rem;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+    
+    .form-floating > .form-control:focus {
+        border-color: #0066cc;
+        box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+        background: white;
+    }
+    
+    .form-floating > label {
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .contact-type-selector {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .contact-type-option {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .contact-type-option input[type="radio"] {
+        display: none;
+    }
+    
+    .contact-type-option label {
+        display: block;
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+        font-weight: 500;
+        margin: 0;
+    }
+    
+    .contact-type-option input[type="radio"]:checked + label {
+        border-color: #0066cc;
+        background: #0066cc;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3);
+    }
+    
+    .contact-type-option label:hover {
+        border-color: #0066cc;
+        transform: translateY(-2px);
+    }
+    
+    .contact-info-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+    }
+    
+    .contact-info-item:hover {
+        transform: translateX(5px);
+    }
+    
+    .contact-info-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #0066cc, #004499);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .contact-info-icon i {
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .contact-info-content h5 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .contact-info-content p {
+        color: #6c757d;
+        margin-bottom: 0;
+        line-height: 1.6;
+    }
+    
+    .social-links {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .social-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        text-decoration: none;
+        color: white;
+        transition: all 0.3s ease;
+        font-size: 1.2rem;
+    }
+    
+    .social-link.facebook {
+        background: #3b5998;
+    }
+    
+    .social-link.instagram {
+        background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    }
+    
+    .social-link.twitter {
+        background: #1da1f2;
+    }
+    
+    .social-link.whatsapp {
+        background: #25d366;
+    }
+    
+    .social-link:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        color: white;
+    }
+    
+    .submit-btn {
+        background: linear-gradient(135deg, #0066cc, #004499);
+        border: none;
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        width: 100%;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .submit-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    .submit-btn:hover::before {
+        left: 100%;
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 102, 204, 0.3);
+        background: linear-gradient(135deg, #004499, #0066cc);
+    }
+    
+    .submit-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .map-container {
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        margin-top: 2rem;
+        height: 400px;
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    
+    .map-placeholder {
+        text-align: center;
+        color: #0066cc;
+    }
+    
+    .map-placeholder i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.7;
+    }
+    
+    .map-placeholder h4 {
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .map-placeholder p {
+        color: #6c757d;
+        margin: 0;
+    }
+    
+    .alert-custom {
+        border: none;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .alert-success-custom {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        color: #155724;
+        border-left: 4px solid #28a745;
+    }
+    
+    .alert-error-custom {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .quick-contact-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .quick-action {
+        flex: 1;
+        min-width: 200px;
+        padding: 1rem;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        text-decoration: none;
+        color: #2c3e50;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action:hover {
+        border-color: #0066cc;
+        color: #0066cc;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 102, 204, 0.1);
+    }
+    
+    .quick-action i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .quick-action strong {
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    
+    .loading-spinner {
+        display: none;
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 768px) {
+        .contact-hero h1 {
+            font-size: 2.5rem;
+        }
+        
+        .contact-hero p {
+            font-size: 1rem;
+        }
+        
+        .contact-form-card, .contact-info-card {
+            padding: 1.5rem;
+        }
+        
+        .contact-type-selector {
+            flex-direction: column;
+        }
+        
+        .contact-type-option {
+            min-width: auto;
+        }
+        
+        .quick-contact-actions {
+            flex-direction: column;
+        }
+        
+        .quick-action {
+            min-width: auto;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="contact-hero">
+    <div class="container">
+        <h1><i class="fas fa-envelope-open-text me-3"></i>Contactez-nous</h1>
+        <p>Nous sommes là pour vous aider ! N'hésitez pas à nous faire part de vos questions, suggestions ou commentaires.</p>
+    </div>
+</div>
+
+<!-- Contact Container -->
+<div class="container contact-container">
+    <div class="row">
+        <!-- Formulaire de contact -->
+        <div class="col-lg-8 mb-4">
+            <div class="card contact-form-card">
+                <div class="card-body">
+                    <h3 class="mb-4">
+                        <i class="fas fa-paper-plane me-2 text-primary"></i>
+                        Envoyez-nous un message
+                    </h3>
+                    
+                    <!-- Affichage des messages flash -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}-custom alert-custom" role="alert">
+                                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form id="contactForm" method="POST" action="{{ url_for('contact') }}">
+                        <!-- Sélecteur de type de contact -->
+                        <div class="contact-type-selector">
+                            <div class="contact-type-option">
+                                <input type="radio" id="general" name="contact_type" value="general" checked>
+                                <label for="general">
+                                    <i class="fas fa-comments d-block mb-1"></i>
+                                    Général
+                                </label>
+                            </div>
+                            <div class="contact-type-option">
+                                <input type="radio" id="support" name="contact_type" value="support">
+                                <label for="support">
+                                    <i class="fas fa-life-ring d-block mb-1"></i>
+                                    Support
+                                </label>
+                            </div>
+                            <div class="contact-type-option">
+                                <input type="radio" id="business" name="contact_type" value="business">
+                                <label for="business">
+                                    <i class="fas fa-handshake d-block mb-1"></i>
+                                    Partenariat
+                                </label>
+                            </div>
+                            <div class="contact-type-option">
+                                <input type="radio" id="complaint" name="contact_type" value="complaint">
+                                <label for="complaint">
+                                    <i class="fas fa-exclamation-circle d-block mb-1"></i>
+                                    Réclamation
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="name" name="name" placeholder="Votre nom complet" required>
+                                    <label for="name"><i class="fas fa-user me-2"></i>Nom complet *</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="email" class="form-control" id="email" name="email" placeholder="votre@email.com" required>
+                                    <label for="email"><i class="fas fa-envelope me-2"></i>Adresse email *</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="tel" class="form-control" id="phone" name="phone" placeholder="+269 123 456 789">
+                                    <label for="phone"><i class="fas fa-phone me-2"></i>Téléphone</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="subject" name="subject" placeholder="Sujet de votre message" required>
+                                    <label for="subject"><i class="fas fa-tag me-2"></i>Sujet *</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-floating">
+                            <textarea class="form-control" id="message" name="message" placeholder="Votre message" style="height: 150px" required></textarea>
+                            <label for="message"><i class="fas fa-edit me-2"></i>Votre message *</label>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <span class="loading-spinner"></span>
+                            <i class="fas fa-paper-plane me-2"></i>
+                            <span class="btn-text">Envoyer le message</span>
+                        </button>
+                        
+                        <p class="text-muted small mt-3 mb-0">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Les champs marqués d'un astérisque (*) sont obligatoires. Nous vous répondrons dans les 24 heures.
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informations de contact -->
+        <div class="col-lg-4">
+            <div class="card contact-info-card">
+                <div class="card-body">
+                    <h3 class="mb-4">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>
+                        Nos coordonnées
+                    </h3>
+                    
+                    <div class="contact-info-item">
+                        <div class="contact-info-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div class="contact-info-content">
+                            <h5>Adresse</h5>
+                            <p>Avenue de l'Indépendance<br>Moroni, Grande Comore<br>Union des Comores</p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-info-item">
+                        <div class="contact-info-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="contact-info-content">
+                            <h5>Téléphone</h5>
+                            <p>
+                                <a href="tel:+269123456789" class="text-decoration-none">+269 123 456 789</a><br>
+                                <a href="tel:+269987654321" class="text-decoration-none">+269 987 654 321</a>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-info-item">
+                        <div class="contact-info-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-info-content">
+                            <h5>Email</h5>
+                            <p>
+                                <a href="mailto:ledouka.km@gmail.com" class="text-decoration-none">ledouka.km@gmail.com</a><br>
+                                <a href="mailto:supportkm@gmail.com" class="text-decoration-none">supportkm@gmail.com</a>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-info-item">
+                        <div class="contact-info-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="contact-info-content">
+                            <h5>Horaires</h5>
+                            <p>
+                                <strong>Lundi - Vendredi:</strong> 8h00 - 18h00<br>
+                                <strong>Samedi:</strong> 9h00 - 15h00<br>
+                                <strong>Dimanche:</strong> Fermé
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <h4 class="mt-4 mb-3">
+                        <i class="fas fa-share-alt me-2 text-primary"></i>
+                        Suivez-nous
+                    </h4>
+                    <div class="social-links">
+                        <a href="#" class="social-link facebook" title="Facebook">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="social-link instagram" title="Instagram">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" class="social-link twitter" title="Twitter">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="social-link whatsapp" title="WhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions rapides -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-rocket me-2 text-primary"></i>
+                Actions rapides
+            </h3>
+            <div class="quick-contact-actions">
+                <a href="tel:+2693424019" class="quick-action">
+                    <i class="fas fa-phone-alt text-success"></i>
+                    <strong>Appel direct</strong>
+                    <small>Contactez-nous maintenant</small>
+                </a>
+                <a href="https://wa.me/2693424019" class="quick-action" target="_blank">
+                    <i class="fab fa-whatsapp text-success"></i>
+                    <strong>WhatsApp</strong>
+                    <small>Chat en temps réel</small>
+                </a>
+                <a href="mailto:ledouka.km@gmail.com" class="quick-action">
+                    <i class="fas fa-envelope text-primary"></i>
+                    <strong>Email direct</strong>
+                    <small>Envoyez un email</small>
+                </a>
+                <a href="{{ url_for('about') }}" class="quick-action">
+                    <i class="fas fa-info-circle text-info"></i>
+                    <strong>À propos</strong>
+                    <small>En savoir plus sur nous</small>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Carte/Localisation -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-map-marked-alt me-2 text-primary"></i>
+                Notre localisation
+            </h3>
+            <div class="map-container">
+                <div class="map-placeholder">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <h4>Moroni, Grande Comore</h4>
+                    <p>Union des Comores</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const contactForm = document.getElementById('contactForm');
+    const submitBtn = contactForm.querySelector('button[type="submit"]');
+    const btnText = submitBtn.querySelector('.btn-text');
+    const loadingSpinner = submitBtn.querySelector('.loading-spinner');
+    
+    // Gestion de la soumission du formulaire
+    contactForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validation côté client
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const subject = document.getElementById('subject').value.trim();
+        const message = document.getElementById('message').value.trim();
+        
+        if (!name || !email || !subject || !message) {
+            showNotification('Veuillez remplir tous les champs obligatoires.', 'error');
+            return;
+        }
+        
+        // Validation email
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailPattern.test(email)) {
+            showNotification('Veuillez saisir une adresse email valide.', 'error');
+            return;
+        }
+        
+        // Désactiver le bouton et afficher le spinner
+        submitBtn.disabled = true;
+        loadingSpinner.style.display = 'inline-block';
+        btnText.textContent = 'Envoi en cours...';
+        
+        // Envoyer le formulaire via AJAX
+        const formData = new FormData(contactForm);
+        
+        fetch(contactForm.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                contactForm.reset();
+                
+                // Animation de succès
+                submitBtn.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                btnText.innerHTML = '<i class="fas fa-check me-2"></i>Message envoyé !';
+                
+                setTimeout(() => {
+                    submitBtn.style.background = '';
+                    btnText.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Envoyer le message';
+                }, 3000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification('Une erreur est survenue. Veuillez réessayer.', 'error');
+        })
+        .finally(() => {
+            // Réactiver le bouton et cacher le spinner
+            submitBtn.disabled = false;
+            loadingSpinner.style.display = 'none';
+            btnText.textContent = 'Envoyer le message';
+        });
+    });
+    
+    // Fonction pour afficher les notifications
+    function showNotification(message, type) {
+        // Supprimer les anciennes notifications
+        const existingAlerts = document.querySelectorAll('.alert-custom');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Créer une nouvelle notification
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'error'}-custom alert-custom`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+            ${message}
+        `;
+        
+        // Insérer la notification au début du formulaire
+        const formBody = contactForm.parentElement;
+        formBody.insertBefore(alertDiv, contactForm);
+        
+        // Faire défiler vers la notification
+        alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Supprimer automatiquement après 5 secondes
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+    
+    // Animation des champs de formulaire
+    const formControls = document.querySelectorAll('.form-control');
+    formControls.forEach(control => {
+        control.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'translateY(-2px)';
+        });
+        
+        control.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Animation des options de contact
+    const contactOptions = document.querySelectorAll('.contact-type-option label');
+    contactOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Effet de ripple
+            const ripple = document.createElement('span');
+            ripple.style.position = 'absolute';
+            ripple.style.borderRadius = '50%';
+            ripple.style.background = 'rgba(255,255,255,0.6)';
+            ripple.style.transform = 'scale(0)';
+            ripple.style.animation = 'ripple 0.6s linear';
+            ripple.style.left = '50%';
+            ripple.style.top = '50%';
+            ripple.style.width = '20px';
+            ripple.style.height = '20px';
+            ripple.style.marginLeft = '-10px';
+            ripple.style.marginTop = '-10px';
+            
+            this.style.position = 'relative';
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+    
+    // CSS pour l'animation ripple
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+{% endblock %}

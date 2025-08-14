@@ -1,0 +1,732 @@
+{% extends 'base.html' %}
+
+{% block title %}Politique de confidentialité - DOUKA KM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .legal-page {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .legal-hero {
+        background: linear-gradient(135deg, #0066cc, #004499);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+        margin-bottom: 2rem;
+        border-radius: 0 0 30px 30px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .legal-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="legal-grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23legal-grid)"/></svg>');
+        opacity: 0.3;
+    }
+    
+    .legal-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .legal-hero p {
+        font-size: 1.1rem;
+        margin-bottom: 0;
+        position: relative;
+        z-index: 1;
+        opacity: 0.9;
+    }
+    
+    .legal-content {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 3rem;
+        margin-bottom: 2rem;
+    }
+    
+    .legal-nav {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .legal-nav h5 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .legal-nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .legal-nav li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .legal-nav a {
+        color: #6c757d;
+        text-decoration: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        display: block;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+    
+    .legal-nav a:hover,
+    .legal-nav a.active {
+        background: #0066cc;
+        color: white;
+        transform: translateX(5px);
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .section-header h2 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin: 0;
+        flex: 1;
+    }
+    
+    .section-header .section-number {
+        background: #0066cc;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .subsection {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border-left: 4px solid #0066cc;
+    }
+    
+    .subsection h3 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .subsection p {
+        color: #6c757d;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+    
+    .subsection ul, .subsection ol {
+        color: #6c757d;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+    
+    .highlight-box {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border: 1px solid #2196f3;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .highlight-box h4 {
+        color: #1976d2;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .highlight-box p {
+        color: #0d47a1;
+        margin-bottom: 0;
+    }
+    
+    .contact-section {
+        background: linear-gradient(135d, #e8f5e8, #c8e6c9);
+        border: 1px solid #4caf50;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        margin-top: 3rem;
+    }
+    
+    .contact-section h3 {
+        color: #2e7d32;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .contact-section p {
+        color: #1b5e20;
+        margin-bottom: 1.5rem;
+    }
+    
+    .contact-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .contact-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .contact-btn-primary {
+        background: #0066cc;
+        color: white;
+        border: 2px solid #0066cc;
+    }
+    
+    .contact-btn-primary:hover {
+        background: #004499;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 102, 204, 0.3);
+    }
+    
+    .contact-btn-secondary {
+        background: white;
+        color: #0066cc;
+        border: 2px solid #0066cc;
+    }
+    
+    .contact-btn-secondary:hover {
+        background: #0066cc;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .last-updated {
+        text-align: center;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-top: 2rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .back-to-top {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #0066cc;
+        color: white;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+    
+    .back-to-top:hover {
+        background: #004499;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 102, 204, 0.3);
+    }
+    
+    @media (max-width: 768px) {
+        .legal-content {
+            padding: 1.5rem;
+        }
+        
+        .legal-nav {
+            position: static;
+            margin-bottom: 1rem;
+        }
+        
+        .section-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .section-header .section-number {
+            margin-right: 0;
+            margin-bottom: 1rem;
+        }
+        
+        .contact-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .contact-btn {
+            width: 100%;
+            max-width: 250px;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-page">
+    <!-- Hero Section -->
+    <div class="legal-hero">
+        <div class="container">
+            <h1><i class="fas fa-shield-alt me-3"></i>Politique de confidentialité</h1>
+            <p>Votre confidentialité est importante pour nous. Découvrez comment nous protégeons vos données personnelles.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <!-- Navigation latérale -->
+            <div class="col-lg-3">
+                <div class="legal-nav">
+                    <h5><i class="fas fa-list me-2"></i>Sommaire</h5>
+                    <ul>
+                        <li><a href="#introduction">Introduction</a></li>
+                        <li><a href="#donnees-collectees">Données collectées</a></li>
+                        <li><a href="#utilisation-donnees">Utilisation des données</a></li>
+                        <li><a href="#partage-donnees">Partage des données</a></li>
+                        <li><a href="#securite">Sécurité</a></li>
+                        <li><a href="#cookies">Cookies</a></li>
+                        <li><a href="#vos-droits">Vos droits</a></li>
+                        <li><a href="#conservation">Conservation</a></li>
+                        <li><a href="#modifications">Modifications</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="col-lg-9">
+                <div class="legal-content">
+                    <!-- Introduction -->
+                    <section id="introduction">
+                        <div class="section-header">
+                            <div class="section-number">1</div>
+                            <h2>Introduction</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p>DOUKA KM, marketplace spécialisée dans le commerce électronique aux Comores, s'engage à protéger la confidentialité et la sécurité de vos données personnelles. Cette politique de confidentialité explique comment nous collectons, utilisons, partageons et protégeons vos informations lorsque vous utilisez notre plateforme.</p>
+                            
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-info-circle me-2"></i>Important</h4>
+                                <p>En utilisant nos services, vous acceptez les pratiques décrites dans cette politique de confidentialité. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre plateforme.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Données collectées -->
+                    <section id="donnees-collectees">
+                        <div class="section-header">
+                            <div class="section-number">2</div>
+                            <h2>Données que nous collectons</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>2.1 Informations personnelles</h3>
+                            <p>Nous collectons les informations suivantes lorsque vous créez un compte ou utilisez nos services :</p>
+                            <ul>
+                                <li><strong>Informations d'identification :</strong> nom, prénom, adresse email, numéro de téléphone</li>
+                                <li><strong>Adresses :</strong> adresses de livraison et de facturation</li>
+                                <li><strong>Informations de paiement :</strong> données bancaires (traitées de manière sécurisée)</li>
+                                <li><strong>Préférences :</strong> historique d'achats, liste de souhaits, préférences de communication</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>2.2 Données techniques</h3>
+                            <p>Nous collectons automatiquement certaines informations techniques :</p>
+                            <ul>
+                                <li>Adresse IP et données de géolocalisation</li>
+                                <li>Type de navigateur et version</li>
+                                <li>Système d'exploitation</li>
+                                <li>Pages visitées et temps passé sur le site</li>
+                                <li>Données de cookies et technologies similaires</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>2.3 Informations de communication</h3>
+                            <p>Lorsque vous nous contactez :</p>
+                            <ul>
+                                <li>Contenu de vos messages et communications</li>
+                                <li>Enregistrements d'appels téléphoniques (avec votre consentement)</li>
+                                <li>Retours et évaluations sur nos services</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Utilisation des données -->
+                    <section id="utilisation-donnees">
+                        <div class="section-header">
+                            <div class="section-number">3</div>
+                            <h2>Comment nous utilisons vos données</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>3.1 Finalités principales</h3>
+                            <p>Nous utilisons vos données personnelles pour :</p>
+                            <ol>
+                                <li><strong>Traitement des commandes :</strong> gestion des achats, paiements et livraisons</li>
+                                <li><strong>Gestion de compte :</strong> création et maintenance de votre compte utilisateur</li>
+                                <li><strong>Support client :</strong> réponse à vos questions et résolution de problèmes</li>
+                                <li><strong>Communication :</strong> envoi de confirmations, mises à jour et informations importantes</li>
+                                <li><strong>Sécurité :</strong> prévention de la fraude et protection de nos services</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>3.2 Amélioration des services</h3>
+                            <p>Avec votre consentement, nous pouvons utiliser vos données pour :</p>
+                            <ul>
+                                <li>Personnaliser votre expérience d'achat</li>
+                                <li>Recommander des produits pertinents</li>
+                                <li>Analyser les tendances d'utilisation</li>
+                                <li>Développer de nouvelles fonctionnalités</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>3.3 Marketing (avec consentement)</h3>
+                            <p>Si vous y consentez, nous pouvons vous envoyer :</p>
+                            <ul>
+                                <li>Newsletters et offres promotionnelles</li>
+                                <li>Informations sur de nouveaux produits</li>
+                                <li>Invitations à des événements spéciaux</li>
+                            </ul>
+                            
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-hand-paper me-2"></i>Votre choix</h4>
+                                <p>Vous pouvez vous désabonner de nos communications marketing à tout moment en cliquant sur le lien de désinscription dans nos emails ou en nous contactant directement.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Partage des données -->
+                    <section id="partage-donnees">
+                        <div class="section-header">
+                            <div class="section-number">4</div>
+                            <h2>Partage de vos données</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>4.1 Principe général</h3>
+                            <p>Nous ne vendons, ne louons et ne partageons jamais vos données personnelles à des fins commerciales sans votre consentement explicite.</p>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>4.2 Partages autorisés</h3>
+                            <p>Nous pouvons partager vos données dans les cas suivants :</p>
+                            <ul>
+                                <li><strong>Prestataires de services :</strong> transporteurs, processeurs de paiement (dans le cadre strict de leurs missions)</li>
+                                <li><strong>Marchands partenaires :</strong> informations nécessaires au traitement de vos commandes</li>
+                                <li><strong>Obligations légales :</strong> en cas de demande des autorités compétentes</li>
+                                <li><strong>Protection de nos droits :</strong> en cas de litige ou d'activité frauduleuse suspectée</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>4.3 Transferts internationaux</h3>
+                            <p>Vos données peuvent être transférées et traitées dans des pays autres que les Comores. Dans ce cas, nous nous assurons que des garanties appropriées sont en place pour protéger vos données conformément aux standards internationaux.</p>
+                        </div>
+                    </section>
+
+                    <!-- Sécurité -->
+                    <section id="securite">
+                        <div class="section-header">
+                            <div class="section-number">5</div>
+                            <h2>Sécurité de vos données</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>5.1 Mesures techniques</h3>
+                            <p>Nous mettons en œuvre des mesures de sécurité robustes :</p>
+                            <ul>
+                                <li>Chiffrement SSL/TLS pour toutes les communications</li>
+                                <li>Stockage sécurisé des données sensibles</li>
+                                <li>Authentification à deux facteurs disponible</li>
+                                <li>Surveillance continue de nos systèmes</li>
+                                <li>Mises à jour régulières de sécurité</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>5.2 Mesures organisationnelles</h3>
+                            <p>Notre équipe suit des procédures strictes :</p>
+                            <ul>
+                                <li>Accès limité aux données selon le principe du moindre privilège</li>
+                                <li>Formation régulière de notre personnel sur la protection des données</li>
+                                <li>Audits de sécurité périodiques</li>
+                                <li>Plans de réponse aux incidents de sécurité</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Cookies -->
+                    <section id="cookies">
+                        <div class="section-header">
+                            <div class="section-number">6</div>
+                            <h2>Cookies et technologies similaires</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>6.1 Qu'est-ce que les cookies ?</h3>
+                            <p>Les cookies sont de petits fichiers texte stockés sur votre appareil qui nous aident à améliorer votre expérience sur notre site.</p>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>6.2 Types de cookies utilisés</h3>
+                            <ul>
+                                <li><strong>Cookies essentiels :</strong> nécessaires au fonctionnement du site (panier, authentification)</li>
+                                <li><strong>Cookies de performance :</strong> nous aident à comprendre comment vous utilisez notre site</li>
+                                <li><strong>Cookies de fonctionnalité :</strong> mémorisent vos préférences et choix</li>
+                                <li><strong>Cookies publicitaires :</strong> personnalisent les publicités (avec votre consentement)</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>6.3 Gestion des cookies</h3>
+                            <p>Vous pouvez contrôler l'utilisation des cookies via :</p>
+                            <ul>
+                                <li>Les paramètres de votre navigateur</li>
+                                <li>Notre centre de préférences cookies</li>
+                                <li>Des outils de désinscription spécialisés</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Vos droits -->
+                    <section id="vos-droits">
+                        <div class="section-header">
+                            <div class="section-number">7</div>
+                            <h2>Vos droits sur vos données</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p>Vous disposez des droits suivants concernant vos données personnelles :</p>
+                            
+                            <h3>7.1 Droit d'accès</h3>
+                            <p>Vous pouvez demander une copie de toutes les données personnelles que nous détenons sur vous.</p>
+                            
+                            <h3>7.2 Droit de rectification</h3>
+                            <p>Vous pouvez corriger ou mettre à jour vos informations personnelles à tout moment.</p>
+                            
+                            <h3>7.3 Droit à l'effacement</h3>
+                            <p>Vous pouvez demander la suppression de vos données dans certaines circonstances.</p>
+                            
+                            <h3>7.4 Droit à la portabilité</h3>
+                            <p>Vous pouvez récupérer vos données dans un format structuré et lisible par machine.</p>
+                            
+                            <h3>7.5 Droit d'opposition</h3>
+                            <p>Vous pouvez vous opposer au traitement de vos données pour certaines finalités.</p>
+                            
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-envelope me-2"></i>Exercer vos droits</h4>
+                                <p>Pour exercer ces droits, contactez-nous à <strong>privacy@doukakm.com</strong> ou via notre formulaire de contact. Nous répondrons dans un délai maximum de 30 jours.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Conservation -->
+                    <section id="conservation">
+                        <div class="section-header">
+                            <div class="section-number">8</div>
+                            <h2>Conservation des données</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p>Nous conservons vos données personnelles uniquement pendant la durée nécessaire aux finalités pour lesquelles elles ont été collectées :</p>
+                            
+                            <ul>
+                                <li><strong>Données de compte :</strong> tant que votre compte est actif + 3 ans après fermeture</li>
+                                <li><strong>Données de commande :</strong> 10 ans pour les obligations comptables et fiscales</li>
+                                <li><strong>Données de communication :</strong> 3 ans après le dernier contact</li>
+                                <li><strong>Données techniques :</strong> 13 mois maximum</li>
+                            </ul>
+                            
+                            <p>Passé ces délais, vos données sont automatiquement supprimées ou anonymisées.</p>
+                        </div>
+                    </section>
+
+                    <!-- Modifications -->
+                    <section id="modifications">
+                        <div class="section-header">
+                            <div class="section-number">9</div>
+                            <h2>Modifications de cette politique</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p>Nous pouvons modifier cette politique de confidentialité de temps en temps pour refléter :</p>
+                            <ul>
+                                <li>Les évolutions de nos services</li>
+                                <li>Les changements dans la législation</li>
+                                <li>Les améliorations de nos pratiques de sécurité</li>
+                            </ul>
+                            
+                            <p>En cas de modification substantielle, nous vous informerons par email ou via une notification sur notre site au moins 30 jours avant l'entrée en vigueur des changements.</p>
+                            
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-calendar-alt me-2"></i>Restez informé</h4>
+                                <p>Nous vous encourageons à consulter régulièrement cette page pour rester informé de nos pratiques en matière de protection des données.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Contact -->
+                    <section id="contact">
+                        <div class="section-header">
+                            <div class="section-number">10</div>
+                            <h2>Nous contacter</h2>
+                        </div>
+                        
+                        <div class="contact-section">
+                            <h3><i class="fas fa-handshake me-2"></i>Des questions sur vos données ?</h3>
+                            <p>Notre équipe est là pour vous aider avec toutes vos questions concernant la protection de vos données personnelles.</p>
+                            
+                            <div class="contact-buttons">
+                                <a href="{{ url_for('contact') }}" class="contact-btn contact-btn-primary">
+                                    <i class="fas fa-envelope"></i>
+                                    Nous contacter
+                                </a>
+                                <a href="mailto:privacy@doukakm.com" class="contact-btn contact-btn-secondary">
+                                    <i class="fas fa-shield-alt"></i>
+                                    Email confidentiel
+                                </a>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Date de mise à jour -->
+                    <div class="last-updated">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong>Dernière mise à jour :</strong> 9 août 2025
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bouton retour en haut -->
+<button class="back-to-top" id="backToTop">
+    <i class="fas fa-chevron-up"></i>
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Navigation douce
+    const navLinks = document.querySelectorAll('.legal-nav a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                // Supprimer la classe active de tous les liens
+                navLinks.forEach(l => l.classList.remove('active'));
+                // Ajouter la classe active au lien cliqué
+                this.classList.add('active');
+                
+                // Scroll fluide vers la section
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Bouton retour en haut
+    const backToTop = document.getElementById('backToTop');
+    
+    window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 300) {
+            backToTop.style.display = 'flex';
+        } else {
+            backToTop.style.display = 'none';
+        }
+    });
+    
+    backToTop.addEventListener('click', function() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+    
+    // Mise en surbrillance de la section active
+    function highlightActiveSection() {
+        const sections = document.querySelectorAll('section[id]');
+        const scrollPos = window.pageYOffset + 100;
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.offsetHeight;
+            const sectionId = section.getAttribute('id');
+            const navLink = document.querySelector(`.legal-nav a[href="#${sectionId}"]`);
+            
+            if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                navLinks.forEach(l => l.classList.remove('active'));
+                if (navLink) {
+                    navLink.classList.add('active');
+                }
+            }
+        });
+    }
+    
+    // Écouter le scroll pour mettre en surbrillance la section active
+    window.addEventListener('scroll', highlightActiveSection);
+    
+    // Mettre en surbrillance la première section au chargement
+    highlightActiveSection();
+});
+</script>
+{% endblock %}

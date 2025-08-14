@@ -1,0 +1,346 @@
+{% extends "admin/layout.html" %}
+
+{% block page_title %}Détail Commande {{ order.get('order_number') or 'CMD-' + order['id']|string }}{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-receipt me-2"></i>Commande {{ order.get('order_number') or 'CMD-' + order['id']|string }}</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('admin_orders') }}">Commandes</a></li>
+                <li class="breadcrumb-item active">{{ order.get('order_number') or 'CMD-' + order['id']|string }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <span class="badge bg-{{ order.get('status_color') or 'secondary' }} fs-6">
+            {{ order.get('status_text') or order.get('status') }}
+        </span>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Informations de la commande -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>Informations de la Commande</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Numéro:</strong> {{ order.get('order_number') or 'CMD-' + order['id']|string }}</p>
+                        <p><strong>Date:</strong> {{ order.get('date') or order.get('created_at') }}</p>
+                        <p><strong>Mode de livraison:</strong> {{ order.get('shipping_method') or 'Standard' }}</p>
+                        <p><strong>Mode de paiement:</strong> {{ order.get('payment_method') or 'À la livraison' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Statut:</strong> 
+                            <span class="badge bg-{{ order.get('status_color') or 'secondary' }}">
+                                {{ order.get('status_text') or order.get('status') }}
+                            </span>
+                        </p>
+                        <p><strong>Paiement:</strong> 
+                            {% set payment_status = order.get('payment_status') or 'pending' %}
+                            {% if payment_status == 'completed' %}
+                                <span class="badge bg-success">Payé</span>
+                            {% elif payment_status == 'pending' %}
+                                <span class="badge bg-warning">En attente</span>
+                            {% elif payment_status == 'failed' %}
+                                <span class="badge bg-danger">Échec</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ payment_status }}</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Total:</strong> <strong class="text-primary">{{ order.get('total')|format_number }} KMF</strong></p>
+                        {% if order.get('updated_at') %}
+                        <p><strong>Dernière MAJ:</strong> {{ order.get('updated_at') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Produits commandés -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-shopping-cart me-2"></i>Produits Commandés</h5>
+            </div>
+            <div class="card-body">
+                {% if order.get('items') %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Options</th>
+                                <th>Prix unitaire</th>
+                                <th>Quantité</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order['items'] %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.get('image') and item.get('image').startswith('http') %}
+                                            <img src="{{ item.get('image') }}" alt="{{ item.get('name') or 'Produit' }}" 
+                                                 class="me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;"
+                                                 onerror="this.src='https://via.placeholder.com/50x50?text=Produit'">
+                                        {% else %}
+                                            <img src="https://via.placeholder.com/50x50?text=Produit" alt="{{ item.get('name') or 'Produit' }}" 
+                                                 class="me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ item.get('name') or 'Produit' }}</strong>
+                                            {% if item.get('description') %}
+                                            <br><small class="text-muted">{{ item.get('description')[:50] }}{% if item.get('description')|length > 50 %}...{% endif %}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if item.get('options') %}
+                                        {% for key, value in item.get('options').items() %}
+                                            <span class="badge bg-light text-dark me-1">{{ key }}: {{ value }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">Aucune option</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.get('price')|default(0) }} KMF</td>
+                                <td>{{ item.get('quantity')|default(1) }}</td>
+                                <td><strong>{{ (item.get('price')|default(0) * item.get('quantity')|default(1)) }} KMF</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="4" class="text-end">Sous-total:</th>
+                                <th>{{ order.get('subtotal')|default(0) }} KMF</th>
+                            </tr>
+                            <tr>
+                                <th colspan="4" class="text-end">Livraison:</th>
+                                <th>{{ order.get('shipping_fee')|default(0) }} KMF</th>
+                            </tr>
+                            <tr class="table-primary">
+                                <th colspan="4" class="text-end">Total:</th>
+                                <th>{{ order.get('total')|default(0) }} KMF</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun produit dans cette commande</h5>
+                    <p class="text-muted">Les détails des produits ne sont pas disponibles.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Notes admin -->
+        {% if order.get('admin_notes') %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-sticky-note me-2"></i>Notes Administrateur</h5>
+            </div>
+            <div class="card-body">
+                {% for note in order['admin_notes'] %}
+                <div class="border-start border-3 border-primary ps-3 mb-3">
+                    <p class="mb-1">{{ note.get('note') }}</p>
+                    <small class="text-muted">
+                        Par {{ note.get('admin_email') }} le {{ note.get('date') }}
+                    </small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar avec informations client et marchand -->
+    <div class="col-md-4">
+        <!-- Informations Client -->
+        {% if order.get('customer_info') %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-user me-2"></i>Client</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>{{ order['customer_info'].get('name') or 'Client' }}</strong></p>
+                <p><small class="text-muted">{{ order['customer_info'].get('email') }}</small></p>
+                {% if order['customer_info'].get('phone') %}
+                <p><i class="fas fa-phone me-2"></i>{{ order['customer_info'].get('phone') }}</p>
+                {% endif %}
+                {% if order['customer_info'].get('city') or order['customer_info'].get('region') %}
+                <p><i class="fas fa-map-marker-alt me-2"></i>{{ order['customer_info'].get('city') }}{% if order['customer_info'].get('region') %}, {{ order['customer_info'].get('region') }}{% endif %}</p>
+                {% endif %}
+                {% if order['customer_info'].get('id') %}
+                <a href="#" onclick="alert('Profil client non disponible')" 
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-eye me-1"></i>Voir le profil
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Informations Marchand -->
+        {% if order.get('merchant_info') %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-store me-2"></i>Marchand</h5>
+            </div>
+            <div class="card-body">
+                <p>
+                    <strong>{{ order['merchant_info'].get('name') }}</strong>
+                    {% if order['merchant_info'].get('verified') %}
+                    <i class="fas fa-check-circle text-success ms-1" title="Vérifié"></i>
+                    {% endif %}
+                </p>
+                <p><small class="text-muted">{{ order['merchant_info'].get('email') }}</small></p>
+                {% if order['merchant_info'].get('phone') %}
+                <p><i class="fas fa-phone me-2"></i>{{ order['merchant_info'].get('phone') }}</p>
+                {% endif %}
+                {% if order['merchant_info'].get('city') or order['merchant_info'].get('region') %}
+                <p><i class="fas fa-map-marker-alt me-2"></i>{{ order['merchant_info'].get('city') }}{% if order['merchant_info'].get('region') %}, {{ order['merchant_info'].get('region') }}{% endif %}</p>
+                {% endif %}
+                {% if order['merchant_info'].get('id') %}
+                <a href="{{ url_for('admin_merchant_detail', merchant_id=order['merchant_info']['id']) }}" 
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye me-1"></i>Voir le profil
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Adresse de livraison -->
+        {% if order.get('shipping_address') %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-map-marker-alt me-2"></i>Adresse de Livraison</h5>
+            </div>
+            <div class="card-body">
+                <address class="mb-0">
+                    {% if order['shipping_address'].get('full_name') %}
+                    <strong>{{ order['shipping_address'].get('full_name') }}</strong><br>
+                    {% endif %}
+                    {{ order['shipping_address'].get('street') }}<br>
+                    {{ order['shipping_address'].get('city') }}, {{ order['shipping_address'].get('region') }}<br>
+                    {% if order['shipping_address'].get('phone') %}
+                    <i class="fas fa-phone me-1"></i>{{ order['shipping_address'].get('phone') }}
+                    {% endif %}
+                </address>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-cogs me-2"></i>Actions</h5>
+            </div>
+            <div class="card-body">
+                {% if order.get('status') in ['processing', 'shipped'] %}
+                <button type="button" class="btn btn-primary btn-sm w-100 mb-2" 
+                        data-bs-toggle="modal" data-bs-target="#updateStatusModal">
+                    <i class="fas fa-edit me-1"></i>Modifier le Statut
+                </button>
+                {% endif %}
+                
+                <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour modifier le statut -->
+<div class="modal fade" id="updateStatusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier le Statut</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="updateStatusForm" method="POST" action="{{ url_for('admin_update_order_status', order_id=order['id']) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="orderNumber" class="form-label">Commande</label>
+                        <input type="text" class="form-control" id="orderNumber" 
+                               value="{{ order.get('order_number') or 'CMD-' + order['id']|string }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newStatus" class="form-label">Nouveau Statut</label>
+                        <select class="form-select" id="newStatus" name="status" required>
+                            <option value="processing" {% if order.get('status') == 'processing' %}selected{% endif %}>En cours de préparation</option>
+                            <option value="shipped" {% if order.get('status') == 'shipped' %}selected{% endif %}>Expédiée</option>
+                            <option value="delivered" {% if order.get('status') == 'delivered' %}selected{% endif %}>Livrée</option>
+                            <option value="cancelled" {% if order.get('status') == 'cancelled' %}selected{% endif %}>Annulée</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="adminNotes" class="form-label">Notes (optionnel)</label>
+                        <textarea class="form-control" id="adminNotes" name="notes" rows="3" 
+                                  placeholder="Ajouter une note pour cette mise à jour..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Gestion de la modal de mise à jour du statut
+const updateStatusForm = document.getElementById('updateStatusForm');
+
+updateStatusForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Fermer la modal
+            bootstrap.Modal.getInstance(document.getElementById('updateStatusModal')).hide();
+            
+            // Afficher le message de succès
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('h2').parentNode);
+            
+            // Recharger la page après 2 secondes
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue lors de la mise à jour du statut.');
+    });
+});
+</script>
+{% endblock %}

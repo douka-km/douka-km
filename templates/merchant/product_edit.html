@@ -1,0 +1,271 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Modifier le produit - {{ product.name }}{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid py-4" data-subcategory-id="{{ product.subcategory_id or '' }}">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Modifier le produit</h1>
+            <p class="mb-0 text-muted">{{ product.name }}</p>
+        </div>
+        <a href="{{ url_for('merchant_products') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Informations du produit</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('merchant_product_edit', product_id=product.id) }}">
+                        <!-- Nom du produit -->
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nom du produit <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ product.name }}" required maxlength="100">
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="4" required maxlength="500">{{ product.description }}</textarea>
+                            <div class="form-text">Maximum 500 caractères</div>
+                        </div>
+
+                        <!-- Prix et Stock -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="price" class="form-label">Prix (KMF) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="price" name="price" 
+                                           value="{{ product.price }}" min="1" step="1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="stock" class="form-label">Quantité en stock <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="stock" name="stock" 
+                                           value="{{ product.stock|default(0) }}" min="0" step="1" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Catégorie et Sous-catégorie -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="category_id" class="form-label">Catégorie <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="category_id" name="category_id" required>
+                                        <option value="">Sélectionner une catégorie</option>
+                                        {% for category in categories %}
+                                            <option value="{{ category.id }}" {% if product.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="subcategory_id" class="form-label">Sous-catégorie</label>
+                                    <select class="form-select" id="subcategory_id" name="subcategory_id">
+                                        <option value="">Choisir une sous-catégorie</option>
+                                        <!-- Les sous-catégories seront remplies dynamiquement -->
+                                    </select>
+                                    <div class="form-text">Optionnel - Sélectionnez une sous-catégorie</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statut -->
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Statut</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="active" {% if product.status == 'active' %}selected{% endif %}>Actif</option>
+                                <option value="inactive" {% if product.status == 'inactive' %}selected{% endif %}>Inactif</option>
+                                <option value="out_of_stock" {% if product.status == 'out_of_stock' %}selected{% endif %}>Rupture de stock</option>
+                            </select>
+                        </div>
+
+                        <!-- Boutons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer les modifications
+                            </button>
+                            <a href="{{ url_for('merchant_products') }}" class="btn btn-secondary">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Aperçu du produit -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Aperçu du produit</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if product.image %}
+                            <img src="{{ product.image }}" 
+                                 alt="{{ product.name }}" 
+                                 class="img-fluid rounded" 
+                                 style="max-height: 200px; object-fit: cover;"
+                                 onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
+                        {% else %}
+                            <img src="https://via.placeholder.com/200x200?text=No+Image" 
+                                 alt="Pas d'image" 
+                                 class="img-fluid rounded">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>ID:</strong> {{ product.id }}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Créé le:</strong> {{ product.created_at or 'N/A' }}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Modifié le:</strong> {{ product.updated_at or 'N/A' }}
+                    </div>
+                    
+                    {% if product.images and product.images|length > 1 %}
+                    <div class="mb-3">
+                        <strong>Images supplémentaires:</strong>
+                        <div class="row g-1 mt-1">
+                            {% for image_url in product.images[1:] %}
+                                <div class="col-4">
+                                    <img src="{{ image_url }}" 
+                                         alt="Image {{ loop.index }}" 
+                                         class="img-thumbnail" 
+                                         style="width: 100%; height: 60px; object-fit: cover;"
+                                         onerror="this.src='https://via.placeholder.com/60x60?text=No+Image'">
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Actions rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/product/{{ product.id }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                            <i class="fas fa-eye me-2"></i>Voir sur le site
+                        </a>
+                        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash me-2"></i>Supprimer le produit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir supprimer le produit "{{ product.name }}" ?
+                <br><br>
+                <strong>Cette action est irréversible.</strong>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{{ url_for('merchant_product_delete', product_id=product.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Limitation de caractères pour la description
+    const descriptionField = document.getElementById('description');
+    if (descriptionField) {
+        descriptionField.addEventListener('input', function() {
+            const remaining = 500 - this.value.length;
+            const helpText = this.nextElementSibling;
+            if (remaining < 50) {
+                helpText.textContent = `${remaining} caractères restants`;
+                helpText.classList.add('text-warning');
+            } else {
+                helpText.textContent = 'Maximum 500 caractères';
+                helpText.classList.remove('text-warning');
+            }
+        });
+    }
+
+    // Gestion dynamique des sous-catégories
+    const categorySelect = document.getElementById('category_id');
+    const subcategorySelect = document.getElementById('subcategory_id');
+    
+    const subcategories = {
+        {% for category in categories %}
+            '{{ category.id }}': [
+                {% for subcategory in category.subcategories %}
+                    { id: '{{ subcategory.id }}', name: '{{ subcategory.name }}' },
+                {% endfor %}
+            ],
+        {% endfor %}
+    };
+
+    // Fonction pour remplir les sous-catégories
+    function populateSubcategories(categoryId, selectedSubcategoryId = null) {
+        subcategorySelect.innerHTML = '<option value="">Choisir une sous-catégorie</option>';
+        
+        if (categoryId && subcategories[categoryId]) {
+            subcategories[categoryId].forEach(function(subcategory) {
+                const option = document.createElement('option');
+                option.value = subcategory.id;
+                option.textContent = subcategory.name;
+                
+                // Sélectionner la sous-catégorie actuelle du produit
+                if (selectedSubcategoryId && subcategory.id == selectedSubcategoryId) {
+                    option.selected = true;
+                }
+                
+                subcategorySelect.appendChild(option);
+            });
+        }
+    }
+
+    // Événement de changement de catégorie
+    categorySelect.addEventListener('change', function() {
+        populateSubcategories(this.value);
+    });
+
+    // Initialiser les sous-catégories au chargement de la page
+    const currentCategoryId = categorySelect.value;
+    // Récupérer la sous-catégorie depuis l'attribut data
+    const currentSubcategoryId = parseInt(document.querySelector('.container-fluid').getAttribute('data-subcategory-id')) || null;
+    
+    if (currentCategoryId) {
+        populateSubcategories(currentCategoryId, currentSubcategoryId);
+    }
+});
+</script>
+{% endblock %}

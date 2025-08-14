@@ -1,0 +1,418 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Ajouter un produit - DOUKA KM{% endblock %}
+{% block page_title %}Ajouter un produit{% endblock %}
+
+{% block admin_content %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-plus me-2"></i> Nouveau produit
+                        </h5>
+                        <a href="{{ url_for('admin_products') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Retour
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="productForm">
+                        <!-- Informations de base -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-info-circle me-2"></i> Informations de base
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Nom du produit <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="price" class="form-label">Prix (KMF) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="price" name="price" required min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="stock" class="form-label">Stock <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="stock" name="stock" required min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                                    <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Catégorisation -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-tags me-2"></i> Catégorisation
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="category_id" class="form-label">Catégorie</label>
+                                    <select class="form-select" id="category_id" name="category_id">
+                                        <option value="">Choisir une catégorie</option>
+                                        <option value="1">Électronique</option>
+                                        <option value="2">Vêtements</option>
+                                        <option value="3">Alimentation</option>
+                                        <option value="4">Artisanat local</option>
+                                        <option value="5">Maison & Déco</option>
+                                        <option value="6">Santé & Beauté</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="subcategory_id" class="form-label">Sous-catégorie</label>
+                                    <select class="form-select" id="subcategory_id" name="subcategory_id">
+                                        <option value="">Choisir une sous-catégorie</option>
+                                        <!-- Les sous-catégories seront remplies dynamiquement -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Images -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-images me-2"></i> Images du produit
+                                </h6>
+                            </div>
+                            <div class="col-md-12">
+                                <div id="images-container">
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text">URL Image 1</span>
+                                        <input type="url" class="form-control" name="image_url[]" placeholder="https://exemple.com/image1.jpg" required>
+                                        <button type="button" class="btn btn-outline-success" onclick="addImageField()">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    La première image sera utilisée comme image principale du produit.
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Options du produit -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-palette me-2"></i> Options du produit (optionnel)
+                                </h6>
+                            </div>
+                            
+                            <!-- Couleurs -->
+                            <div class="col-md-6">
+                                <label class="form-label">Couleurs disponibles</label>
+                                <div id="colors-container">
+                                    <div class="color-option mb-2">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <input type="text" class="form-control" name="color_name[]" placeholder="Nom de la couleur (ex: Rouge)">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <input type="color" class="form-control form-control-color" name="color_hex[]" value="#000000">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-color">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-color">
+                                    <i class="fas fa-plus"></i> Ajouter une couleur
+                                </button>
+                            </div>
+
+                            <!-- Tailles -->
+                            <div class="col-md-6">
+                                <label class="form-label">Tailles disponibles</label>
+                                <div id="sizes-container">
+                                    <div class="size-option mb-2">
+                                        <div class="row">
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control" name="size_value[]" placeholder="Taille (ex: S, M, L)">
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control" name="size_label[]" placeholder="Description (ex: Small)">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-size">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-size">
+                                    <i class="fas fa-plus"></i> Ajouter une taille
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Spécifications techniques -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-cogs me-2"></i> Spécifications techniques (optionnel)
+                                </h6>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Spécifications techniques</label>
+                                <div id="specs-container">
+                                    <div class="spec-option mb-2">
+                                        <div class="row">
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control" name="spec_name[]" placeholder="Nom (ex: Matériau)">
+                                            </div>
+                                            <div class="col-md-5">
+                                                <input type="text" class="form-control" name="spec_value[]" placeholder="Valeur (ex: Coton 100%)">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-spec">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-spec">
+                                    <i class="fas fa-plus"></i> Ajouter une spécification
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Prix par combinaisons d'options -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-tags me-2"></i> Prix spécifiques par combinaison (optionnel)
+                                </h6>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Définissez des prix différents pour des combinaisons spécifiques de couleur et taille. Si aucun prix spécifique n'est défini, le prix de base sera utilisé.
+                                </div>
+                                <div id="price-combinations-container">
+                                    <!-- Les combinaisons de prix seront ajoutées ici dynamiquement -->
+                                </div>
+                                <button type="button" class="btn btn-outline-success btn-sm" id="add-price-combination">
+                                    <i class="fas fa-plus"></i> Ajouter un prix spécifique
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Statut du produit -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-toggle-on me-2"></i> Statut
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="status" class="form-label">Statut du produit</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="active">Actif</option>
+                                    <option value="inactive">Inactif</option>
+                                    <option value="draft">Brouillon</option>
+                                </select>
+                                <div class="form-text">Les produits actifs seront visibles dans la boutique</div>
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{{ url_for('admin_products') }}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i> Annuler
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i> Ajouter le produit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// Gestion des images
+function addImageField() {
+    const container = document.getElementById('images-container');
+    
+    const newField = document.createElement('div');
+    newField.className = 'input-group mb-2';
+    newField.innerHTML = `
+        <span class="input-group-text">URL Image</span>
+        <input type="url" class="form-control" name="image_url[]" placeholder="https://exemple.com/image.jpg">
+        <button type="button" class="btn btn-outline-danger" onclick="removeField(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newField);
+}
+
+function removeField(button) {
+    button.closest('.input-group').remove();
+}
+
+// Gestion des options avec nouveau format
+document.addEventListener('DOMContentLoaded', function() {
+    // Couleurs
+    document.getElementById('add-color').addEventListener('click', function() {
+        const container = document.getElementById('colors-container');
+        const newColor = document.createElement('div');
+        newColor.className = 'color-option mb-2';
+        newColor.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" name="color_name[]" placeholder="Nom de la couleur (ex: Rouge)">
+                </div>
+                <div class="col-md-4">
+                    <input type="color" class="form-control form-control-color" name="color_hex[]" value="#000000">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-color">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newColor);
+    });
+
+    // Tailles
+    document.getElementById('add-size').addEventListener('click', function() {
+        const container = document.getElementById('sizes-container');
+        const newSize = document.createElement('div');
+        newSize.className = 'size-option mb-2';
+        newSize.innerHTML = `
+            <div class="row">
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="size_value[]" placeholder="Taille (ex: S, M, L)">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="size_label[]" placeholder="Description (ex: Small)">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-size">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newSize);
+    });
+
+    // Spécifications
+    document.getElementById('add-spec').addEventListener('click', function() {
+        const container = document.getElementById('specs-container');
+        const newSpec = document.createElement('div');
+        newSpec.className = 'spec-option mb-2';
+        newSpec.innerHTML = `
+            <div class="row">
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="spec_name[]" placeholder="Nom (ex: Matériau)">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="spec_value[]" placeholder="Valeur (ex: Coton 100%)">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-spec">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newSpec);
+    });
+
+    // Combinaisons de prix
+    document.getElementById('add-price-combination').addEventListener('click', function() {
+        const container = document.getElementById('price-combinations-container');
+        const newCombination = document.createElement('div');
+        newCombination.className = 'price-combination mb-3 p-3 border rounded';
+        newCombination.innerHTML = `
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Couleur</label>
+                    <input type="text" class="form-control" name="combination_color[]" placeholder="Rouge">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Taille</label>
+                    <input type="text" class="form-control" name="combination_size[]" placeholder="M">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Prix (KMF)</label>
+                    <input type="number" class="form-control" name="combination_price[]" placeholder="25000">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Action</label>
+                    <button type="button" class="btn btn-outline-danger w-100 remove-combination">
+                        <i class="fas fa-trash"></i> Supprimer
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(newCombination);
+    });
+
+    // Gestion des suppressions avec délégation d'événements
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-color')) {
+            e.target.closest('.color-option').remove();
+        }
+        if (e.target.closest('.remove-size')) {
+            e.target.closest('.size-option').remove();
+        }
+        if (e.target.closest('.remove-spec')) {
+            e.target.closest('.spec-option').remove();
+        }
+        if (e.target.closest('.remove-combination')) {
+            e.target.closest('.price-combination').remove();
+        }
+    });
+
+    // Gestion des sous-catégories
+    const categorySelect = document.getElementById('category_id');
+    const subcategorySelect = document.getElementById('subcategory_id');
+    
+    const subcategories = {
+    };
+    
+    categorySelect.addEventListener('change', function() {
+        const categoryId = this.value;
+        subcategorySelect.innerHTML = '<option value="">Choisir une sous-catégorie</option>';
+        
+        if (categoryId && subcategories[categoryId]) {
+            subcategories[categoryId].forEach(function(subcategory) {
+                const option = document.createElement('option');
+                option.value = subcategory.id;
+                option.textContent = subcategory.name;
+                subcategorySelect.appendChild(option);
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

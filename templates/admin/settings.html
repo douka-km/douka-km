@@ -1,0 +1,889 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Paramètres - DOUKA KM Admin{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Paramètres du système</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Tableau de bord</a></li>
+        <li class="breadcrumb-item active">Paramètres</li>
+    </ol>
+
+    <div class="row">
+        <!-- Statistiques système -->
+        <div class="col-xl-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-1"></i>
+                    Statistiques du système
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="h3 text-primary">{{ system_stats.total_users }}</div>
+                            <div class="small text-muted">Utilisateurs</div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="h3 text-success">{{ system_stats.total_merchants }}</div>
+                            <div class="small text-muted">Marchands</div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="h3 text-info">{{ system_stats.total_products }}</div>
+                            <div class="small text-muted">Produits</div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="h3 text-warning">{{ system_stats.total_orders }}</div>
+                            <div class="small text-muted">Commandes</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h3 text-success">{{ system_stats.active_merchants }}</div>
+                            <div class="small text-muted">Marchands vérifiés</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h3 text-danger">{{ system_stats.pending_merchants }}</div>
+                            <div class="small text-muted">En attente</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profil administrateur -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-user-cog me-1"></i>
+                    Mon profil administrateur
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('admin_settings') }}" method="post">
+                        <input type="hidden" name="action" value="update_admin_profile">
+                        
+                        <div class="mb-3">
+                            <label for="admin_email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="admin_email" value="{{ admin.email or session.admin_email }}" readonly>
+                            <div class="form-text">L'email ne peut pas être modifié</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">Prénom</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ admin.first_name or '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Nom</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ admin.last_name or '' }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="{{ admin.phone or '' }}">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Mettre à jour le profil</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paramètres principaux -->
+        <div class="col-xl-8">
+            <!-- Informations du site -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-globe me-1"></i>
+                    Informations du site
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('admin_settings') }}" method="post">
+                        <input type="hidden" name="action" value="update_site_info">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="site_name" class="form-label">Nom du site</label>
+                                <input type="text" class="form-control" id="site_name" name="site_name" 
+                                       value="{{ site_settings.site_name or 'DOUKA KM' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="contact_email" class="form-label">Email de contact</label>
+                                <input type="email" class="form-control" id="contact_email" name="contact_email" 
+                                       value="{{ site_settings.contact_email or '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="contact_phone" class="form-label">Téléphone de contact</label>
+                                <input type="tel" class="form-control" id="contact_phone" name="contact_phone" 
+                                       value="{{ site_settings.contact_phone or '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="site_description" class="form-label">Description du site</label>
+                            <textarea class="form-control" id="site_description" name="site_description" rows="3">{{ site_settings.site_description or '' }}</textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Sauvegarder</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Logo du site -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-image me-1"></i>
+                    Logo du site
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('admin_settings') }}" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="update_logo">
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Logo actuel</label>
+                                    <div class="current-logo-container p-3 border rounded text-center" style="background-color: #f8f9fa;">
+                                        {% if site_settings.logo_url %}
+                                            <img src="{{ site_settings.logo_url }}" alt="Logo actuel" class="img-fluid" style="max-height: 150px; max-width: 100%;">
+                                        {% else %}
+                                            <div class="text-muted">
+                                                <i class="fas fa-image fa-3x mb-2"></i>
+                                                <br>
+                                                <small>Aucun logo défini</small>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="logo_file" class="form-label">Nouveau logo</label>
+                                    <input type="file" class="form-control" id="logo_file" name="logo_file" 
+                                           accept="image/*" onchange="previewLogo(this)">
+                                    <div class="form-text">
+                                        Formats acceptés : JPG, PNG, GIF, SVG. Taille maximale : 2 MB.
+                                        <br>Dimensions recommandées : 200x60 pixels (largeur x hauteur).
+                                    </div>
+                                </div>
+                                
+                                <!-- Aperçu du nouveau logo -->
+                                <div class="mb-3" id="logo-preview-container" style="display: none;">
+                                    <label class="form-label">Aperçu</label>
+                                    <div class="logo-preview-box p-3 border rounded text-center" style="background-color: #f8f9fa;">
+                                        <img id="logo-preview" src="" alt="Aperçu du logo" class="img-fluid" style="max-height: 150px; max-width: 100%;">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="logo_alt_text" class="form-label">Texte alternatif</label>
+                                    <input type="text" class="form-control" id="logo_alt_text" name="logo_alt_text" 
+                                           value="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}"
+                                           placeholder="Texte affiché si l'image ne se charge pas">
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-upload me-1"></i> Mettre à jour le logo
+                                    </button>
+                                    {% if site_settings.logo_url %}
+                                    <button type="button" class="btn btn-outline-danger" onclick="removeLogo()">
+                                        <i class="fas fa-trash me-1"></i> Supprimer le logo
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Paramètres financiers -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-percentage me-1"></i>
+                    Paramètres financiers
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('admin_settings') }}" method="post">
+                        <input type="hidden" name="action" value="update_commission">
+                        
+                        <div class="mb-3">
+                            <label for="commission_rate" class="form-label">Taux de commission (%)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="commission_rate" name="commission_rate" 
+                                       value="{{ site_settings.commission_rate or 5.0 }}" 
+                                       min="0" max="100" step="0.1" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text">
+                                Commission prélevée sur chaque vente des marchands.
+                                <br><strong>Actuellement :</strong> {{ site_settings.commission_rate or 5.0 }}% sur chaque commande livrée.
+                                <br><strong>Impact :</strong> Sur une vente de 10 000 KMF, la commission sera de {{ ((site_settings.commission_rate or 5.0) * 100)|int }} KMF.
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success">Mettre à jour la commission</button>
+                        <div class="form-text text-info mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Les changements seront appliqués immédiatement aux calculs des marchands.
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Paramètres de livraison -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-shipping-fast me-1"></i>
+                    Paramètres de livraison
+                </div>
+                <div class="card-body">
+                    <!-- Onglets pour les paramètres de livraison -->
+                    <ul class="nav nav-tabs" id="shippingTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="basic-shipping-tab" data-bs-toggle="tab" data-bs-target="#basic-shipping" type="button" role="tab">
+                                Paramètres généraux
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="regional-shipping-tab" data-bs-toggle="tab" data-bs-target="#regional-shipping" type="button" role="tab">
+                                Tarifs par région
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="price-ranges-tab" data-bs-toggle="tab" data-bs-target="#price-ranges" type="button" role="tab">
+                                Tranches de prix
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-3" id="shippingTabsContent">
+                        <!-- Paramètres généraux -->
+                        <div class="tab-pane fade show active" id="basic-shipping" role="tabpanel">
+                            <form action="{{ url_for('admin_settings') }}" method="post">
+                                <input type="hidden" name="action" value="update_shipping">
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="default_shipping_fee" class="form-label">Frais de livraison par défaut</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="default_shipping_fee" name="default_shipping_fee" 
+                                                   value="{{ site_settings.shipping_fee or site_settings.default_shipping_fee or 2000 }}" 
+                                                   min="0" required>
+                                            <span class="input-group-text">KMF</span>
+                                        </div>
+                                        <div class="form-text">
+                                            <strong>Actuellement :</strong> {{ site_settings.shipping_fee or site_settings.default_shipping_fee or 2000 }} KMF par commande
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="free_shipping_threshold" class="form-label">Seuil livraison gratuite</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="free_shipping_threshold" name="free_shipping_threshold" 
+                                                   value="{{ site_settings.free_shipping_threshold or 50000 }}" 
+                                                   min="0" required>
+                                            <span class="input-group-text">KMF</span>
+                                        </div>
+                                        <div class="form-text">
+                                            Montant minimum pour la livraison gratuite
+                                            <br><strong>Actuellement :</strong> Livraison gratuite à partir de {{ site_settings.free_shipping_threshold or 50000 }} KMF
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-info">Mettre à jour la livraison</button>
+                                <div class="form-text text-info mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Les nouveaux frais s'appliqueront aux prochaines commandes des clients.
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Tarifs par région -->
+                        <div class="tab-pane fade" id="regional-shipping" role="tabpanel">
+                            <form action="{{ url_for('admin_settings') }}" method="post">
+                                <input type="hidden" name="action" value="update_shipping_rates">
+                                
+                                <div class="alert alert-info" role="alert">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <strong>Configuration avancée :</strong> Définissez des tarifs différents pour chaque région et type de livraison.
+                                </div>
+                                
+                                <!-- Seuil de livraison gratuite -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="free_shipping_threshold_regional" class="form-label">Seuil livraison gratuite</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="free_shipping_threshold_regional" name="free_shipping_threshold" 
+                                                   value="{{ site_settings.free_shipping_threshold or 50000 }}" 
+                                                   min="0" required>
+                                            <span class="input-group-text">KMF</span>
+                                        </div>
+                                        <div class="form-text">Applicable à toutes les régions</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Tarifs par région -->
+                                <div class="row">
+                                    <!-- Grande Comore -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0"><i class="fas fa-map-marker-alt me-1"></i> Grande Comore</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Livraison Standard</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="grande-comore_standard" 
+                                                               value="{{ site_settings.shipping_rates['grande-comore']['standard'] if site_settings.shipping_rates and 'grande-comore' in site_settings.shipping_rates else 2000 }}" 
+                                                               min="0" required>
+                                                        <span class="input-group-text">KMF</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Livraison Express</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="grande-comore_express" 
+                                                               value="{{ site_settings.shipping_rates['grande-comore']['express'] if site_settings.shipping_rates and 'grande-comore' in site_settings.shipping_rates else 4000 }}" 
+                                                               min="0" required>
+                                                        <span class="input-group-text">KMF</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Anjouan -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0"><i class="fas fa-map-marker-alt me-1"></i> Anjouan</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Livraison Standard</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="anjouan_standard" 
+                                                               value="{{ site_settings.shipping_rates['anjouan']['standard'] if site_settings.shipping_rates and 'anjouan' in site_settings.shipping_rates else 2500 }}" 
+                                                               min="0" required>
+                                                        <span class="input-group-text">KMF</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Livraison Express</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="anjouan_express" 
+                                                               value="{{ site_settings.shipping_rates['anjouan']['express'] if site_settings.shipping_rates and 'anjouan' in site_settings.shipping_rates else 5000 }}" 
+                                                               min="0" required>
+                                                        <span class="input-group-text">KMF</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Mohéli -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card">
+                                            <div class="card-header bg-info text-white">
+                                                <h6 class="mb-0"><i class="fas fa-map-marker-alt me-1"></i> Mohéli</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Livraison Standard</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="moheli_standard" 
+                                                               value="{{ site_settings.shipping_rates['moheli']['standard'] if site_settings.shipping_rates and 'moheli' in site_settings.shipping_rates else 3000 }}" 
+                                                               min="0" required>
+                                                        <span class="input-group-text">KMF</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Livraison Express</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="moheli_express" 
+                                                               value="{{ site_settings.shipping_rates['moheli']['express'] if site_settings.shipping_rates and 'moheli' in site_settings.shipping_rates else 6000 }}" 
+                                                               min="0" required>
+                                                        <span class="input-group-text">KMF</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Tarifs par défaut -->
+                                    <div class="col-md-6 mb-4">
+                                        <div class="card">
+                                            <div class="card-header bg-warning text-dark">
+                                                <h6 class="mb-0"><i class="fas fa-globe me-1"></i> Tarifs par défaut</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Livraison Standard</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="default_standard" 
+                                                               value="{{ site_settings.shipping_rates['default']['standard'] if site_settings.shipping_rates and 'default' in site_settings.shipping_rates else 2000 }}" 
+                                                               min="0" required>
+                                                        <span class="input-group-text">KMF</span>
+                                                    </div>
+                                                    <div class="form-text">Pour les régions non spécifiées</div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Livraison Express</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" name="default_express" 
+                                                               value="{{ site_settings.shipping_rates['default']['express'] if site_settings.shipping_rates and 'default' in site_settings.shipping_rates else 4000 }}" 
+                                                               min="0" required>
+                                                        <span class="input-group-text">KMF</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i> Sauvegarder les tarifs régionaux
+                                    </button>
+                                    <div class="form-text text-info mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Les nouveaux tarifs s'appliqueront immédiatement aux prochaines commandes.
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Tranches de prix -->
+                        <div class="tab-pane fade" id="price-ranges" role="tabpanel">
+                            <form action="{{ url_for('admin_settings') }}" method="post">
+                                <input type="hidden" name="action" value="update_shipping_price_ranges">
+                                
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <strong>Important :</strong> Le système de tranches de prix, s'il est activé, remplace les tarifs par région. Les deux systèmes ne peuvent pas être utilisés simultanément.
+                                </div>
+                                
+                                <!-- Activation du système -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="price_ranges_enabled" name="price_ranges_enabled" 
+                                                   {% if site_settings.shipping_price_ranges and site_settings.shipping_price_ranges.enabled %}checked{% endif %}>
+                                            <label class="form-check-label" for="price_ranges_enabled">
+                                                <strong>Activer le système de tranches de prix</strong>
+                                            </label>
+                                        </div>
+                                        <div class="form-text">
+                                            Si activé, les frais de livraison seront calculés selon le montant du panier plutôt que selon la région.
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="free_shipping_threshold_ranges" class="form-label">Seuil livraison gratuite</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="free_shipping_threshold_ranges" name="free_shipping_threshold_ranges" 
+                                                   value="{{ site_settings.free_shipping_threshold or 50000 }}" 
+                                                   min="0" required>
+                                            <span class="input-group-text">KMF</span>
+                                        </div>
+                                        <div class="form-text">Applicable même avec les tranches de prix</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Configuration des tranches -->
+                                <div id="price-ranges-config">
+                                    <h6 class="mb-3">Configuration des tranches de prix</h6>
+                                    
+                                    <div id="ranges-container">
+                                        {% set ranges = site_settings.shipping_price_ranges.ranges if site_settings.shipping_price_ranges and site_settings.shipping_price_ranges.ranges else [
+                                            {'min': 0, 'max': 10000, 'standard': 3000, 'express': 6000},
+                                            {'min': 10001, 'max': 30000, 'standard': 2000, 'express': 4000},
+                                            {'min': 30001, 'max': 50000, 'standard': 1500, 'express': 3000}
+                                        ] %}
+                                        
+                                        {% for range in ranges %}
+                                        <div class="range-item card mb-3">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">Tranche {{ loop.index }}</h6>
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-range">
+                                                    <i class="fas fa-trash"></i> Supprimer
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Prix minimum (KMF)</label>
+                                                        <input type="number" class="form-control" name="range_{{ loop.index0 }}_min" 
+                                                               value="{{ range.min }}" min="0" required>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Prix maximum (KMF)</label>
+                                                        <input type="number" class="form-control" name="range_{{ loop.index0 }}_max" 
+                                                               value="{% if range.max and range.max != 'inf' and range.max|string != 'inf' %}{{ range.max }}{% endif %}" 
+                                                               min="0" placeholder="Laissez vide pour ∞">
+                                                        <div class="form-text">Laissez vide pour "et plus"</div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Livraison Standard (KMF)</label>
+                                                        <input type="number" class="form-control" name="range_{{ loop.index0 }}_standard" 
+                                                               value="{{ range.standard }}" min="0" required>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Livraison Express (KMF)</label>
+                                                        <input type="number" class="form-control" name="range_{{ loop.index0 }}_express" 
+                                                               value="{{ range.express }}" min="0" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <button type="button" class="btn btn-outline-primary" id="add-range">
+                                            <i class="fas fa-plus me-1"></i> Ajouter une tranche
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-save me-1"></i> Sauvegarder les tranches de prix
+                                    </button>
+                                    <div class="form-text text-info mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Les nouvelles tranches s'appliqueront immédiatement aux prochaines commandes.
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Changement de mot de passe -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-lock me-1"></i>
+                    Sécurité
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-3">Changer le mot de passe</h6>
+                    <form action="{{ url_for('admin_settings') }}" method="post">
+                        <input type="hidden" name="action" value="change_password">
+                        
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Mot de passe actuel</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="new_password" class="form-label">Nouveau mot de passe</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password" 
+                                       minlength="6" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="confirm_password" class="form-label">Confirmer le mot de passe</label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                       minlength="6" required>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning">Changer le mot de passe</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Actions système -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-tools me-1"></i>
+                    Actions système
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6>Maintenance</h6>
+                            <p class="text-muted small">Actions de maintenance du système</p>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="clearCache()">
+                                <i class="fas fa-broom me-1"></i> Vider le cache
+                            </button>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>Sauvegarde</h6>
+                            <p class="text-muted small">Exporter les données du système</p>
+                            <button class="btn btn-outline-info btn-sm" onclick="exportData()">
+                                <i class="fas fa-download me-1"></i> Exporter les données
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations système -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Informations système
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Version:</strong><br>
+                            <span class="text-muted">DOUKA KM v1.0.0</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Dernière mise à jour:</strong><br>
+                            <span class="text-muted">{{ site_settings.updated_at or 'Jamais' }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Mis à jour par:</strong><br>
+                            <span class="text-muted">{{ site_settings.updated_by or 'N/A' }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Statut:</strong><br>
+                            <span class="badge bg-success">En ligne</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function clearCache() {
+    if (confirm('Êtes-vous sûr de vouloir vider le cache ? Cette action peut affecter les performances temporairement.')) {
+        // Ici vous pouvez ajouter une requête AJAX pour vider le cache
+        alert('Cache vidé avec succès !');
+    }
+}
+
+function exportData() {
+    if (confirm('Voulez-vous exporter toutes les données du système ?')) {
+        // Ici vous pouvez ajouter une requête pour exporter les données
+        alert('Export démarré ! Vous recevrez un email quand ce sera terminé.');
+    }
+}
+
+// Validation du mot de passe
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const newPassword = document.getElementById('new_password').value;
+    const confirmPassword = this.value;
+    
+    if (newPassword !== confirmPassword) {
+        this.setCustomValidity('Les mots de passe ne correspondent pas');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+
+// Gestion des tranches de prix
+document.addEventListener('DOMContentLoaded', function() {
+    let rangeCounter = document.querySelectorAll('.range-item').length;
+    
+    // Fonction pour ajouter une nouvelle tranche
+    document.getElementById('add-range').addEventListener('click', function() {
+        const container = document.getElementById('ranges-container');
+        const newRangeHtml = `
+            <div class="range-item card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Tranche ${rangeCounter + 1}</h6>
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-range">
+                        <i class="fas fa-trash"></i> Supprimer
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">Prix minimum (KMF)</label>
+                            <input type="number" class="form-control" name="range_${rangeCounter}_min" 
+                                   value="0" min="0" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Prix maximum (KMF)</label>
+                            <input type="number" class="form-control" name="range_${rangeCounter}_max" 
+                                   min="0" placeholder="Laissez vide pour ∞">
+                            <div class="form-text">Laissez vide pour "et plus"</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Livraison Standard (KMF)</label>
+                            <input type="number" class="form-control" name="range_${rangeCounter}_standard" 
+                                   value="2000" min="0" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Livraison Express (KMF)</label>
+                            <input type="number" class="form-control" name="range_${rangeCounter}_express" 
+                                   value="4000" min="0" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', newRangeHtml);
+        rangeCounter++;
+        updateRangeIndexes();
+    });
+    
+    // Fonction pour supprimer une tranche
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-range') || e.target.closest('.remove-range')) {
+            const rangeItem = e.target.closest('.range-item');
+            if (document.querySelectorAll('.range-item').length > 1) {
+                rangeItem.remove();
+                updateRangeIndexes();
+            } else {
+                alert('Il doit y avoir au moins une tranche de prix.');
+            }
+        }
+    });
+    
+    // Fonction pour mettre à jour les index des tranches
+    function updateRangeIndexes() {
+        const ranges = document.querySelectorAll('.range-item');
+        ranges.forEach((range, index) => {
+            // Mettre à jour le titre
+            const title = range.querySelector('.card-header h6');
+            title.textContent = `Tranche ${index + 1}`;
+            
+            // Mettre à jour les noms des inputs
+            const inputs = range.querySelectorAll('input');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                if (name) {
+                    const parts = name.split('_');
+                    if (parts.length >= 3) {
+                        parts[1] = index;
+                        input.setAttribute('name', parts.join('_'));
+                    }
+                }
+            });
+        });
+    }
+    
+    // Validation automatique des tranches
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('input[name*="_min"], input[name*="_max"]')) {
+            validateRanges();
+        }
+    });
+    
+    function validateRanges() {
+        const ranges = document.querySelectorAll('.range-item');
+        let hasError = false;
+        
+        ranges.forEach((range, index) => {
+            const minInput = range.querySelector('input[name*="_min"]');
+            const maxInput = range.querySelector('input[name*="_max"]');
+            
+            const minValue = parseFloat(minInput.value) || 0;
+            const maxValue = parseFloat(maxInput.value) || Infinity;
+            
+            // Vérifier que min < max
+            if (maxValue !== Infinity && minValue >= maxValue) {
+                maxInput.setCustomValidity('Le prix maximum doit être supérieur au prix minimum');
+                hasError = true;
+            } else {
+                maxInput.setCustomValidity('');
+            }
+            
+            // Vérifier le chevauchement avec les autres tranches
+            ranges.forEach((otherRange, otherIndex) => {
+                if (index !== otherIndex) {
+                    const otherMinInput = otherRange.querySelector('input[name*="_min"]');
+                    const otherMaxInput = otherRange.querySelector('input[name*="_max"]');
+                    
+                    const otherMinValue = parseFloat(otherMinInput.value) || 0;
+                    const otherMaxValue = parseFloat(otherMaxInput.value) || Infinity;
+                    
+                    // Vérifier le chevauchement
+                    if (!(maxValue <= otherMinValue || minValue >= otherMaxValue)) {
+                        minInput.setCustomValidity('Cette tranche chevauche avec une autre tranche');
+                        hasError = true;
+                    } else if (!hasError) {
+                        minInput.setCustomValidity('');
+                    }
+                }
+            });
+        });
+        
+        return !hasError;
+    }
+    
+    // Initialiser la validation
+    updateRangeIndexes();
+});
+
+// Fonction pour prévisualiser le logo
+function previewLogo(input) {
+    const file = input.files[0];
+    const previewContainer = document.getElementById('logo-preview-container');
+    const previewImg = document.getElementById('logo-preview');
+    
+    if (file) {
+        // Vérifier la taille du fichier (2MB max)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Le fichier est trop volumineux. Taille maximale : 2 MB.');
+            input.value = '';
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        // Vérifier le type de fichier
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Format de fichier non supporté. Utilisez JPG, PNG, GIF ou SVG.');
+            input.value = '';
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        // Créer l'aperçu
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+
+// Fonction pour supprimer le logo
+function removeLogo() {
+    if (confirm('Êtes-vous sûr de vouloir supprimer le logo actuel ?')) {
+        fetch('{{ url_for("admin_settings") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=remove_logo'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la suppression : ' + (data.message || 'Erreur inconnue'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la suppression du logo.');
+        });
+    }
+}
+</script>
+{% endblock %}

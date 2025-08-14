@@ -1,0 +1,271 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Gestion des Employés{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-users me-2"></i>Gestion des Employés</h2>
+        <a href="{{ url_for('admin_add_employee') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Ajouter un Employé
+        </a>
+    </div>
+
+    <!-- Messages flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ employees|selectattr('role', 'equalto', 'admin')|list|length }}</h4>
+                            <p class="mb-0">Administrateurs</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-user-shield fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ employees|selectattr('role', 'equalto', 'manager')|list|length }}</h4>
+                            <p class="mb-0">Managers</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-user-tie fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ employees|selectattr('role', 'equalto', 'livreur')|list|length }}</h4>
+                            <p class="mb-0">Livreurs</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-motorcycle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ employees|length }}</h4>
+                            <p class="mb-0">Total Employés</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des employés -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Liste des Employés</h5>
+        </div>
+        <div class="card-body">
+            {% if employees %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom Complet</th>
+                                <th>Email</th>
+                                <th>Rôle</th>
+                                <th>Date de Création</th>
+                                <th>Dernière Connexion</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for employee in employees %}
+                            <tr>
+                                <td>
+                                    {% if employee.display_id %}
+                                        <span class="badge bg-secondary">{{ employee.display_id }}</span>
+                                        {% if employee.source %}
+                                            <br><small class="text-muted">{{ employee.source }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">#{{ employee.id }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ employee.first_name }} {{ employee.last_name }}</strong>
+                                </td>
+                                <td>{{ employee.email }}</td>
+                                <td>
+                                    {% if employee.role == 'admin' or employee.role == 'super_admin' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-user-shield me-1"></i>Administrateur
+                                        </span>
+                                    {% elif employee.role == 'manager' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-user-tie me-1"></i>Manager
+                                        </span>
+                                    {% elif employee.role == 'livreur' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-motorcycle me-1"></i>Livreur
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ employee.created_at }}</small>
+                                </td>
+                                <td>
+                                    {% if employee.last_login == 'Jamais' %}
+                                        <small class="text-muted">{{ employee.last_login }}</small>
+                                    {% else %}
+                                        <small class="text-success">{{ employee.last_login }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        {% if employee.source == 'database' %}
+                                            <a href="{{ url_for('admin_edit_employee', employee_id=employee.real_id) }}" 
+                                               class="btn btn-outline-primary" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-outline-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteModal{{ employee.real_id }}"
+                                                    title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% elif employee.source == 'admin' %}
+                                            <span class="badge bg-info">Admin Principal</span>
+                                        {% else %}
+                                            <a href="{{ url_for('admin_edit_employee', employee_id=employee.real_id) }}" 
+                                               class="btn btn-outline-primary" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-outline-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteModal{{ employee.real_id }}"
+                                                    title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Modal de confirmation de suppression -->
+                                    {% if employee.source != 'admin' %}
+                                    <div class="modal fade" id="deleteModal{{ employee.real_id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirmer la suppression</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>Êtes-vous sûr de vouloir supprimer l'employé :</p>
+                                                    <strong>{{ employee.first_name }} {{ employee.last_name }}</strong> ({{ employee.email }})
+                                                    <br><br>
+                                                    <div class="alert alert-warning">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        Cette action est irréversible !
+                                                        {% if employee.source == 'database' %}
+                                                            <br><small>Employé de la base de données</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                    <form method="POST" action="{{ url_for('admin_delete_employee', employee_id=employee.real_id) }}" class="d-inline">
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-trash me-1"></i>Supprimer
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun employé trouvé</h5>
+                    <p class="text-muted">Commencez par ajouter votre premier employé.</p>
+                    <a href="{{ url_for('admin_add_employee') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Ajouter un Employé
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.table th {
+    font-weight: 600;
+    border-top: none;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.075);
+}
+
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.modal-content {
+    border-radius: 0.5rem;
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+</style>
+{% endblock %}

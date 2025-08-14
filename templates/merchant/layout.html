@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Espace Marchand - DOUKA KM{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        :root {
+            --merchant-sidebar-width: 250px;
+            --merchant-sidebar-collapsed-width: 70px;
+            --merchant-primary-color: #0d6efd;
+            --merchant-secondary-color: #6c757d;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .merchant-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .merchant-sidebar {
+            width: var(--merchant-sidebar-width);
+            background-color: #212529;
+            color: white;
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100%;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        
+        .merchant-sidebar.collapsed {
+            width: var(--merchant-sidebar-collapsed-width);
+        }
+        
+        .merchant-sidebar .sidebar-brand {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .merchant-sidebar .sidebar-brand h3 {
+            font-size: 18px;
+            margin: 0;
+            white-space: nowrap;
+        }
+        
+        .merchant-sidebar .sidebar-menu {
+            padding: 20px 0;
+        }
+        
+        .merchant-sidebar .sidebar-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .merchant-sidebar .sidebar-menu li {
+            margin-bottom: 5px;
+        }
+        
+        .merchant-sidebar .sidebar-menu a {
+            color: #adb5bd;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        
+        .merchant-sidebar .sidebar-menu a:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.05);
+        }
+        
+        .merchant-sidebar .sidebar-menu a.active {
+            color: white;
+            background-color: var(--merchant-primary-color);
+        }
+        
+        .merchant-sidebar .sidebar-menu a i {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        
+        .merchant-sidebar.collapsed .sidebar-brand h3,
+        .merchant-sidebar.collapsed .sidebar-menu a span {
+            display: none;
+        }
+        
+        .merchant-sidebar.collapsed .sidebar-menu a i {
+            margin-right: 0;
+        }
+        
+        .merchant-sidebar.collapsed .sidebar-menu a {
+            justify-content: center;
+            padding: 15px;
+        }
+        
+        .merchant-content {
+            flex: 1;
+            margin-left: var(--merchant-sidebar-width);
+            transition: all 0.3s;
+        }
+        
+        .merchant-content.expanded {
+            margin-left: var(--merchant-sidebar-collapsed-width);
+        }
+        
+        .merchant-navbar {
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .merchant-navbar .toggle-sidebar {
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        .merchant-navbar .merchant-user {
+            display: flex;
+            align-items: center;
+        }
+        
+        .merchant-navbar .merchant-user .dropdown-toggle {
+            text-decoration: none;
+            color: #212529;
+            display: flex;
+            align-items: center;
+        }
+        
+        .merchant-navbar .merchant-user img {
+            width: 30px;
+            height: 30px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .merchant-dashboard .border-left-primary {
+            border-left: 4px solid var(--merchant-primary-color);
+        }
+        
+        .merchant-dashboard .border-left-success {
+            border-left: 4px solid #198754;
+        }
+        
+        .merchant-dashboard .border-left-info {
+            border-left: 4px solid #0dcaf0;
+        }
+        
+        .merchant-dashboard .border-left-warning {
+            border-left: 4px solid #ffc107;
+        }
+        
+        .merchant-dashboard .text-gray-300 {
+            color: #dee2e6;
+        }
+        
+        @media (max-width: 768px) {
+            .merchant-sidebar {
+                width: var(--merchant-sidebar-collapsed-width);
+            }
+            
+            .merchant-content {
+                margin-left: var(--merchant-sidebar-collapsed-width);
+            }
+            
+            .merchant-sidebar.expanded {
+                width: var(--merchant-sidebar-width);
+            }
+            
+            .merchant-sidebar:not(.expanded) .sidebar-brand h3,
+            .merchant-sidebar:not(.expanded) .sidebar-menu a span {
+                display: none;
+            }
+            
+            .merchant-sidebar:not(.expanded) .sidebar-menu a i {
+                margin-right: 0;
+            }
+            
+            .merchant-sidebar:not(.expanded) .sidebar-menu a {
+                justify-content: center;
+                padding: 15px;
+            }
+            
+            .merchant-sidebar.expanded .sidebar-brand h3,
+            .merchant-sidebar.expanded .sidebar-menu a span {
+                display: block;
+            }
+            
+            .merchant-sidebar.expanded .sidebar-menu a i {
+                margin-right: 10px;
+            }
+            
+            .merchant-sidebar.expanded .sidebar-menu a {
+                justify-content: flex-start;
+                padding: 10px 15px;
+            }
+            
+            .merchant-sidebar.expanded + .merchant-content {
+                margin-left: var(--merchant-sidebar-width);
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="merchant-wrapper">
+        <!-- Sidebar -->
+        <aside class="merchant-sidebar" id="merchantSidebar">
+            <div class="sidebar-brand">
+                <h3>DOUKA KM Marchand</h3>
+                <button class="btn btn-link text-white d-md-none" id="closeMobileSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="sidebar-menu">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('merchant_dashboard') }}" class="{{ 'active' if request.endpoint == 'merchant_dashboard' else '' }}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Tableau de bord</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('merchant_products') }}" class="{{ 'active' if request.endpoint == 'merchant_products' else '' }}">
+                            <i class="fas fa-box"></i>
+                            <span>Produits</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('merchant_orders') }}" class="{{ 'active' if request.endpoint == 'merchant_orders' else '' }}">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Commandes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('merchant_payments') }}" class="{{ 'active' if request.endpoint in ['merchant_payments', 'merchant_withdrawal_detail'] else '' }}">
+                            <i class="fas fa-wallet"></i>
+                            <span>Paiements</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('merchant_reviews') }}" class="{{ 'active' if request.endpoint == 'merchant_reviews' else '' }}">
+                            <i class="fas fa-star"></i>
+                            <span>Évaluations</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('merchant_profile') }}" class="{{ 'active' if request.endpoint == 'merchant_profile' else '' }}">
+                            <i class="fas fa-store"></i>
+                            <span>Boutique</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('merchant_logout') }}">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Déconnexion</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Content -->
+        <div class="merchant-content" id="merchantContent">
+            <!-- Navbar -->
+            <nav class="merchant-navbar">
+                <div class="d-flex align-items-center">
+                    <div class="toggle-sidebar me-3" id="toggleSidebar">
+                        <i class="fas fa-bars"></i>
+                    </div>
+                    <h5 class="mb-0">{{ merchant.store_name }}</h5>
+                    {% if not merchant.store_verified %}
+                        <span class="badge bg-warning ms-2">Non vérifié</span>
+                    {% endif %}
+                </div>
+                <div class="merchant-user">
+                    <div class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
+                            {% if merchant and merchant.store_logo %}
+                                {% if merchant.store_logo.startswith('http') %}
+                                    <img src="{{ merchant.store_logo }}" alt="Logo" onerror="this.src='/static/img/merchants/store_logo_default.png';">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename=merchant.store_logo.replace('static/', '')) }}" alt="Logo">
+                                {% endif %}
+                            {% else %}
+                                <img src="{{ url_for('static', filename='img/merchants/store_logo_default.png') }}" alt="Logo">
+                            {% endif %}
+                            <span>{{ merchant.first_name }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('merchant_profile') }}">
+                                    <i class="fas fa-user fa-sm fa-fw me-2 text-gray-400"></i>
+                                    Profil
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('merchant_settings') }}">
+                                    <i class="fas fa-cogs fa-sm fa-fw me-2 text-gray-400"></i>
+                                    Paramètres
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('merchant_logout') }}">
+                                    <i class="fas fa-sign-out-alt fa-sm fa-fw me-2 text-gray-400"></i>
+                                    Déconnexion
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Flash messages -->
+            <div class="container-fluid mt-3">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Main content -->
+            {% block merchant_content %}{% endblock %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('merchantSidebar');
+            const content = document.getElementById('merchantContent');
+            const toggleBtn = document.getElementById('toggleSidebar');
+            const closeMobileBtn = document.getElementById('closeMobileSidebar');
+            
+            // Toggle sidebar
+            toggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('collapsed');
+                content.classList.toggle('expanded');
+                
+                // On mobile, show full sidebar when toggled
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.toggle('expanded');
+                }
+            });
+            
+            // Close mobile sidebar
+            if (closeMobileBtn) {
+                closeMobileBtn.addEventListener('click', function() {
+                    sidebar.classList.remove('expanded');
+                });
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

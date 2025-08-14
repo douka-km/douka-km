@@ -1,0 +1,948 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="search-section mb-4" id="search-bar-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <form action="/search" method="GET" class="search-form">
+                    <div class="input-group position-relative">
+                        <input type="text" name="q" class="form-control form-control-lg" 
+                               placeholder="Rechercher des produits..." 
+                               aria-label="Recherche"
+                               id="searchInput"
+                               autocomplete="off">
+                        
+                        <!-- Conteneur pour les suggestions -->
+                        <div id="searchSuggestions" class="search-suggestions d-none">
+                            <!-- Les suggestions seront ajoutées ici dynamiquement -->
+                        </div>
+                        
+                        <!-- Dropdown minimaliste pour les catégories -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="categoryDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-list me-2"></i><span id="selectedCategoryText">Toutes catégories</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="categoryDropdown" style="min-width: 250px; max-height: 400px; overflow-y: auto;">
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="selectCategory('', 'Toutes catégories')">
+                                        <i class="fas fa-th-large me-2"></i>Toutes catégories
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% for category in categories_with_subcategories %}
+                                <li class="dropdown-submenu">
+                                    {% if category.subcategories %}
+                                    <!-- Catégorie avec sous-catégories - clickable toggle -->
+                                    <a class="dropdown-item dropdown-toggle-custom d-flex justify-content-between align-items-center" 
+                                       href="#" 
+                                       onclick="toggleSubmenu(event, 'submenu-{{ category.id }}')">
+                                        <span><i class="{{ category.icon | default('fas fa-folder') }} me-2"></i>{{ category.name }}</span>
+                                        <i class="fas fa-chevron-right ms-2 submenu-arrow" id="arrow-{{ category.id }}"></i>
+                                    </a>
+                                    <ul class="dropdown-submenu-list" id="submenu-{{ category.id }}">
+                                        <li>
+                                            <a class="dropdown-item ps-4" href="#" onclick="selectCategory('{{ category.id }}', '{{ category.name }} (Toutes)')">
+                                                <i class="fas fa-circle-dot me-2"></i>Toutes les {{ category.name | lower }}
+                                            </a>
+                                        </li>
+                                        {% for subcategory in category.subcategories %}
+                                        <li>
+                                            <a class="dropdown-item ps-4" href="#" onclick="selectCategory('sub_{{ subcategory.id }}', '{{ subcategory.name }}')">
+                                                <i class="fas fa-circle me-2"></i>{{ subcategory.name }}
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <!-- Catégorie sans sous-catégories - sélection directe -->
+                                    <a class="dropdown-item" href="#" onclick="selectCategory('{{ category.id }}', '{{ category.name }}')">
+                                        <i class="{{ category.icon | default('fas fa-folder') }} me-2"></i>{{ category.name }}
+                                    </a>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        
+                        <!-- Champ caché pour stocker la valeur de la catégorie sélectionnée -->
+                        <input type="hidden" name="category" id="selectedCategory" value="">
+                        
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Rechercher
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Placeholder for the fixed search bar that appears on scroll -->
+<div id="search-placeholder" class="d-none"></div>
+
+<section class="hero-section mb-5">
+    <div id="heroCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <img src="{{ url_for('static', filename='img/banner1.jpg') }}" class="d-block w-100" alt="DOUKA KM E-commerce">
+                <div class="carousel-caption">
+                    <h1 class="h3 d-md-block">Bienvenue sur DOUKA KM</h1>
+                    <p class="d-none d-sm-block">Votre nouvelle plateforme de commerce en ligne aux Comores</p>
+                    <a href="/products" class="btn btn-primary btn-sm">Découvrir nos produits</a>
+                </div>
+            </div>
+            <div class="carousel-item">
+                <img src="{{ url_for('static', filename='img/banner2.jpg') }}" class="d-block w-100" alt="Livraison aux Comores">
+                <div class="carousel-caption">
+                    <h1 class="h3 d-md-block">Livraison partout aux Comores</h1>
+                    <p class="d-none d-sm-block">Nous livrons sur toutes les îles: Grande Comore, Mohéli et Anjouan</p>
+                    <a href="/about" class="btn btn-primary btn-sm">En savoir plus</a>
+                </div>
+            </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+            <span class="visually-hidden">Précédent</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+            <span class="visually-hidden">Suivant</span>
+        </button>
+    </div>
+</section>
+
+<!-- Section des codes promo publics -->
+{% if has_active_promos %}
+<section class="promo-codes-section mb-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h3 class="text-center mb-4">
+                    <i class="fas fa-tags text-warning me-2"></i>
+                    Codes promo disponibles
+                </h3>
+                
+                <div class="row justify-content-center">
+                    {% for promo in public_promo_codes[:3] %} <!-- Limiter à 3 codes maximum sur la page d'accueil -->
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="promo-card h-100 border-0 shadow-sm {% if promo.urgency_level == 'high' %}promo-urgent{% elif promo.urgency_level == 'medium' %}promo-medium{% else %}promo-normal{% endif %}">
+                            <div class="promo-card-header text-center py-3">
+                                <div class="promo-code-display mb-2">
+                                    <span class="promo-code-text">{{ promo.code }}</span>
+                                    <button class="btn btn-sm btn-outline-primary ms-2 copy-code-btn" 
+                                            data-code="{{ promo.code }}" 
+                                            title="Copier le code">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                                <div class="promo-discount-badge">
+                                    {{ promo.formatted_discount }}
+                                </div>
+                            </div>
+                            
+                            <div class="promo-card-body px-3 pb-3">
+                                <h6 class="promo-title">{{ promo.name }}</h6>
+                                <p class="promo-description text-muted small mb-2">
+                                    {{ promo.description }}
+                                </p>
+                                
+                                <div class="promo-details">
+                                    <div class="promo-condition mb-1">
+                                        <i class="fas fa-shopping-basket text-info me-1"></i>
+                                        <small>{{ promo.condition_text }}</small>
+                                    </div>
+                                    
+                                    {% if promo.usage_limit %}
+                                    <div class="promo-availability mb-1">
+                                        <i class="fas fa-users text-secondary me-1"></i>
+                                        <small>{{ promo.availability_text }}</small>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="promo-expiry">
+                                        <i class="fas fa-clock text-{% if promo.urgency_level == 'high' %}danger{% elif promo.urgency_level == 'medium' %}warning{% else %}success{% endif %} me-1"></i>
+                                        <small class="text-{% if promo.urgency_level == 'high' %}danger{% elif promo.urgency_level == 'medium' %}warning{% else %}muted{% endif %}">
+                                            {{ promo.expiry_text }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if public_promo_codes|length > 3 %}
+                <div class="text-center mt-3">
+                    <a href="/promo-codes" class="btn btn-outline-warning">
+                        <i class="fas fa-tags me-1"></i>
+                        Voir tous les codes promo ({{ public_promo_codes|length }})
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section class="featured-products mb-5">
+    <h2 class="text-center mb-4">Produits populaires</h2>
+    <div class="row">
+        {% for product in products %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 product-card">
+                {% if product.image %}
+                    {% if product.image.startswith('http') %}
+                        <!-- Image via URL -->
+                        <img src="{{ product.image }}" 
+                             class="card-img-top" 
+                             alt="{{ product.name }}"
+                             onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/f8f9fa/6c757d?text=Produit';">
+                    {% else %}
+                        <!-- Image locale -->
+                        <img src="{{ url_for('static', filename=product.image.replace('static/', '') if product.image.startswith('static/') else product.image) }}" 
+                             class="card-img-top" 
+                             alt="{{ product.name }}"
+                             onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/f8f9fa/6c757d?text=Produit';">
+                    {% endif %}
+                {% else %}
+                    <!-- Image placeholder -->
+                    <img src="https://via.placeholder.com/400x300/f8f9fa/6c757d?text=Produit" 
+                         class="card-img-top" 
+                         alt="Aucune image">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="card-text">{{ product.description }}</p>
+                    
+                    <p class="card-text text-primary fw-bold">{{ product.price|format_number }} KMF</p>
+                    <div class="action-buttons">
+                        <a href="/product/{{ product.id }}" class="btn btn-outline-primary">Voir détails</a>
+                        <button class="btn btn-primary add-to-cart-btn" data-product-id="{{ product.id }}">
+                            <i class="fas fa-shopping-cart"></i> Ajouter au panier
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Section de produits personnalisés basés sur l'historique du client -->
+<section class="personalized-products mb-5">
+    <h2 class="text-center mb-4">Recommandés pour vous</h2>
+    <div class="row">
+        {% if recommended_products %}
+            {% for product in recommended_products %}
+            <div class="col-md-3 mb-4">
+                <div class="card h-100 product-card">
+                    {% if product.image %}
+                        {% if product.image.startswith('http') %}
+                            <!-- Image via URL -->
+                            <img src="{{ product.image }}" 
+                                 class="card-img-top" 
+                                 alt="{{ product.name }}"
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit';">
+                        {% else %}
+                            <!-- Image locale -->
+                            <img src="{{ url_for('static', filename=product.image.replace('static/', '') if product.image.startswith('static/') else product.image) }}" 
+                                 class="card-img-top" 
+                                 alt="{{ product.name }}"
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit';">
+                        {% endif %}
+                    {% else %}
+                        <!-- Image placeholder -->
+                        <img src="https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit" 
+                             class="card-img-top" 
+                             alt="Aucune image">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text">{{ product.description }}</p>
+                        
+                        <p class="card-text text-primary fw-bold">{{ product.price|format_number }} KMF</p>
+                        <div class="action-buttons">
+                            <a href="/product/{{ product.id }}" class="btn btn-outline-primary btn-sm">Voir détails</a>
+                            <a href="/add-to-cart/{{ product.id }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-cart-plus"></i> Ajouter
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <p class="mb-0 text-center">Connectez-vous pour voir des recommandations personnalisées basées sur votre historique de navigation.</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="features mb-5">
+    <h2 class="text-center mb-4">Pourquoi choisir DOUKA KM?</h2>
+    <div class="row text-center">
+        <div class="col-md-4 mb-4">
+            <div class="feature-box p-3">
+                <i class="fas fa-truck fa-3x mb-3 text-primary"></i>
+                <h4>Livraison rapide</h4>
+                <p>Livraison sur toutes les îles des Comores dans les meilleurs délais.</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="feature-box p-3">
+                <i class="fas fa-lock fa-3x mb-3 text-primary"></i>
+                <h4>Paiement sécurisé</h4>
+                <p>Plusieurs méthodes de paiement sécurisées, y compris les services mobiles locaux.</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="feature-box p-3">
+                <i class="fas fa-headset fa-3x mb-3 text-primary"></i>
+                <h4>Support client</h4>
+                <p>Notre équipe est disponible pour vous aider 7/7 jours.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="categories mb-5">
+    <h2 class="text-center mb-4">Nos catégories</h2>
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <img src="{{ url_for('static', filename='img/category1.jpg') }}" class="card-img-top" alt="Électronique">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Électronique</h5>
+                    <a href="/category/electronics" class="btn btn-outline-primary">Voir produits</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <img src="{{ url_for('static', filename='img/category2.jpg') }}" class="card-img-top" alt="Vêtements">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Vêtements</h5>
+                    <a href="/category/clothing" class="btn btn-outline-primary">Voir produits</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <img src="{{ url_for('static', filename='img/category3.jpg') }}" class="card-img-top" alt="Alimentation">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Alimentation</h5>
+                    <a href="/products?category_filter=3" class="btn btn-outline-primary">Voir produits</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card">
+                <img src="{{ url_for('static', filename='img/category4.jpg') }}" class="card-img-top" alt="Artisanat local">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Artisanat local</h5>
+                    <a href="/category/crafts" class="btn btn-outline-primary">Voir produits</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-section {
+        padding: 20px 0;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        z-index: 1000;
+    }
+    
+    .search-form .input-group {
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        align-items: stretch;
+    }
+    
+    .search-form .input-group .form-control,
+    .search-form .input-group .btn {
+        height: 48px;
+        border-radius: 0;
+    }
+    
+    .search-form .input-group .form-control {
+        border-top-left-radius: 0.375rem;
+        border-bottom-left-radius: 0.375rem;
+    }
+    
+    .search-form .input-group .dropdown .btn {
+        border-left: none;
+        border-right: none;
+        border-radius: 0;
+        height: 48px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .search-form .input-group .btn:last-child {
+        border-top-right-radius: 0.375rem;
+        border-bottom-right-radius: 0.375rem;
+        border-left: none;
+    }
+    
+    /* Styles pour les suggestions de recherche */
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 0.375rem 0.375rem;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .suggestion-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #f8f9fa;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+    
+    .suggestion-item:hover,
+    .suggestion-item.active {
+        background-color: #f8f9fa;
+    }
+    
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+    
+    .suggestion-item .suggestion-icon {
+        margin-right: 10px;
+        color: #6c757d;
+        width: 20px;
+        text-align: center;
+    }
+    
+    .suggestion-item .suggestion-text {
+        flex: 1;
+    }
+    
+    .suggestion-item .suggestion-price {
+        color: #007bff;
+        font-weight: 600;
+        font-size: 0.9em;
+    }
+    
+    .suggestion-category {
+        padding: 8px 15px;
+        background-color: #e9ecef;
+        font-size: 0.85em;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    /* Styles pour le dropdown des catégories */
+    .dropdown-submenu {
+        position: relative;
+    }
+    
+    /* Supprimer le hover automatique et utiliser la classe .show */
+    .dropdown-submenu.show > .dropdown-submenu-list {
+        display: block;
+    }
+    
+    .dropdown-submenu-list {
+        display: none;
+        position: static;
+        border: none;
+        box-shadow: none;
+        background-color: #f8f9fa;
+        margin-left: 1rem;
+        border-radius: 0;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .dropdown-submenu-list .dropdown-item {
+        padding: 0.5rem 1rem;
+        color: #495057;
+        text-decoration: none;
+        display: block;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .dropdown-submenu-list .dropdown-item:hover {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    
+    .dropdown-toggle-custom {
+        position: relative;
+    }
+    
+    .submenu-arrow {
+        transition: transform 0.2s ease;
+        color: #6c757d;
+        font-size: 0.8em;
+    }
+    
+    .dropdown-submenu.show .submenu-arrow {
+        transform: rotate(90deg);
+        color: #495057;
+    }
+    
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .dropdown-item:hover {
+        background-color: #e9ecef;
+        transform: translateX(2px);
+    }
+    
+    .dropdown-item i {
+        width: 16px;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    .dropdown-item:hover i {
+        color: #495057;
+    }
+    
+    .merchant-info {
+        font-size: 0.85em;
+        line-height: 1.3;
+        border-left: 3px solid #007bff;
+        padding-left: 8px;
+        margin: 8px 0;
+    }
+    
+    .merchant-info .text-primary {
+        font-size: 0.8em;
+        word-break: break-all;
+    }
+    
+    .search-section.fixed {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        animation: slideDown 0.3s forwards;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    #search-placeholder {
+        height: 84px; /* Adjust this to match your search section height */
+    }
+    
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+    
+    /* Styles pour le carousel sur mobile */
+    .carousel-caption {
+        background: linear-gradient(135deg, rgba(0, 123, 255, 0.9), rgba(0, 86, 179, 0.8));
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        /* Centrage vertical et horizontal */
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        max-width: 500px;
+    }
+    
+    @media (max-width: 768px) {
+        .carousel-caption {
+            /* Position centrée pour mobile */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            max-width: none;
+            right: auto;
+            bottom: auto;
+            text-align: center;
+            padding: 15px 20px;
+            margin-bottom: 0;
+            background: linear-gradient(135deg, rgba(13, 110, 253, 0.95), rgba(108, 117, 125, 0.85));
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        .carousel-caption h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: white;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+        
+        .carousel-caption p {
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+            line-height: 1.4;
+            font-weight: 400;
+        }
+        
+        .carousel-caption .btn {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #ffffff, #f8f9fa);
+            color: #0d6efd;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .carousel-caption .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+        }
+        
+        .carousel-item img {
+            height: 280px;
+            object-fit: cover;
+            filter: brightness(0.7);
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .carousel-caption {
+            width: 90%;
+            padding: 12px 15px;
+        }
+        
+        .carousel-caption h1 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .carousel-caption p {
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+        
+        .carousel-caption .btn {
+            padding: 8px 16px;
+            font-size: 0.8rem;
+        }
+        
+        .carousel-item img {
+            height: 220px;
+            filter: brightness(0.6);
+        }
+    }
+    
+    /* Animation pour l'apparition du carousel */
+    .carousel-caption {
+        animation: fadeInCenter 1s ease-out;
+    }
+    
+    @keyframes fadeInCenter {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.8);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Fonction pour gérer la sélection des catégories
+    function selectCategory(value, text) {
+        document.getElementById('selectedCategory').value = value;
+        document.getElementById('selectedCategoryText').textContent = text;
+        
+        // Fermer le dropdown
+        const dropdown = document.getElementById('categoryDropdown');
+        const bsDropdown = new bootstrap.Dropdown(dropdown);
+        bsDropdown.hide();
+    }
+    
+    // Fonction pour basculer l'affichage des sous-menus
+    function toggleSubmenu(event, submenuId) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const submenu = document.getElementById(submenuId);
+        const parentLi = submenu.closest('.dropdown-submenu');
+        const arrow = parentLi.querySelector('.submenu-arrow');
+        
+        // Fermer tous les autres sous-menus
+        document.querySelectorAll('.dropdown-submenu').forEach(function(item) {
+            if (item !== parentLi) {
+                item.classList.remove('show');
+            }
+        });
+        
+        // Basculer le sous-menu actuel
+        parentLi.classList.toggle('show');
+    }
+    
+    // Variables pour l'autocomplétion
+    let searchTimeout;
+    let currentSuggestionIndex = -1;
+    
+    // Fonction pour effectuer la recherche d'autocomplétion
+    function searchProducts(query) {
+        if (query.length < 2) {
+            hideSuggestions();
+            return;
+        }
+        
+        // Appel AJAX vers l'endpoint API
+        fetch(`/api/search-suggestions?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(products => showSuggestions(products, query))
+            .catch(error => {
+                console.error('Erreur lors de la recherche:', error);
+                hideSuggestions();
+            });
+    }
+    
+    // Fonction pour afficher les suggestions
+    function showSuggestions(products, query) {
+        const suggestionsContainer = document.getElementById('searchSuggestions');
+        
+        if (products.length === 0) {
+            hideSuggestions();
+            return;
+        }
+        
+        let html = '';
+        
+        // Grouper par catégorie
+        const categories = {};
+        products.forEach(product => {
+            if (!categories[product.category]) {
+                categories[product.category] = [];
+            }
+            categories[product.category].push(product);
+        });
+        
+        // Créer le HTML des suggestions
+        Object.keys(categories).forEach(category => {
+            html += `<div class="suggestion-category">${category}</div>`;
+            categories[category].forEach(product => {
+                const highlightedName = product.name.replace(
+                    new RegExp(query, 'gi'), 
+                    `<strong>$&</strong>`
+                );
+                html += `
+                    <div class="suggestion-item" onclick="selectProduct('${product.name}', ${product.id})">
+                        <i class="fas fa-search suggestion-icon"></i>
+                        <div class="suggestion-text">${highlightedName}</div>
+                        <div class="suggestion-price">${product.price.toLocaleString()} KMF</div>
+                    </div>
+                `;
+            });
+        });
+        
+        suggestionsContainer.innerHTML = html;
+        suggestionsContainer.classList.remove('d-none');
+        currentSuggestionIndex = -1;
+    }
+    
+    // Fonction pour masquer les suggestions
+    function hideSuggestions() {
+        const suggestionsContainer = document.getElementById('searchSuggestions');
+        suggestionsContainer.classList.add('d-none');
+        currentSuggestionIndex = -1;
+    }
+    
+    // Fonction pour sélectionner un produit
+    function selectProduct(productName, productId) {
+        document.getElementById('searchInput').value = productName;
+        hideSuggestions();
+        // Optionnel: rediriger directement vers le produit
+        window.location.href = `/product/${productId}`;
+    }
+    
+    // Fonction pour naviguer dans les suggestions avec les flèches
+    function navigateSuggestions(direction) {
+        const suggestions = document.querySelectorAll('.suggestion-item');
+        if (suggestions.length === 0) return;
+        
+        // Supprimer la classe active précédente
+        if (currentSuggestionIndex >= 0) {
+            suggestions[currentSuggestionIndex].classList.remove('active');
+        }
+        
+        // Calculer le nouvel index
+        if (direction === 'down') {
+            currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, suggestions.length - 1);
+        } else if (direction === 'up') {
+            currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, -1);
+        }
+        
+        // Ajouter la classe active
+        if (currentSuggestionIndex >= 0) {
+            suggestions[currentSuggestionIndex].classList.add('active');
+            suggestions[currentSuggestionIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configuration de l'autocomplétion de recherche
+        const searchInput = document.getElementById('searchInput');
+        
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            
+            if (query.length >= 2) {
+                searchTimeout = setTimeout(() => {
+                    searchProducts(query);
+                }, 300); // Délai de 300ms pour éviter trop de requêtes
+            } else {
+                hideSuggestions();
+            }
+        });
+        
+        searchInput.addEventListener('keydown', function(e) {
+            const suggestionsContainer = document.getElementById('searchSuggestions');
+            
+            if (!suggestionsContainer.classList.contains('d-none')) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    navigateSuggestions('down');
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    navigateSuggestions('up');
+                } else if (e.key === 'Enter') {
+                    const activeItem = document.querySelector('.suggestion-item.active');
+                    if (activeItem) {
+                        e.preventDefault();
+                        activeItem.click();
+                    }
+                } else if (e.key === 'Escape') {
+                    hideSuggestions();
+                    searchInput.blur();
+                }
+            }
+        });
+        
+        searchInput.addEventListener('blur', function() {
+            // Délai pour permettre le clic sur les suggestions
+            setTimeout(() => {
+                hideSuggestions();
+            }, 200);
+        });
+        
+        // Fermer les suggestions si on clique ailleurs
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-form')) {
+                hideSuggestions();
+            }
+        });
+        
+        // Gestion du scroll pour la barre de recherche fixe
+        // Get the search bar container and its initial offset position
+        const searchBar = document.getElementById('search-bar-container');
+        const searchPlaceholder = document.getElementById('search-placeholder');
+        const initialOffset = searchBar.offsetTop;
+        
+        // Function to handle scroll event
+        function handleScroll() {
+            if (window.pageYOffset > initialOffset) {
+                // User has scrolled past the original position of the search bar
+                searchBar.classList.add('fixed');
+                searchPlaceholder.classList.remove('d-none');
+            } else {
+                // User has scrolled back to the top
+                searchBar.classList.remove('fixed');
+                searchPlaceholder.classList.add('d-none');
+            }
+        }
+        
+        // Add scroll event listener
+        window.addEventListener('scroll', handleScroll);
+        
+        // Add to cart functionality using global function from base.html
+        const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+        addToCartButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const productId = this.getAttribute('data-product-id');
+                const originalHTML = this.innerHTML;
+                
+                // Disable button while processing
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ajout...';
+                
+                // Call the global addToCart function from base.html
+                if (typeof window.addToCart === 'function') {
+                    const success = window.addToCart(productId, 1);
+                    
+                    // Animate button on success
+                    setTimeout(() => {
+                        if (success !== false) {
+                            this.innerHTML = '<i class="fas fa-check"></i> Ajouté';
+                            this.classList.add('btn-success');
+                            this.classList.remove('btn-primary');
+                            
+                            setTimeout(() => {
+                                this.innerHTML = originalHTML;
+                                this.classList.remove('btn-success');
+                                this.classList.add('btn-primary');
+                                this.disabled = false;
+                            }, 1500);
+                        } else {
+                            this.innerHTML = originalHTML;
+                            this.disabled = false;
+                        }
+                    }, 500);
+                } else {
+                    // Fallback if global function not available
+                    this.innerHTML = originalHTML;
+                    this.disabled = false;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

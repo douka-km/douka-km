@@ -1,0 +1,167 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Évaluations de la boutique - DOUKA KM{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Évaluations de la boutique</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Évaluations</li>
+    </ol>
+    
+    <!-- Résumé des évaluations -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h1 class="display-4 mb-0">
+                        {% if avg_rating > 0 %}
+                            {{ "%.1f"|format(avg_rating) }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </h1>
+                    <p class="mb-0">Note moyenne</p>
+                    <small>{{ total_reviews }} avis au total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Répartition des notes</h5>
+                    {% if total_reviews > 0 %}
+                        {% for rating in range(5, 0, -1) %}
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="me-3" style="min-width: 30px;">{{ rating }}★</span>
+                            <div class="progress flex-grow-1 me-3" style="height: 20px;">
+                                <div class="progress-bar bg-warning" 
+                                     style="width: {{ rating_distribution[rating] }}%"
+                                     aria-valuenow="{{ rating_distribution[rating] }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            <small style="min-width: 50px;">{{ rating_distribution[rating] }}%</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Aucune évaluation pour le moment</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liste des évaluations -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-comments me-1"></i>
+            Toutes les évaluations ({{ total_reviews }})
+        </div>
+        <div class="card-body">
+            {% if reviews %}
+                {% for review in reviews %}
+                <div class="border-bottom pb-4 mb-4">
+                    <div class="row">
+                        <div class="col-md-2 text-center">
+                            <img src="{{ review.product_image or 'static/img/default-product.png' }}" 
+                                 alt="{{ review.product_name }}" 
+                                 class="img-thumbnail mb-2" 
+                                 style="max-width: 100px; max-height: 100px; object-fit: cover;">
+                            <p class="small text-muted mb-0">{{ review.product_name }}</p>
+                        </div>
+                        <div class="col-md-10">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <div class="mb-1">
+                                        {% for i in range(review.rating) %}
+                                            <i class="fas fa-star text-warning"></i>
+                                        {% endfor %}
+                                        {% for i in range(5 - review.rating) %}
+                                            <i class="far fa-star text-warning"></i>
+                                        {% endfor %}
+                                        <span class="ms-2 badge bg-primary">{{ review.rating }}/5</span>
+                                    </div>
+                                    <h6 class="mb-1">{{ review.title }}</h6>
+                                    <small class="text-muted">
+                                        Par {{ review.user_name }} 
+                                        {% if review.verified_purchase %}
+                                            <i class="fas fa-check-circle text-success ms-1" title="Achat vérifié"></i>
+                                        {% endif %}
+                                        - {{ review.created_at }}
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            {% if review.comment %}
+                            <p class="mb-0">{{ review.comment }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Pagination -->
+                {% if total_pages > 1 %}
+                <nav aria-label="Navigation des évaluations">
+                    <ul class="pagination justify-content-center">
+                        {% if has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('merchant_reviews', page=prev_num) }}">Précédent</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in range(1, total_pages + 1) %}
+                            {% if page_num == current_page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('merchant_reviews', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('merchant_reviews', page=next_num) }}">Suivant</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucune évaluation pour le moment</h5>
+                    <p class="text-muted">Les évaluations de vos clients apparaîtront ici une fois qu'ils auront laissé des avis sur vos produits.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rating-stars {
+        color: #ffc107;
+    }
+    
+    .progress {
+        background-color: #e9ecef;
+    }
+    
+    .img-thumbnail {
+        border: 1px solid #dee2e6;
+    }
+    
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
+{% endblock %}

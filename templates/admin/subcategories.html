@@ -1,0 +1,548 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Gestion des Sous-Catégories - DOUKA KM Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.subcategory-card {
+    transition: transform 0.2s;
+}
+
+.subcategory-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.status-badge {
+    font-size: 0.85em;
+}
+
+.category-tag {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.products-count {
+    background-color: #f5f5f5;
+    color: #666;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.75em;
+}
+
+.category-group-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.category-group-header .btn {
+    color: white;
+    border-color: rgba(255,255,255,0.3);
+}
+
+.category-group-header .btn:hover {
+    background-color: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.5);
+}
+
+.collapse-icon {
+    transition: transform 0.3s ease;
+}
+
+.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+}
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="mt-4">Gestion des Sous-Catégories</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Tableau de bord</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('admin_categories') }}">Catégories</a></li>
+                <li class="breadcrumb-item active">Sous-Catégories</li>
+            </ol>
+        </div>
+        <div>
+            <div class="btn-group me-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAllCategories(true)" title="Déplier toutes les catégories">
+                    <i class="fas fa-expand-alt"></i> Tout déplier
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAllCategories(false)" title="Plier toutes les catégories">
+                    <i class="fas fa-compress-alt"></i> Tout plier
+                </button>
+            </div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSubcategoryModal">
+                <i class="fas fa-plus"></i> Ajouter une Sous-Catégorie
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-white-75 small">Total Sous-Catégories</div>
+                            <div class="text-lg fw-bold">{{ stats.total_subcategories }}</div>
+                        </div>
+                        <div><i class="fas fa-layer-group fa-2x text-white-50"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-white-75 small">Sous-Catégories Actives</div>
+                            <div class="text-lg fw-bold">{{ stats.active_subcategories }}</div>
+                        </div>
+                        <div><i class="fas fa-check-circle fa-2x text-white-50"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-info text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-white-75 small">Total Produits</div>
+                            <div class="text-lg fw-bold">{{ stats.total_products }}</div>
+                        </div>
+                        <div><i class="fas fa-box fa-2x text-white-50"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-white-75 small">Catégories avec Sous-Cat.</div>
+                            <div class="text-lg fw-bold">{{ stats.categories_with_subcategories }}</div>
+                        </div>
+                        <div><i class="fas fa-tags fa-2x text-white-50"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des sous-catégories groupées par catégorie -->
+    {% if categories_grouped %}
+        {% for category_group in categories_grouped %}
+        <div class="card mb-4">
+            <div class="card-header category-group-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="{{ category_group.category.icon }} me-2"></i>
+                    <strong>{{ category_group.category.name }}</strong>
+                    <span class="badge bg-light text-dark ms-2">{{ category_group.subcategories_count }} sous-catégorie(s)</span>
+                    <span class="badge bg-success ms-1">{{ category_group.active_subcategories_count }} active(s)</span>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="collapse" data-bs-target="#category-{{ category_group.category.id }}" aria-expanded="true">
+                        <i class="fas fa-chevron-down collapse-icon"></i> Afficher/Masquer
+                    </button>
+                </div>
+            </div>
+            <div class="collapse show" id="category-{{ category_group.category.id }}">
+                <div class="card-body">
+                    <div class="row">
+                        {% for subcategory in category_group.subcategories %}
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="card subcategory-card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title mb-1">{{ subcategory.name }}</h6>
+                                        <span class="badge bg-{{ 'success' if subcategory.active else 'danger' }} status-badge">
+                                            {{ 'Actif' if subcategory.active else 'Inactif' }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <span class="products-count">{{ subcategory.products_count }} produit(s)</span>
+                                    </div>
+                                    
+                                    <p class="card-text text-muted small mb-3">{{ subcategory.description }}</p>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            Créé le {{ subcategory.created_at }}
+                                        </small>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-primary edit-subcategory-btn" 
+                                                    data-id="{{ subcategory.id }}"
+                                                    data-name="{{ subcategory.name }}"
+                                                    data-description="{{ subcategory.description }}"
+                                                    data-category-id="{{ subcategory.category_id }}"
+                                                    data-active="{{ subcategory.active|lower }}"
+                                                    title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-{{ 'warning' if subcategory.active else 'success' }} toggle-status-btn" 
+                                                    data-id="{{ subcategory.id }}"
+                                                    title="{{ 'Désactiver' if subcategory.active else 'Activer' }}">
+                                                <i class="fas fa-{{ 'eye-slash' if subcategory.active else 'eye' }}"></i>
+                                            </button>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger delete-subcategory-btn" 
+                                                    data-id="{{ subcategory.id }}"
+                                                    data-name="{{ subcategory.name }}"
+                                                    title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="text-center py-5">
+                <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Aucune sous-catégorie trouvée</h5>
+                <p class="text-muted">Commencez par ajouter votre première sous-catégorie.</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSubcategoryModal">
+                    <i class="fas fa-plus"></i> Ajouter une Sous-Catégorie
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal d'ajout de sous-catégorie -->
+<div class="modal fade" id="addSubcategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajouter une Sous-Catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addSubcategoryForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="subcategoryName" class="form-label">Nom de la sous-catégorie *</label>
+                        <input type="text" class="form-control" id="subcategoryName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="subcategoryDescription" class="form-label">Description *</label>
+                        <textarea class="form-control" id="subcategoryDescription" name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="subcategoryCategory" class="form-label">Catégorie Parente *</label>
+                        <select class="form-select" id="subcategoryCategory" name="category_id" required>
+                            <option value="">Choisir une catégorie</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'édition de sous-catégorie -->
+<div class="modal fade" id="editSubcategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier la Sous-Catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editSubcategoryForm">
+                <input type="hidden" id="editSubcategoryId" name="subcategory_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editSubcategoryName" class="form-label">Nom de la sous-catégorie *</label>
+                        <input type="text" class="form-control" id="editSubcategoryName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editSubcategoryDescription" class="form-label">Description *</label>
+                        <textarea class="form-control" id="editSubcategoryDescription" name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editSubcategoryCategory" class="form-label">Catégorie Parente *</label>
+                        <select class="form-select" id="editSubcategoryCategory" name="category_id" required>
+                            <option value="">Choisir une catégorie</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editSubcategoryActive" name="active">
+                            <label class="form-check-label" for="editSubcategoryActive">
+                                Sous-catégorie active
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Ajouter une sous-catégorie
+document.getElementById('addSubcategoryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('/admin/subcategories/add', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            // Fermer le modal d'ajout
+            const addModal = bootstrap.Modal.getInstance(document.getElementById('addSubcategoryModal'));
+            addModal.hide();
+            this.reset();
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showAlert('danger', 'Une erreur est survenue.');
+    });
+});
+
+// Éditer une sous-catégorie
+function editSubcategory(id, name, description, categoryId, active) {
+    document.getElementById('editSubcategoryId').value = id;
+    document.getElementById('editSubcategoryName').value = name;
+    document.getElementById('editSubcategoryDescription').value = description;
+    document.getElementById('editSubcategoryCategory').value = categoryId;
+    document.getElementById('editSubcategoryActive').checked = active;
+    
+    // Afficher le modal d'édition
+    const editModal = new bootstrap.Modal(document.getElementById('editSubcategoryModal'));
+    editModal.show();
+}
+
+document.getElementById('editSubcategoryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const subcategoryId = document.getElementById('editSubcategoryId').value;
+    const formData = new FormData(this);
+    formData.append('active', document.getElementById('editSubcategoryActive').checked);
+    
+    console.log('Données envoyées:', {
+        id: subcategoryId,
+        name: formData.get('name'),
+        description: formData.get('description'),
+        category_id: formData.get('category_id'),
+        active: formData.get('active')
+    });
+    
+    fetch(`/admin/subcategories/${subcategoryId}/edit`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Réponse serveur:', data);
+        if (data.success) {
+            showAlert('success', data.message);
+            // Fermer le modal d'édition
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editSubcategoryModal'));
+            editModal.hide();
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showAlert('danger', 'Une erreur est survenue.');
+    });
+});
+
+// Event listeners pour les boutons
+document.addEventListener('DOMContentLoaded', function() {
+    // Boutons d'édition
+    document.querySelectorAll('.edit-subcategory-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const name = this.dataset.name;
+            const description = this.dataset.description;
+            const categoryId = this.dataset.categoryId;
+            const active = this.dataset.active === 'true';
+            
+            editSubcategory(id, name, description, categoryId, active);
+        });
+    });
+    
+    // Boutons de basculement de statut
+    document.querySelectorAll('.toggle-status-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const subcategoryId = this.dataset.id;
+            toggleSubcategoryStatus(subcategoryId);
+        });
+    });
+    
+    // Boutons de suppression
+    document.querySelectorAll('.delete-subcategory-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const subcategoryId = this.dataset.id;
+            const subcategoryName = this.dataset.name;
+            deleteSubcategory(subcategoryId, subcategoryName);
+        });
+    });
+});
+
+// Basculer le statut d'une sous-catégorie
+function toggleSubcategoryStatus(subcategoryId) {
+    if (confirm('Êtes-vous sûr de vouloir changer le statut de cette sous-catégorie ?')) {
+        fetch(`/admin/subcategories/${subcategoryId}/toggle-status`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert('danger', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showAlert('danger', 'Une erreur est survenue.');
+        });
+    }
+}
+
+// Supprimer une sous-catégorie
+function deleteSubcategory(subcategoryId, subcategoryName) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer la sous-catégorie "${subcategoryName}" ?\n\nCette action est irréversible.`)) {
+        fetch(`/admin/subcategories/${subcategoryId}/delete`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', data.message);
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showAlert('danger', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showAlert('danger', 'Une erreur est survenue.');
+        });
+    }
+}
+
+// Fonction utilitaire pour afficher les alertes
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Gestion des animations de collapse
+document.addEventListener('DOMContentLoaded', function() {
+    // Écouter les événements de collapse Bootstrap
+    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    
+    collapseElements.forEach(button => {
+        const targetId = button.getAttribute('data-bs-target');
+        const targetElement = document.querySelector(targetId);
+        const icon = button.querySelector('.collapse-icon');
+        
+        if (targetElement && icon) {
+            // Événement quand le collapse se ferme
+            targetElement.addEventListener('hide.bs.collapse', function() {
+                button.classList.add('collapsed');
+            });
+            
+            // Événement quand le collapse s'ouvre
+            targetElement.addEventListener('show.bs.collapse', function() {
+                button.classList.remove('collapsed');
+            });
+        }
+    });
+    
+    // Fonction pour plier/déplier tous les groupes
+    window.toggleAllCategories = function(expand = true) {
+        const collapseElements = document.querySelectorAll('[id^="category-"]');
+        const buttons = document.querySelectorAll('[data-bs-toggle="collapse"]');
+        
+        collapseElements.forEach((element, index) => {
+            const collapse = new bootstrap.Collapse(element, {
+                toggle: false
+            });
+            
+            if (expand) {
+                collapse.show();
+            } else {
+                collapse.hide();
+            }
+        });
+    };
+});
+</script>
+{% endblock %}

@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}Mes adresses | DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Menu latéral -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Mon compte</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user me-2"></i> Informations personnelles
+                    </a>
+                    <a href="{{ url_for('orders') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-box me-2"></i> Mes commandes
+                    </a>
+                    <a href="{{ url_for('addresses') }}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-map-marker-alt me-2"></i> Mes adresses
+                    </a>
+                    <a href="{{ url_for('wishlist') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-heart me-2"></i> Ma liste d'envies
+                    </a>
+                    <a href="{{ url_for('change_password') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-lock me-2"></i> Changer de mot de passe
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Mes adresses</h4>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAddressModal">
+                        <i class="fas fa-plus me-1"></i> Ajouter une adresse
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    {% if addresses %}
+                        <div class="row row-cols-1 row-cols-md-2 g-4">
+                            {% for address in addresses %}
+                                <div class="col">
+                                    <div class="card h-100 {% if address.is_default %}border-primary{% endif %}">
+                                        <div class="card-body">
+                                            {% if address.is_default %}
+                                                <div class="position-absolute top-0 end-0 p-2">
+                                                    <span class="badge bg-primary">Principale</span>
+                                                </div>
+                                            {% endif %}
+                                            <h5 class="card-title">{{ address.name }}</h5>
+                                            <address class="mb-0">
+                                                {{ address.full_name }}<br>
+                                                {{ address.street }}<br>
+                                                {{ address.city }}, {{ address.region|capitalize }}<br>
+                                                Tél: {{ address.phone }}
+                                            </address>
+                                        </div>
+                                        <div class="card-footer bg-transparent">
+                                            <div class="d-flex justify-content-between">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                                    data-bs-toggle="modal" data-bs-target="#editAddressModal{{ address.id }}">
+                                                    <i class="fas fa-edit"></i> Modifier
+                                                </button>
+                                                <div>
+                                                    {% if not address.is_default %}
+                                                        <form action="{{ url_for('set_default_address', address_id=address.id) }}" method="post" class="d-inline">
+                                                            <button type="submit" class="btn btn-outline-primary btn-sm me-1">
+                                                                <i class="fas fa-check"></i> Définir par défaut
+                                                            </button>
+                                                        </form>
+                                                        <form action="{{ url_for('delete_address', address_id=address.id) }}" method="post" class="d-inline delete-form">
+                                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                                <i class="fas fa-trash"></i> Supprimer
+                                                            </button>
+                                                        </form>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Modal de modification d'adresse -->
+                                <div class="modal fade" id="editAddressModal{{ address.id }}" tabindex="-1" aria-labelledby="editAddressModalLabel{{ address.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="editAddressModalLabel{{ address.id }}">Modifier l'adresse</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <form action="{{ url_for('edit_address', address_id=address.id) }}" method="post">
+                                                    <div class="mb-3">
+                                                        <label for="edit_name{{ address.id }}" class="form-label">Nom de l'adresse</label>
+                                                        <input type="text" class="form-control" id="edit_name{{ address.id }}" name="name" value="{{ address.name }}" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="edit_full_name{{ address.id }}" class="form-label">Nom complet</label>
+                                                        <input type="text" class="form-control" id="edit_full_name{{ address.id }}" name="full_name" value="{{ address.full_name }}" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="edit_street{{ address.id }}" class="form-label">Adresse</label>
+                                                        <input type="text" class="form-control" id="edit_street{{ address.id }}" name="street" value="{{ address.street }}" required>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-6 mb-3">
+                                                            <label for="edit_city{{ address.id }}" class="form-label">Ville</label>
+                                                            <input type="text" class="form-control" id="edit_city{{ address.id }}" name="city" value="{{ address.city }}" required>
+                                                        </div>
+                                                        <div class="col-md-6 mb-3">
+                                                            <label for="edit_region{{ address.id }}" class="form-label">Région/Île</label>
+                                                            <select class="form-select" id="edit_region{{ address.id }}" name="region" required>
+                                                                <option value="">Choisir...</option>
+                                                                <option value="grande-comore" {% if address.region == 'grande-comore' %}selected{% endif %}>Grande Comore</option>
+                                                                <option value="anjouan" {% if address.region == 'anjouan' %}selected{% endif %}>Anjouan</option>
+                                                                <option value="moheli" {% if address.region == 'moheli' %}selected{% endif %}>Mohéli</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="edit_phone{{ address.id }}" class="form-label">Numéro de téléphone</label>
+                                                        <input type="tel" class="form-control" id="edit_phone{{ address.id }}" name="phone" value="{{ address.phone }}" required>
+                                                    </div>
+                                                    <div class="form-check mb-3">
+                                                        <input class="form-check-input" type="checkbox" id="edit_is_default{{ address.id }}" name="is_default" {% if address.is_default %}checked{% endif %}>
+                                                        <label class="form-check-label" for="edit_is_default{{ address.id }}">
+                                                            Définir comme adresse par défaut
+                                                        </label>
+                                                    </div>
+                                                    <div class="d-grid">
+                                                        <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-map-marker-alt fa-4x text-muted mb-3"></i>
+                            <h5>Vous n'avez pas encore d'adresse</h5>
+                            <p class="text-muted">Ajoutez votre première adresse pour faciliter vos achats</p>
+                            <button type="button" class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#addAddressModal">
+                                Ajouter une adresse
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour ajouter une adresse -->
+<div class="modal fade" id="addAddressModal" tabindex="-1" aria-labelledby="addAddressModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addAddressModalLabel">Ajouter une adresse</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('add_address') }}" method="post">
+                    <div class="mb-3">
+                        <label for="address_name" class="form-label">Nom de l'adresse</label>
+                        <input type="text" class="form-control" id="address_name" name="name" placeholder="ex: Domicile, Bureau..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="full_name" class="form-label">Nom complet</label>
+                        <input type="text" class="form-control" id="full_name" name="full_name" value="{{ user.first_name }} {{ user.last_name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="street" class="form-label">Adresse</label>
+                        <input type="text" class="form-control" id="street" name="street" value="{{ user.address }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="city" class="form-label">Ville</label>
+                            <input type="text" class="form-control" id="city" name="city" value="{{ user.city }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="region" class="form-label">Région/Île</label>
+                            <select class="form-select" id="region" name="region" required>
+                                <option value="">Choisir...</option>
+                                <option value="grande-comore" {% if user.region == 'grande-comore' %}selected{% endif %}>Grande Comore</option>
+                                <option value="anjouan" {% if user.region == 'anjouan' %}selected{% endif %}>Anjouan</option>
+                                <option value="moheli" {% if user.region == 'moheli' %}selected{% endif %}>Mohéli</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Numéro de téléphone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone }}" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="is_default" name="is_default" 
+                            {% if not addresses %}checked{% endif %}>
+                        <label class="form-check-label" for="is_default">
+                            Définir comme adresse par défaut
+                        </label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Enregistrer l'adresse</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Confirmation de suppression d'adresse
+        document.querySelectorAll('.delete-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                if (!confirm('Êtes-vous sûr de vouloir supprimer cette adresse?')) {
+                    e.preventDefault();
+                }
+            });
+        });
+        
+        // Fermer le modal après soumission réussie
+        const addressModalElement = document.getElementById('addAddressModal');
+        if (addressModalElement) {
+            const addressModal = new bootstrap.Modal(addressModalElement);
+            
+            // Si le formulaire est soumis avec succès, fermer le modal
+            document.querySelector('#addAddressModal form').addEventListener('submit', function() {
+                setTimeout(function() {
+                    addressModal.hide();
+                }, 100);
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,404 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Tableau de bord administrateur - DOUKA KM{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+
+{% block admin_content %}
+    <!-- Welcome section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h4 mb-3">Bienvenue, {{ admin.first_name }} {{ admin.last_name }}</h1>
+                    <p class="text-muted">Voici un aperçu des statistiques de la plateforme DOUKA KM.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card card-stats h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="icon-box">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <div class="text-end">
+                            <div class="card-title">Marchands</div>
+                            <div class="card-value">{{ stats.total_merchants }}</div>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-primary" style="width: 70%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card card-stats h-100 bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="icon-box">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="text-end">
+                            <div class="card-title">Utilisateurs</div>
+                            <div class="card-value">{{ stats.total_users }}</div>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-light" style="width: 60%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card card-stats h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="icon-box">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <div class="text-end">
+                            <div class="card-title">Produits</div>
+                            <div class="card-value">{{ stats.total_products }}</div>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-primary" style="width: 85%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6 mb-4">
+            <div class="card card-stats h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="icon-box">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="text-end">
+                            <div class="card-title">Commandes</div>
+                            <div class="card-value">{{ stats.total_orders }}</div>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-primary" style="width: 50%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commission Card Row -->
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card card-stats h-100 bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="icon-box">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="text-end">
+                            <div class="card-title">Revenue Admin</div>
+                            <div class="card-value" id="admin-revenue">{{ stats.admin_revenue|format_number }} KMF</div>
+                        </div>
+                    </div>
+                    <div class="small">
+                        <i class="fas fa-clock me-1"></i>
+                        Mise à jour en temps réel
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Marchands récents</h5>
+                    <span class="badge bg-primary rounded-pill">{{ stats.pending_merchants }} en attente</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Marchand</th>
+                                    <th>Inscription</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for merchant in recent_merchants %}
+                                <tr>
+                                    <td>{{ merchant.name }}</td>
+                                    <td>{{ merchant.date }}</td>
+                                    <td>
+                                        {% if merchant.verified %}
+                                            <span class="badge bg-success">Vérifié</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">En attente</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('admin_merchant_detail', merchant_id=merchant.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white text-center">
+                    <a href="{{ url_for('admin_merchants') }}" class="btn btn-sm btn-outline-secondary">Voir tous les marchands</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Commandes récentes</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>N° Commande</th>
+                                    <th>Client</th>
+                                    <th>Marchand</th>
+                                    <th>Total</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td>{{ order.order_number }}</td>
+                                    <td>{{ order.customer_name }}</td>
+                                    <td>
+                                        {% if order.source == 'admin' %}
+                                            <span class="text-primary fw-bold">{{ order.merchant_name }}</span>
+                                            <small class="badge bg-primary ms-1">Admin</small>
+                                        {% else %}
+                                            {{ order.merchant_name }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.total|format_number }} KMF</td>
+                                    <td>
+                                        {% if order.status == 'processing' %}
+                                            <span class="badge bg-primary">En traitement</span>
+                                        {% elif order.status == 'shipped' %}
+                                            <span class="badge bg-info">Expédiée</span>
+                                        {% elif order.status == 'delivered' %}
+                                            <span class="badge bg-success">Livrée</span>
+                                        {% elif order.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Annulée</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ order.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white text-center">
+                    <a href="{{ url_for('admin_orders') }}" class="btn btn-sm btn-outline-secondary">Voir toutes les commandes</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Actions rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <a href="{{ url_for('admin_merchants') }}" class="card bg-light h-100 text-decoration-none">
+                                <div class="card-body d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-store fa-2x text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Approuver marchands</h6>
+                                        <p class="mb-0 small text-muted">{{ stats.pending_merchants }} en attente</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <a href="{{ url_for('admin_products') }}" class="card bg-light h-100 text-decoration-none">
+                                <div class="card-body d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-box fa-2x text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Gérer produits</h6>
+                                        <p class="mb-0 small text-muted">{{ stats.total_products }} produits</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <a href="{{ url_for('admin_admin_products') }}" class="card bg-light h-100 text-decoration-none">
+                                <div class="card-body d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-crown fa-2x text-success"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Mes Produits Admin</h6>
+                                        <p class="mb-0 small text-muted">{{ stats.total_commission_fees|format_number }} KMF commission</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <a href="{{ url_for('admin_categories') }}" class="card bg-light h-100 text-decoration-none">
+                                <div class="card-body d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-tags fa-2x text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Gérer catégories</h6>
+                                        <p class="mb-0 small text-muted">catégories</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <a href="{{ url_for('admin_users') }}" class="card bg-light h-100 text-decoration-none">
+                                <div class="card-body d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-users fa-2x text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">Gérer utilisateurs</h6>
+                                        <p class="mb-0 small text-muted">utilisateurs</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <a href="{{ url_for('admin_product_add') }}" class="card bg-success text-white h-100 text-decoration-none">
+                                <div class="card-body d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-plus fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-white">Ajouter produit</h6>
+                                        <p class="mb-0 small text-white-50">Nouveau produit admin</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fonction pour mettre à jour les statistiques de commission
+        function updateCommissionStats() {
+            fetch('/admin/api/commission-stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mettre à jour les valeurs affichées
+                        const commissionTotal = document.getElementById('commission-total');
+                        const adminRevenue = document.getElementById('admin-revenue');
+                        
+                        if (commissionTotal) {
+                            commissionTotal.textContent = data.formatted_total + ' KMF';
+                        }
+                        
+                        if (adminRevenue) {
+                            adminRevenue.textContent = data.formatted_admin_revenue + ' KMF';
+                        }
+                        
+                        // Ajouter un effet visuel pour indiquer la mise à jour
+                        [commissionTotal, adminRevenue].forEach(element => {
+                            if (element) {
+                                element.style.transition = 'all 0.3s ease';
+                                element.style.color = '#ffffff';
+                                setTimeout(() => {
+                                    element.style.color = '';
+                                }, 300);
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors de la mise à jour des statistiques:', error);
+                });
+        }
+        
+        // Mettre à jour immédiatement au chargement
+        updateCommissionStats();
+        
+        // Mettre à jour toutes les 30 secondes (30000 ms)
+        setInterval(updateCommissionStats, 30000);
+        
+        // Mettre à jour lors du focus sur la fenêtre (quand l'utilisateur revient sur l'onglet)
+        window.addEventListener('focus', updateCommissionStats);
+        
+        // Ajouter un indicateur visuel de la dernière mise à jour
+        function showLastUpdate() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('fr-FR');
+            
+            // Créer un petit indicateur de dernière mise à jour si il n'existe pas
+            let updateIndicator = document.getElementById('last-update-indicator');
+            if (!updateIndicator) {
+                updateIndicator = document.createElement('small');
+                updateIndicator.id = 'last-update-indicator';
+                updateIndicator.className = 'text-muted position-fixed';
+                updateIndicator.style.bottom = '10px';
+                updateIndicator.style.right = '10px';
+                updateIndicator.style.background = 'rgba(0,0,0,0.1)';
+                updateIndicator.style.padding = '5px 10px';
+                updateIndicator.style.borderRadius = '15px';
+                updateIndicator.style.fontSize = '0.75rem';
+                document.body.appendChild(updateIndicator);
+            }
+            
+            updateIndicator.innerHTML = `<i class="fas fa-sync-alt me-1"></i>Dernière mise à jour: ${timeString}`;
+            
+            // Faire clignoter l'indicateur
+            updateIndicator.style.opacity = '0.5';
+            setTimeout(() => {
+                updateIndicator.style.opacity = '1';
+            }, 200);
+        }
+        
+        // Afficher l'indicateur lors de chaque mise à jour
+        const originalUpdate = updateCommissionStats;
+        updateCommissionStats = function() {
+            originalUpdate();
+            showLastUpdate();
+        };
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détails Commande #{{ order.id }} - Livreur | DOUKA KM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .delivery-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .status-badge {
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+        }
+        .order-timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+        .timeline-item {
+            position: relative;
+            padding: 1rem 0;
+            border-left: 2px solid #e9ecef;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 1.5rem;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #6c757d;
+        }
+        .timeline-item.active::before {
+            background: #28a745;
+        }
+        .order-actions {
+            position: sticky;
+            top: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+        }
+        .assignment-status {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        .assignment-status.assigned-to-me {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .assignment-status.assigned-to-other {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .assignment-status.available {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('livreur_dashboard') }}">
+                <i class="fas fa-truck me-2"></i>DOUKA KM - Livreur
+            </a>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>
+                        Livreur
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('livreur_dashboard') }}">
+                            <i class="fas fa-home me-2"></i>Dashboard
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('livreur_orders', view='assigned') }}">
+                            <i class="fas fa-clipboard-list me-2"></i>Mes commandes
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('livreur_settings') }}">
+                            <i class="fas fa-user-cog me-2"></i>Mes paramètres
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('admin_logout') }}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Messages Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Bouton de retour -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('livreur_orders') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i>Retour aux commandes
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Informations principales -->
+            <div class="col-lg-8">
+                <!-- Statut d'assignation -->
+                {% if order.is_assigned_to_me %}
+                    <div class="assignment-status assigned-to-me">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-2x me-3"></i>
+                            <div>
+                                <h6 class="mb-1">Commande assignée à vous</h6>
+                                <small>Cette commande vous est actuellement assignée. Vous pouvez la gérer et mettre à jour son statut.</small>
+                            </div>
+                        </div>
+                    </div>
+                {% elif order.is_assigned_to_other %}
+                    <div class="assignment-status assigned-to-other">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-user-times fa-2x me-3"></i>
+                            <div>
+                                <h6 class="mb-1">Commande déjà assignée</h6>
+                                <small>Cette commande est assignée à un autre livreur ({{ order.assigned_to }}).</small>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="assignment-status available">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-hand-paper fa-2x me-3"></i>
+                            <div>
+                                <h6 class="mb-1">Commande disponible</h6>
+                                <small>Cette commande est disponible pour assignation. Vous pouvez la prendre si vous avez de la place.</small>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Informations de livraison -->
+                <div class="delivery-info">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-2">
+                                <i class="fas fa-box me-2"></i>
+                                Commande #{{ order.order_number or order.id }}
+                            </h4>
+                            <p class="mb-1">
+                                <i class="fas fa-store me-2"></i>
+                                <strong>{{ order.merchant_info.store_name }}</strong>
+                            </p>
+                            <p class="mb-1">
+                                <i class="fas fa-user me-2"></i>
+                                Client: {{ order.customer_name or 'Client' }}
+                            </p>
+                            <p class="mb-0">
+                                <i class="fas fa-calendar me-2"></i>
+                                Commandé le: {{ order.created_at }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="status-badge bg-{{ order.status_color or 'secondary' }}">
+                                {{ order.status_text or order.status }}
+                            </div>
+                            <div class="mt-2">
+                                <h3 class="mb-0">{{ order.total|format_number }} KMF</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informations du marchand -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-store me-2"></i>Informations du marchand
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Nom:</strong> {{ order.merchant_info.store_name }}</p>
+                                <p><strong>Email:</strong> {{ order.merchant_info.email }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Téléphone:</strong> {{ order.merchant_info.phone or 'Non renseigné' }}</p>
+                                <p><strong>Adresse:</strong> {{ order.merchant_info.store_address or 'Non renseignée' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Produits commandés -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-shopping-cart me-2"></i>Produits commandés
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% if order['items'] %}
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th>Prix unitaire</th>
+                                            <th>Quantité</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in order['items'] %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    {% if item.image %}
+                                                        <img src="{{ item.image }}" alt="{{ item.name }}" 
+                                                             class="me-3" style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;">
+                                                    {% endif %}
+                                                    <div>
+                                                        <h6 class="mb-1">{{ item.name }}</h6>
+                                                        {% if item.variant_details %}
+                                                            <small class="text-muted">{{ item.variant_details }}</small>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ item.price|format_number }} KMF</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td><strong>{{ (item.price * item.quantity)|format_number }} KMF</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th colspan="3">Total de la commande</th>
+                                            <th><strong>{{ order.total|format_number }} KMF</strong></th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Aucun produit trouvé pour cette commande.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Informations de livraison -->
+                {% if order.shipping_address %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-map-marker-alt me-2"></i>Adresse de livraison
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <address class="mb-0">
+                            <strong>{{ order.shipping_address.full_name or order.customer_name }}</strong><br>
+                            {{ order.shipping_address.street }}<br>
+                            {{ order.shipping_address.city }}, {{ order.shipping_address.region }}<br>
+                            {% if order.shipping_address.phone %}
+                                <i class="fas fa-phone me-1"></i>{{ order.shipping_address.phone }}
+                            {% endif %}
+                        </address>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Timeline de la commande -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-history me-2"></i>Historique de la commande
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="order-timeline">
+                            <div class="timeline-item {{ 'active' if order.status in ['processing', 'shipped', 'delivered'] else '' }}">
+                                <h6>Commande en préparation</h6>
+                                <small class="text-muted">{{ order.created_at }}</small>
+                            </div>
+                            <div class="timeline-item {{ 'active' if order.status in ['shipped', 'delivered'] else '' }}">
+                                <h6>Commande expédiée</h6>
+                                <small class="text-muted">
+                                    {% if order.status in ['shipped', 'delivered'] and order.updated_at %}
+                                        {{ order.updated_at }}
+                                    {% else %}
+                                        En attente
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="timeline-item {{ 'active' if order.status == 'delivered' else '' }}">
+                                <h6>Commande livrée</h6>
+                                <small class="text-muted">
+                                    {% if order.status == 'delivered' and order.delivered_at %}
+                                        {{ order.delivered_at }}
+                                    {% else %}
+                                        En attente
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="col-lg-4">
+                <div class="order-actions">
+                    <h6 class="mb-3">
+                        <i class="fas fa-tools me-2"></i>Actions disponibles
+                    </h6>
+
+                    <!-- Actions d'assignation -->
+                    {% if not order.is_assigned_to_me and not order.is_assigned_to_other %}
+                        <!-- Commande disponible -->
+                        <button class="btn btn-success w-100 mb-3 assign-order-btn" 
+                                data-order-id="{{ order.id }}"
+                                data-order-type="{{ order.source }}"
+                                data-merchant-email="{{ order.merchant_info.email }}">
+                            <i class="fas fa-hand-paper me-2"></i>Prendre cette commande
+                        </button>
+                        <p class="text-muted small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            En prenant cette commande, elle vous sera assignée et ne sera plus visible pour les autres livreurs.
+                        </p>
+                    {% elif order.is_assigned_to_me %}
+                        <!-- Commande assignée à moi -->
+                        <button class="btn btn-outline-danger w-100 mb-3 unassign-order-btn"
+                                data-order-id="{{ order.id }}"
+                                data-order-type="{{ order.source }}"
+                                data-merchant-email="{{ order.merchant_info.email }}">
+                            <i class="fas fa-times me-2"></i>Abandonner cette commande
+                        </button>
+
+                        <!-- Actions de mise à jour du statut (seulement si assignée à moi) -->
+                        <div class="border-top pt-3 mt-3">
+                            <h6 class="mb-3">Mettre à jour le statut</h6>
+                            
+                            {% set current_status = order.status %}
+                            
+                            <!-- Boutons de statut selon la progression -->
+                            {% if current_status == 'processing' %}
+                                <button class="btn btn-info w-100 mb-2 update-status-btn" 
+                                        data-status="shipped" data-order-id="{{ order.id }}">
+                                    <i class="fas fa-truck me-2"></i>Marquer comme expédiée
+                                </button>
+                            {% elif current_status == 'shipped' %}
+                                <button class="btn btn-success w-100 mb-2 update-status-btn" 
+                                        data-status="delivered" data-order-id="{{ order.id }}">
+                                    <i class="fas fa-check me-2"></i>Marquer comme livrée
+                                </button>
+                            {% elif current_status == 'delivered' %}
+                                <div class="alert alert-success mb-0">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Commande livrée avec succès !
+                                </div>
+                            {% endif %}
+
+                            <!-- Formulaire pour ajouter des notes -->
+                            <div class="mt-3">
+                                <label for="status-notes" class="form-label">Notes (optionnel)</label>
+                                <textarea class="form-control" id="status-notes" rows="2" 
+                                         placeholder="Ajouter une note sur cette livraison..."></textarea>
+                            </div>
+                        </div>
+                    {% else %}
+                        <!-- Commande assignée à un autre livreur -->
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Cette commande est déjà assignée à un autre livreur.
+                        </div>
+                    {% endif %}
+
+                    <!-- Informations de contact -->
+                    <div class="border-top pt-3 mt-3">
+                        <h6 class="mb-3">Contacts</h6>
+                        <div class="d-flex flex-column gap-2">
+                            {% if order.shipping_address and order.shipping_address.phone %}
+                                <a href="tel:{{ order.shipping_address.phone }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-phone me-2"></i>Appeler le client
+                                </a>
+                            {% endif %}
+                            {% if order.merchant_info.phone %}
+                                <a href="tel:{{ order.merchant_info.phone }}" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-store me-2"></i>Appeler le marchand
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gestion de l'assignation de commande
+            const assignButton = document.querySelector('.assign-order-btn');
+            if (assignButton) {
+                assignButton.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    const orderType = this.getAttribute('data-order-type');
+                    const merchantEmail = this.getAttribute('data-merchant-email');
+                    
+                    if (confirm('Voulez-vous vraiment prendre cette commande ?')) {
+                        // Désactiver le bouton pendant le traitement
+                        this.disabled = true;
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Assignation...';
+                        
+                        // Préparer les données du formulaire
+                        const formData = new FormData();
+                        formData.append('order_id', orderId);
+                        formData.append('order_type', orderType);
+                        if (merchantEmail && merchantEmail !== 'admin') {
+                            formData.append('merchant_email', merchantEmail);
+                        }
+                        
+                        // Envoyer la requête d'assignation
+                        fetch('{{ url_for("livreur_assign_order") }}', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Afficher un message de succès et recharger la page
+                                alert('Commande assignée avec succès !');
+                                location.reload();
+                            } else {
+                                // Afficher le message d'erreur
+                                alert('Erreur: ' + data.message);
+                                // Réactiver le bouton
+                                this.disabled = false;
+                                this.innerHTML = '<i class="fas fa-hand-paper me-2"></i>Prendre cette commande';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur:', error);
+                            alert('Une erreur est survenue lors de l\'assignation.');
+                            // Réactiver le bouton
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-hand-paper me-2"></i>Prendre cette commande';
+                        });
+                    }
+                });
+            }
+
+            // Gestion de la désassignation de commande
+            const unassignButton = document.querySelector('.unassign-order-btn');
+            if (unassignButton) {
+                unassignButton.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    const orderType = this.getAttribute('data-order-type');
+                    const merchantEmail = this.getAttribute('data-merchant-email');
+                    
+                    if (confirm('Voulez-vous vraiment abandonner cette commande ? Elle redeviendra disponible pour les autres livreurs.')) {
+                        // Désactiver le bouton pendant le traitement
+                        this.disabled = true;
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Désassignation...';
+                        
+                        // Préparer les données du formulaire
+                        const formData = new FormData();
+                        formData.append('order_id', orderId);
+                        formData.append('order_type', orderType);
+                        if (merchantEmail && merchantEmail !== 'admin') {
+                            formData.append('merchant_email', merchantEmail);
+                        }
+                        
+                        // Envoyer la requête de désassignation
+                        fetch('{{ url_for("livreur_unassign_order") }}', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Afficher un message de succès et recharger la page
+                                alert('Commande abandonnée avec succès !');
+                                location.reload();
+                            } else {
+                                // Afficher le message d'erreur
+                                alert('Erreur: ' + data.message);
+                                // Réactiver le bouton
+                                this.disabled = false;
+                                this.innerHTML = '<i class="fas fa-times me-2"></i>Abandonner cette commande';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur:', error);
+                            alert('Une erreur est survenue lors de la désassignation.');
+                            // Réactiver le bouton
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-times me-2"></i>Abandonner cette commande';
+                        });
+                    }
+                });
+            }
+
+            // Gestion de la mise à jour du statut
+            const updateStatusButtons = document.querySelectorAll('.update-status-btn');
+            updateStatusButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const status = this.getAttribute('data-status');
+                    const orderId = this.getAttribute('data-order-id');
+                    const notes = document.getElementById('status-notes').value;
+                    
+                    let confirmMessage = 'Voulez-vous vraiment mettre à jour le statut de cette commande ?';
+                    if (status === 'delivered') {
+                        confirmMessage = 'Êtes-vous sûr que cette commande a été livrée ? Cette action est irréversible.';
+                    }
+                    
+                    if (confirm(confirmMessage)) {
+                        updateOrderStatus(orderId, status, notes, this);
+                    }
+                });
+            });
+        });
+
+        function updateOrderStatus(orderId, status, notes, button) {
+            // Désactiver le bouton pendant le traitement
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Mise à jour...';
+            
+            // Préparer les données du formulaire
+            const formData = new FormData();
+            formData.append('status', status);
+            if (notes) {
+                formData.append('notes', notes);
+            }
+            
+            // Envoyer la requête de mise à jour
+            fetch(`{{ url_for("livreur_update_order_status", order_id=0) }}`.replace('0', orderId), {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Statut mis à jour avec succès !');
+                    location.reload();
+                } else {
+                    alert('Erreur: ' + data.message);
+                    // Réactiver le bouton
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Une erreur est survenue lors de la mise à jour.');
+                // Réactiver le bouton
+                button.disabled = false;
+                button.innerHTML = originalText;
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1417 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Email vérifié avec succès - DOUKA KM{% endblock %}
+
+{% block content %}
+<!-- Confetti Canvas -->
+<canvas id="confetti-canvas"></canvas>
+
+<!-- Particles background -->
+<div id="success-particles"></div>
+
+<div class="auth-card success-card">
+    <!-- Success Animation Spectacular -->
+    <div class="text-center mb-4">
+        <div class="success-animation-wrapper">
+            <!-- Animated Success Badge -->
+            <div class="success-badge-container">
+                <div class="success-rings">
+                    <div class="ring ring-1"></div>
+                    <div class="ring ring-2"></div>
+                    <div class="ring ring-3"></div>
+                </div>
+                <div class="success-checkmark-advanced">
+                    <div class="check-container">
+                        <svg class="checkmark-svg" viewBox="0 0 52 52">
+                            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                            <path class="checkmark-check" fill="none" d="m14.1 27.2l7.1 7.2 16.7-16.8"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 3D Trophy -->
+            <div class="trophy-container">
+                <div class="trophy">
+                    <div class="trophy-cup"></div>
+                    <div class="trophy-base"></div>
+                    <div class="trophy-handles">
+                        <div class="handle left"></div>
+                        <div class="handle right"></div>
+                    </div>
+                    <div class="trophy-shine"></div>
+                </div>
+            </div>
+        </div>
+        
+        <h1 class="success-title mb-3">
+            <span class="title-line">🎉 Félicitations !</span>
+            <span class="title-line">Email vérifié avec succès</span>
+        </h1>
+        <p class="success-subtitle">
+            Votre compte DOUKA KM est maintenant <strong class="text-success">activé</strong>
+        </p>
+    </div>
+
+    <!-- Welcome Animation Card -->
+    <div class="welcome-spectacular mb-4">
+        <div class="welcome-header">
+            <div class="welcome-icon">
+                <i class="fas fa-rocket"></i>
+            </div>
+            <div class="welcome-text">
+                <h3>Bienvenue dans l'univers DOUKA KM !</h3>
+                <p>Votre aventure shopping commence maintenant</p>
+            </div>
+        </div>
+        
+        <!-- Interactive Features Grid -->
+        <div class="features-interactive">
+            <div class="feature-card" data-feature="shopping">
+                <div class="feature-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <h6>Shopping Illimité</h6>
+                <p>Découvrez des milliers de produits</p>
+                <div class="feature-progress">
+                    <div class="progress-bar" data-width="100"></div>
+                </div>
+            </div>
+            
+            <div class="feature-card" data-feature="wishlist">
+                <div class="feature-icon">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h6>Liste de Souhaits</h6>
+                <p>Sauvegardez vos coups de cœur</p>
+                <div class="feature-progress">
+                    <div class="progress-bar" data-width="90"></div>
+                </div>
+            </div>
+            
+            <div class="feature-card" data-feature="delivery">
+                <div class="feature-icon">
+                    <i class="fas fa-truck-fast"></i>
+                </div>
+                <h6>Livraison Rapide</h6>
+                <p>Suivi en temps réel</p>
+                <div class="feature-progress">
+                    <div class="progress-bar" data-width="95"></div>
+                </div>
+            </div>
+            
+            <div class="feature-card" data-feature="support">
+                <div class="feature-icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <h6>Support 24/7</h6>
+                <p>Assistance personnalisée</p>
+                <div class="feature-progress">
+                    <div class="progress-bar" data-width="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Premium Promo Card -->
+    <div class="promo-spectacular mb-4">
+        <div class="promo-background">
+            <div class="promo-particles">
+                <div class="promo-particle"></div>
+                <div class="promo-particle"></div>
+                <div class="promo-particle"></div>
+            </div>
+        </div>
+        <div class="promo-content">
+            <div class="promo-badge">
+                <span class="badge-text">OFFRE EXCLUSIVE</span>
+            </div>
+            <h4 class="promo-title">🎁 Cadeau de Bienvenue</h4>
+            <p class="promo-desc">Votre première commande avec <strong>20% de réduction</strong></p>
+            <div class="promo-code-container">
+                <div class="promo-code-wrapper">
+                    <input type="text" id="promoCodeInput" value="BIENVENUE20" readonly>
+                    <button class="copy-btn" onclick="copyPromoCode()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div class="promo-timer">
+                    <i class="fas fa-clock"></i>
+                    <span>Valable 7 jours</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons Spectacular -->
+    <div class="actions-spectacular mb-4">
+        <div class="actions-grid">
+            <a href="{{ url_for('home') }}" class="action-card primary">
+                <div class="action-icon">
+                    <i class="fas fa-home"></i>
+                </div>
+                <div class="action-content">
+                    <h6>Accueil</h6>
+                    <p>Découvrez nos produits</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('products') }}" class="action-card secondary">
+                <div class="action-icon">
+                    <i class="fas fa-shopping-bags"></i>
+                </div>
+                <div class="action-content">
+                    <h6>Catalogue</h6>
+                    <p>Parcourir tous les produits</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+            
+            <a href="{{ url_for('profile') }}" class="action-card accent">
+                <div class="action-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="action-content">
+                    <h6>Mon Profil</h6>
+                    <p>Gérer mes informations</p>
+                </div>
+                <div class="action-arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Social Share -->
+    <div class="social-share-spectacular">
+        <p class="share-text">Partagez votre expérience DOUKA KM</p>
+        <div class="share-buttons">
+            <button class="share-btn facebook" onclick="shareOnFacebook()">
+                <i class="fab fa-facebook-f"></i>
+            </button>
+            <button class="share-btn twitter" onclick="shareOnTwitter()">
+                <i class="fab fa-twitter"></i>
+            </button>
+            <button class="share-btn linkedin" onclick="shareOnLinkedIn()">
+                <i class="fab fa-linkedin-in"></i>
+            </button>
+            <button class="share-btn whatsapp" onclick="shareOnWhatsApp()">
+                <i class="fab fa-whatsapp"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced CSS Styles -->
+<style>
+    /* Confetti Animation */
+    #confetti-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 999;
+    }
+
+    /* Particles Background */
+    #success-particles {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 1;
+    }
+
+    /* Success Card Enhancement */
+    .success-card {
+        position: relative;
+        background: linear-gradient(135deg, 
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(240, 248, 255, 0.95) 50%,
+            rgba(230, 247, 255, 0.95) 100%);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 
+            0 20px 40px rgba(0, 0, 0, 0.1),
+            0 0 60px rgba(0, 123, 255, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        z-index: 2;
+        overflow: hidden;
+    }
+
+    .success-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        animation: shine 3s infinite;
+        z-index: -1;
+    }
+
+    @keyframes shine {
+        0% { left: -100%; }
+        50% { left: 100%; }
+        100% { left: 100%; }
+    }
+
+    /* Advanced Success Animation */
+    .success-animation-wrapper {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .success-badge-container {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+
+    .success-rings {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .ring {
+        position: absolute;
+        border: 2px solid;
+        border-radius: 50%;
+        opacity: 0;
+        animation: ringExpand 2s ease-out infinite;
+    }
+
+    .ring-1 {
+        width: 120px;
+        height: 120px;
+        border-color: #28a745;
+        animation-delay: 0s;
+    }
+
+    .ring-2 {
+        width: 160px;
+        height: 160px;
+        border-color: #17a2b8;
+        animation-delay: 0.5s;
+    }
+
+    .ring-3 {
+        width: 200px;
+        height: 200px;
+        border-color: #ffc107;
+        animation-delay: 1s;
+    }
+
+    @keyframes ringExpand {
+        0% {
+            transform: translate(-50%, -50%) scale(0.3);
+            opacity: 1;
+        }
+        70% {
+            opacity: 0.7;
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 0;
+        }
+    }
+
+    .success-checkmark-advanced {
+        position: relative;
+        z-index: 3;
+    }
+
+    .check-container {
+        width: 80px;
+        height: 80px;
+        position: relative;
+    }
+
+    .checkmark-svg {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        display: block;
+        stroke-width: 3;
+        stroke: #28a745;
+        stroke-miterlimit: 10;
+        box-shadow: 
+            inset 0 0 0 #28a745,
+            0 10px 30px rgba(40, 167, 69, 0.3);
+        animation: checkmarkBounce 0.6s ease-in-out 1.5s both;
+    }
+
+    .checkmark-circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        stroke-width: 3;
+        stroke-miterlimit: 10;
+        stroke: #28a745;
+        fill: rgba(40, 167, 69, 0.1);
+        animation: checkmarkCircle 1.2s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+    }
+
+    .checkmark-check {
+        transform-origin: 50% 50%;
+        stroke-dasharray: 48;
+        stroke-dashoffset: 48;
+        animation: checkmarkCheck 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) 0.7s forwards;
+    }
+
+    @keyframes checkmarkCircle {
+        0% { stroke-dashoffset: 166; }
+        100% { stroke-dashoffset: 0; }
+    }
+
+    @keyframes checkmarkCheck {
+        0% { stroke-dashoffset: 48; }
+        100% { stroke-dashoffset: 0; }
+    }
+
+    @keyframes checkmarkBounce {
+        0%, 20%, 53%, 80%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+        40%, 43% { transform: translate3d(0, -10px, 0) scale(1.1); }
+        70% { transform: translate3d(0, -5px, 0) scale(1.05); }
+        90% { transform: translate3d(0, -2px, 0) scale(1.02); }
+    }
+
+    /* 3D Trophy */
+    .trophy-container {
+        margin-top: 1rem;
+        perspective: 1000px;
+    }
+
+    .trophy {
+        position: relative;
+        width: 60px;
+        height: 80px;
+        margin: 0 auto;
+        transform-style: preserve-3d;
+        animation: trophyRotate 4s infinite linear;
+    }
+
+    .trophy-cup {
+        width: 40px;
+        height: 35px;
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        border-radius: 20px 20px 10px 10px;
+        position: relative;
+        margin: 0 auto;
+        box-shadow: 
+            0 5px 15px rgba(255, 215, 0, 0.3),
+            inset 0 2px 5px rgba(255, 255, 255, 0.5);
+    }
+
+    .trophy-base {
+        width: 50px;
+        height: 15px;
+        background: linear-gradient(45deg, #cd7f32, #daa520);
+        margin: 5px auto 0;
+        border-radius: 5px;
+        position: relative;
+    }
+
+    .trophy-handles {
+        position: absolute;
+        top: 10px;
+        width: 100%;
+    }
+
+    .handle {
+        width: 12px;
+        height: 20px;
+        border: 3px solid #ffd700;
+        border-radius: 0 15px 15px 0;
+        position: absolute;
+    }
+
+    .handle.left {
+        left: -8px;
+        border-right: none;
+        transform: scaleX(-1);
+    }
+
+    .handle.right {
+        right: -8px;
+        border-left: none;
+    }
+
+    .trophy-shine {
+        position: absolute;
+        top: 5px;
+        left: 15px;
+        width: 8px;
+        height: 15px;
+        background: linear-gradient(45deg, rgba(255, 255, 255, 0.8), transparent);
+        border-radius: 50%;
+        animation: trophyShine 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes trophyRotate {
+        0% { transform: rotateY(0deg); }
+        100% { transform: rotateY(360deg); }
+    }
+
+    @keyframes trophyShine {
+        0% { opacity: 0.6; }
+        100% { opacity: 1; }
+    }
+
+    /* Enhanced Title */
+    .success-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(45deg, #28a745, #20c997, #17a2b8);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        line-height: 1.2;
+        margin-bottom: 1rem;
+    }
+
+    .title-line {
+        display: block;
+        animation: titleSlideIn 0.8s ease-out forwards;
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    .title-line:first-child {
+        animation-delay: 1.8s;
+    }
+
+    .title-line:last-child {
+        animation-delay: 2.2s;
+    }
+
+    @keyframes titleSlideIn {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .success-subtitle {
+        font-size: 1.2rem;
+        color: #6c757d;
+        animation: subtitleFadeIn 0.8s ease-out 2.6s both;
+    }
+
+    @keyframes subtitleFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Welcome Spectacular */
+    .welcome-spectacular {
+        background: linear-gradient(135deg, 
+            rgba(40, 167, 69, 0.1) 0%,
+            rgba(23, 162, 184, 0.1) 100%);
+        border: 1px solid rgba(40, 167, 69, 0.2);
+        border-radius: 20px;
+        padding: 2rem;
+        backdrop-filter: blur(10px);
+        animation: welcomeSlideUp 0.8s ease-out 3s both;
+    }
+
+    @keyframes welcomeSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .welcome-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .welcome-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        box-shadow: 0 10px 25px rgba(0, 123, 255, 0.3);
+        animation: iconFloat 3s ease-in-out infinite;
+    }
+
+    .welcome-icon i {
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    @keyframes iconFloat {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .welcome-text h3 {
+        color: #28a745;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .welcome-text p {
+        color: #6c757d;
+        margin: 0;
+    }
+
+    /* Interactive Features */
+    .features-interactive {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .feature-card {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        transition: left 0.5s;
+    }
+
+    .feature-card:hover::before {
+        left: 100%;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px) scale(1.05);
+        box-shadow: 
+            0 20px 40px rgba(0, 0, 0, 0.1),
+            0 0 30px rgba(0, 123, 255, 0.2);
+    }
+
+    .feature-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        transition: transform 0.3s ease;
+    }
+
+    .feature-card:hover .feature-icon {
+        transform: rotate(360deg);
+    }
+
+    .feature-icon i {
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .feature-card h6 {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .feature-progress {
+        height: 4px;
+        background: rgba(0, 123, 255, 0.2);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #007bff, #28a745);
+        border-radius: 2px;
+        width: 0;
+        transition: width 1s ease-out 0.5s;
+    }
+
+    .feature-card:hover .progress-bar {
+        width: var(--progress-width, 100%);
+    }
+
+    /* Promo Spectacular */
+    .promo-spectacular {
+        position: relative;
+        background: linear-gradient(135deg, 
+            #667eea 0%, 
+            #764ba2 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        color: white;
+        overflow: hidden;
+        animation: promoSlideIn 0.8s ease-out 3.5s both;
+    }
+
+    @keyframes promoSlideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .promo-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+    }
+
+    .promo-particles {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    .promo-particle {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: floatParticle 6s infinite ease-in-out;
+    }
+
+    .promo-particle:nth-child(1) {
+        width: 20px;
+        height: 20px;
+        top: 20%;
+        left: 20%;
+        animation-delay: 0s;
+    }
+
+    .promo-particle:nth-child(2) {
+        width: 15px;
+        height: 15px;
+        top: 60%;
+        right: 30%;
+        animation-delay: 2s;
+    }
+
+    .promo-particle:nth-child(3) {
+        width: 25px;
+        height: 25px;
+        bottom: 30%;
+        left: 60%;
+        animation-delay: 4s;
+    }
+
+    @keyframes floatParticle {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+
+    .promo-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .promo-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        padding: 0.3rem 1rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        animation: badgePulse 2s infinite;
+    }
+
+    @keyframes badgePulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .promo-title {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .promo-desc {
+        margin-bottom: 1.5rem;
+        opacity: 0.9;
+    }
+
+    .promo-code-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .promo-code-wrapper {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 0.5rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #promoCodeInput {
+        background: transparent;
+        border: none;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        outline: none;
+        padding: 0.5rem;
+        width: 150px;
+    }
+
+    .copy-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        padding: 0.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-left: 0.5rem;
+    }
+
+    .copy-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+
+    .promo-timer {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+
+    /* Actions Spectacular */
+    .actions-spectacular {
+        animation: actionsSlideUp 0.8s ease-out 4s both;
+    }
+
+    @keyframes actionsSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .action-card {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        transition: left 0.5s;
+    }
+
+    .action-card:hover::before {
+        left: 100%;
+    }
+
+    .action-card:hover {
+        transform: translateY(-8px) scale(1.03);
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .action-card.primary:hover {
+        box-shadow: 0 15px 35px rgba(0, 123, 255, 0.3);
+        border-color: rgba(0, 123, 255, 0.5);
+    }
+
+    .action-card.secondary:hover {
+        box-shadow: 0 15px 35px rgba(40, 167, 69, 0.3);
+        border-color: rgba(40, 167, 69, 0.5);
+    }
+
+    .action-card.accent:hover {
+        box-shadow: 0 15px 35px rgba(255, 193, 7, 0.3);
+        border-color: rgba(255, 193, 7, 0.5);
+    }
+
+    .action-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        transition: transform 0.3s ease;
+    }
+
+    .action-card.primary .action-icon {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+    }
+
+    .action-card.secondary .action-icon {
+        background: linear-gradient(45deg, #28a745, #20c997);
+    }
+
+    .action-card.accent .action-icon {
+        background: linear-gradient(45deg, #ffc107, #e0a800);
+    }
+
+    .action-icon i {
+        color: white;
+        font-size: 1.3rem;
+    }
+
+    .action-card:hover .action-icon {
+        transform: rotate(-10deg) scale(1.1);
+    }
+
+    .action-content {
+        flex: 1;
+    }
+
+    .action-content h6 {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+    }
+
+    .action-content p {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .action-arrow {
+        color: #6c757d;
+        transition: transform 0.3s ease;
+    }
+
+    .action-card:hover .action-arrow {
+        transform: translateX(5px);
+    }
+
+    /* Social Share */
+    .social-share-spectacular {
+        text-align: center;
+        padding: 1.5rem 0;
+        animation: socialFadeIn 0.8s ease-out 4.5s both;
+    }
+
+    @keyframes socialFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .share-text {
+        color: #6c757d;
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+
+    .share-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .share-btn {
+        width: 50px;
+        height: 50px;
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .share-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+        transform: translate(-50%, -50%);
+    }
+
+    .share-btn:hover::before {
+        width: 100%;
+        height: 100%;
+    }
+
+    .share-btn:hover {
+        transform: translateY(-5px) scale(1.1);
+    }
+
+    .share-btn.facebook {
+        background: linear-gradient(45deg, #3b5998, #2d4373);
+        box-shadow: 0 5px 15px rgba(59, 89, 152, 0.4);
+    }
+
+    .share-btn.twitter {
+        background: linear-gradient(45deg, #1da1f2, #0d8bd9);
+        box-shadow: 0 5px 15px rgba(29, 161, 242, 0.4);
+    }
+
+    .share-btn.linkedin {
+        background: linear-gradient(45deg, #0077b5, #005885);
+        box-shadow: 0 5px 15px rgba(0, 119, 181, 0.4);
+    }
+
+    .share-btn.whatsapp {
+        background: linear-gradient(45deg, #25d366, #1da851);
+        box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .success-title {
+            font-size: 2rem;
+        }
+
+        .features-interactive {
+            grid-template-columns: 1fr;
+        }
+
+        .actions-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .promo-code-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .share-buttons {
+            gap: 0.5rem;
+        }
+
+        .share-btn {
+            width: 45px;
+            height: 45px;
+            font-size: 1.1rem;
+        }
+    }
+</style>
+
+<!-- JavaScript for Enhanced Interactions -->
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize confetti
+    initConfetti();
+    
+    // Initialize particles
+    initSuccessParticles();
+    
+    // Initialize feature progress bars
+    initFeatureProgress();
+    
+    // Initialize tooltip animations
+    initAnimations();
+});
+
+// Confetti Animation
+function initConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const confettiPieces = [];
+    const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1'];
+    
+    for (let i = 0; i < 150; i++) {
+        confettiPieces.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            w: Math.random() * 4,
+            h: Math.random() * 4,
+            d: Math.random() * 4 + 1,
+            c: colors[Math.floor(Math.random() * colors.length)],
+            tilt: Math.floor(Math.random() * 33) - 16,
+            tiltAngleIncremental: Math.random() * 0.07 + 0.05,
+            tiltAngle: 0
+        });
+    }
+    
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        for (let i = 0; i < confettiPieces.length; i++) {
+            const p = confettiPieces[i];
+            ctx.beginPath();
+            ctx.lineWidth = p.d / 2;
+            ctx.strokeStyle = p.c;
+            ctx.moveTo(p.x + p.tilt + (p.w / 4), p.y);
+            ctx.lineTo(p.x + p.tilt, p.y + p.tilt + (p.h / 4));
+            ctx.stroke();
+        }
+        
+        update();
+    }
+    
+    function update() {
+        for (let i = 0; i < confettiPieces.length; i++) {
+            const p = confettiPieces[i];
+            p.tiltAngle += p.tiltAngleIncremental;
+            p.y += (Math.cos(p.d) + 3 + p.d) / 2;
+            p.tilt = Math.sin(p.tiltAngle - (i / 3)) * 15;
+            
+            if (p.y > canvas.height) {
+                confettiPieces[i] = {
+                    x: Math.random() * canvas.width,
+                    y: -10,
+                    w: p.w,
+                    h: p.h,
+                    d: p.d,
+                    c: p.c,
+                    tilt: p.tilt,
+                    tiltAngleIncremental: p.tiltAngleIncremental,
+                    tiltAngle: p.tiltAngle
+                };
+            }
+        }
+    }
+    
+    setInterval(draw, 33);
+    
+    // Stop confetti after 10 seconds
+    setTimeout(() => {
+        canvas.style.display = 'none';
+    }, 10000);
+}
+
+// Success Particles
+function initSuccessParticles() {
+    particlesJS('success-particles', {
+        "particles": {
+            "number": {
+                "value": 50,
+                "density": {
+                    "enable": true,
+                    "value_area": 800
+                }
+            },
+            "color": {
+                "value": ["#007bff", "#28a745", "#ffc107", "#17a2b8"]
+            },
+            "shape": {
+                "type": "circle",
+                "stroke": {
+                    "width": 0,
+                    "color": "#000000"
+                }
+            },
+            "opacity": {
+                "value": 0.3,
+                "random": false,
+                "anim": {
+                    "enable": false,
+                    "speed": 1,
+                    "opacity_min": 0.1,
+                    "sync": false
+                }
+            },
+            "size": {
+                "value": 3,
+                "random": true,
+                "anim": {
+                    "enable": false,
+                    "speed": 40,
+                    "size_min": 0.1,
+                    "sync": false
+                }
+            },
+            "line_linked": {
+                "enable": true,
+                "distance": 150,
+                "color": "#007bff",
+                "opacity": 0.1,
+                "width": 1
+            },
+            "move": {
+                "enable": true,
+                "speed": 2,
+                "direction": "none",
+                "random": false,
+                "straight": false,
+                "out_mode": "out",
+                "bounce": false,
+                "attract": {
+                    "enable": false,
+                    "rotateX": 600,
+                    "rotateY": 1200
+                }
+            }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": {
+                "onhover": {
+                    "enable": true,
+                    "mode": "repulse"
+                },
+                "onclick": {
+                    "enable": true,
+                    "mode": "push"
+                },
+                "resize": true
+            },
+            "modes": {
+                "grab": {
+                    "distance": 400,
+                    "line_linked": {
+                        "opacity": 1
+                    }
+                },
+                "bubble": {
+                    "distance": 400,
+                    "size": 40,
+                    "duration": 2,
+                    "opacity": 8,
+                    "speed": 3
+                },
+                "repulse": {
+                    "distance": 200,
+                    "duration": 0.4
+                },
+                "push": {
+                    "particles_nb": 4
+                },
+                "remove": {
+                    "particles_nb": 2
+                }
+            }
+        },
+        "retina_detect": true
+    });
+}
+
+// Feature Progress Animation
+function initFeatureProgress() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const progressBars = entry.target.querySelectorAll('.progress-bar');
+                progressBars.forEach(bar => {
+                    const width = bar.getAttribute('data-width');
+                    if (width) {
+                        bar.style.setProperty('--progress-width', width + '%');
+                        setTimeout(() => {
+                            bar.style.width = width + '%';
+                        }, 500);
+                    }
+                });
+            }
+        });
+    });
+    
+    document.querySelectorAll('.feature-card').forEach(card => {
+        observer.observe(card);
+    });
+}
+
+// Initialize animations
+function initAnimations() {
+    // Add ripple effect to buttons
+    document.querySelectorAll('.share-btn, .copy-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const ripple = document.createElement('span');
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            ripple.classList.add('ripple');
+            
+            const existingRipple = button.querySelector('.ripple');
+            if (existingRipple) {
+                existingRipple.remove();
+            }
+            
+            button.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+}
+
+// Copy promo code function
+function copyPromoCode() {
+    const promoInput = document.getElementById('promoCodeInput');
+    promoInput.select();
+    promoInput.setSelectionRange(0, 99999);
+    
+    navigator.clipboard.writeText(promoInput.value).then(() => {
+        // Show success feedback
+        const copyBtn = document.querySelector('.copy-btn');
+        const originalIcon = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+        copyBtn.style.background = 'rgba(40, 167, 69, 0.8)';
+        
+        setTimeout(() => {
+            copyBtn.innerHTML = originalIcon;
+            copyBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+        }, 2000);
+    });
+}
+
+// Social sharing functions
+function shareOnFacebook() {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent('Je viens de rejoindre DOUKA KM ! 🎉');
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`, '_blank');
+}
+
+function shareOnTwitter() {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent('Je viens de rejoindre DOUKA KM ! Une expérience shopping incroyable ! 🎉 #DOUKAKM');
+    window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank');
+}
+
+function shareOnLinkedIn() {
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank');
+}
+
+function shareOnWhatsApp() {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent('Je viens de rejoindre DOUKA KM ! 🎉 ' + url);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+}
+
+// Ripple effect styles
+const style = document.createElement('style');
+style.textContent = `
+    .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.6);
+        transform: scale(0);
+        animation: ripple-animation 0.6s linear;
+        pointer-events: none;
+    }
+
+    @keyframes ripple-animation {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// Window resize handler
+window.addEventListener('resize', function() {
+    const canvas = document.getElementById('confetti-canvas');
+    if (canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+});
+</script>
+{% endblock %}

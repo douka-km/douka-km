@@ -1,0 +1,272 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}
+    {% if action == 'add' %}Ajouter un Employé{% else %}Modifier l'Employé{% endif %}
+{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-user-plus me-2"></i>
+            {% if action == 'add' %}Ajouter un Employé{% else %}Modifier l'Employé{% endif %}
+        </h2>
+        <a href="{{ url_for('admin_employees') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+        </a>
+    </div>
+
+    <!-- Messages flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        {% if action == 'add' %}Informations du Nouvel Employé{% else %}Modifier les Informations{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Informations personnelles -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">Prénom <span class="text-danger">*</span></label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="first_name" 
+                                       name="first_name" 
+                                       value="{{ employee.first_name if employee else '' }}"
+                                       required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Nom <span class="text-danger">*</span></label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="last_name" 
+                                       name="last_name" 
+                                       value="{{ employee.last_name if employee else '' }}"
+                                       required>
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="email" 
+                                   name="email" 
+                                   value="{{ employee_email if employee_email else '' }}"
+                                   {% if action == 'edit' %}readonly{% endif %}
+                                   required>
+                            {% if action == 'edit' %}
+                                <div class="form-text">L'email ne peut pas être modifié après création.</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Rôle -->
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Rôle <span class="text-danger">*</span></label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="">Sélectionner un rôle</option>
+                                <option value="livreur" 
+                                        {% if employee and employee.role == 'livreur' %}selected{% endif %}>
+                                    <i class="fas fa-motorcycle"></i> Livreur
+                                </option>
+                                <option value="manager" 
+                                        {% if employee and employee.role == 'manager' %}selected{% endif %}>
+                                    <i class="fas fa-user-tie"></i> Manager
+                                </option>
+                                <option value="admin" 
+                                        {% if employee and employee.role == 'admin' %}selected{% endif %}>
+                                    <i class="fas fa-user-shield"></i> Administrateur
+                                </option>
+                            </select>
+                            <div class="form-text">
+                                <small>
+                                    <strong>Livreur :</strong> Accès aux commandes seulement<br>
+                                    <strong>Manager :</strong> Accès à toutes les pages sauf paramètres et gestion utilisateurs<br>
+                                    <strong>Admin :</strong> Accès à toutes les pages
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Mot de passe -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                {% if action == 'add' %}Mot de passe <span class="text-danger">*</span>{% else %}Nouveau mot de passe{% endif %}
+                            </label>
+                            <div class="input-group">
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password" 
+                                       name="password" 
+                                       {% if action == 'add' %}required{% endif %}>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            {% if action == 'edit' %}
+                                <div class="form-text">Laissez vide pour conserver le mot de passe actuel.</div>
+                            {% else %}
+                                <div class="form-text">Minimum 6 caractères recommandés.</div>
+                            {% endif %}
+                        </div>
+
+                        {% if action == 'edit' %}
+                        <!-- Statut actif -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="is_active" 
+                                       name="is_active"
+                                       {% if employee and employee.get('is_active', True) %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    Compte actif
+                                </label>
+                            </div>
+                            <div class="form-text">Un compte inactif ne peut pas se connecter.</div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_employees') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                {% if action == 'add' %}Créer l'Employé{% else %}Sauvegarder{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if action == 'edit' and employee %}
+            <!-- Informations supplémentaires pour la modification -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Informations Système</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small class="text-muted">ID de l'employé :</small><br>
+                            <span class="badge bg-secondary">#{{ employee.id }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">Date de création :</small><br>
+                            <span>{{ employee.created_at }}</span>
+                        </div>
+                    </div>
+                    {% if employee.get('created_by') %}
+                    <div class="row mt-2">
+                        <div class="col-md-6">
+                            <small class="text-muted">Créé par :</small><br>
+                            <span>{{ employee.created_by }}</span>
+                        </div>
+                        {% if employee.get('updated_at') %}
+                        <div class="col-md-6">
+                            <small class="text-muted">Dernière modification :</small><br>
+                            <span>{{ employee.updated_at }}</span>
+                            {% if employee.get('updated_by') %}
+                                <br><small class="text-muted">par {{ employee.updated_by }}</small>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Afficher/masquer le mot de passe
+document.getElementById('togglePassword').addEventListener('click', function() {
+    const passwordInput = document.getElementById('password');
+    const icon = this.querySelector('i');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+});
+
+// Description des rôles au changement
+document.getElementById('role').addEventListener('change', function() {
+    const descriptions = {
+        'livreur': 'Accès limité à la page "Toutes les Commandes" pour la gestion des livraisons.',
+        'manager': 'Accès à toutes les pages administratives sauf "Paramètres" et "Gestion des Utilisateurs".',
+        'admin': 'Accès complet à toutes les fonctionnalités administratives.'
+    };
+    
+    const roleHelp = document.getElementById('roleHelp');
+    if (roleHelp) {
+        roleHelp.textContent = descriptions[this.value] || '';
+    }
+});
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 0.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn {
+    border-radius: 0.375rem;
+    font-weight: 500;
+}
+
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.badge {
+    font-size: 0.875em;
+}
+
+.input-group .btn {
+    border-left: none;
+}
+
+.form-text {
+    font-size: 0.875em;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,19 @@
+<!-- Dans la section qui affiche les informations de la boutique -->
+<div class="store-info">
+    <!-- Informations existantes -->
+    
+    <!-- Ajout des coordonnées GPS -->
+    {% if merchant.latitude is not none and merchant.longitude is not none %}
+    <div class="mb-3">
+        <h5>Localisation</h5>
+        <p>
+            <i class="fas fa-map-marker-alt"></i> Coordonnées GPS: 
+            {{ merchant.latitude }}, {{ merchant.longitude }}
+            <a href="https://www.google.com/maps?q={{ merchant.latitude }},{{ merchant.longitude }}" 
+               target="_blank" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-map"></i> Voir sur Google Maps
+            </a>
+        </p>
+    </div>
+    {% endif %}
+</div>

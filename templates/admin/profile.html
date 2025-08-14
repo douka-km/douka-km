@@ -1,0 +1,153 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Profil administrateur - DOUKA KM{% endblock %}
+{% block page_title %}Mon Profil{% endblock %}
+
+{% block admin_content %}
+<div class="row">
+    <div class="col-lg-8 col-md-10 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    Informations du profil
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Prénom</label>
+                        <div class="form-control-plaintext border rounded p-2 bg-light">
+                            {{ admin.first_name }}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Nom</label>
+                        <div class="form-control-plaintext border rounded p-2 bg-light">
+                            {{ admin.last_name }}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Email</label>
+                        <div class="form-control-plaintext border rounded p-2 bg-light">
+                            {{ admin.email }}
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Rôle</label>
+                        <div class="form-control-plaintext border rounded p-2 bg-light">
+                            {% if admin.role == 'super_admin' %}
+                                <span class="badge bg-danger">Super Administrateur</span>
+                            {% elif admin.role == 'admin' %}
+                                <span class="badge bg-primary">Administrateur</span>
+                            {% elif admin.role == 'livreur' %}
+                                <span class="badge bg-success">Livreur</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ admin.role|title }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if admin.phone %}
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Téléphone</label>
+                        <div class="form-control-plaintext border rounded p-2 bg-light">
+                            {{ admin.phone }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if admin.date_joined %}
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Date d'embauche</label>
+                        <div class="form-control-plaintext border rounded p-2 bg-light">
+                            {{ admin.date_joined.strftime('%d/%m/%Y') if admin.date_joined else 'Non spécifiée' }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="text-muted mb-3">Actions du profil</h6>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="btn btn-outline-primary" onclick="alert('Fonctionnalité à venir')">
+                            <i class="fas fa-edit me-2"></i>
+                            Modifier le profil
+                        </a>
+                        <a href="#" class="btn btn-outline-secondary" onclick="alert('Fonctionnalité à venir')">
+                            <i class="fas fa-key me-2"></i>
+                            Changer le mot de passe
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Statistiques d'activité
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4 mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <i class="fas fa-calendar-check fa-2x text-primary mb-2"></i>
+                            <h6 class="mb-1">Dernière connexion</h6>
+                            <p class="mb-0 text-muted">{{ admin.last_login.strftime('%d/%m/%Y à %H:%M') if admin.last_login else 'Inconnue' }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <i class="fas fa-user-clock fa-2x text-success mb-2"></i>
+                            <h6 class="mb-1">Statut</h6>
+                            <p class="mb-0">
+                                {% if admin.is_active %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactif</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <i class="fas fa-shield-alt fa-2x text-info mb-2"></i>
+                            <h6 class="mb-1">Permissions</h6>
+                            <p class="mb-0 text-muted">
+                                {% if admin.role == 'super_admin' %}
+                                    Accès complet
+                                {% elif admin.role == 'admin' %}
+                                    Accès limité
+                                {% else %}
+                                    Accès restreint
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-control-plaintext {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 10px;
+    }
+    
+    .card-header {
+        border-bottom: 1px solid #e9ecef;
+        border-radius: 10px 10px 0 0 !important;
+    }
+</style>
+{% endblock %}

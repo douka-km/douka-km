@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Livreur - DOUKA KM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('livreur_dashboard') }}">
+                <i class="fas fa-truck me-2"></i>DOUKA KM - Livreur
+            </a>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i>
+                        {{ employee.first_name }} {{ employee.last_name }}
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('livreur_dashboard') }}">
+                            <i class="fas fa-home me-2"></i>Dashboard
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('livreur_orders') }}">
+                            <i class="fas fa-list me-2"></i>Mes commandes
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('livreur_settings') }}">
+                            <i class="fas fa-user-cog me-2"></i>Mes paramètres
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('admin_logout') }}">
+                            <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Messages Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- En-tête de bienvenue -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h4 class="card-title mb-1">
+                                    <i class="fas fa-truck me-2"></i>
+                                    Bonjour {{ employee.first_name }} !
+                                </h4>
+                                <p class="card-text mb-0">
+                                    Vous avez <strong>{{ current_assignments_count }}/3</strong> commandes assignées.
+                                    {% if can_take_more %}
+                                        <span class="badge bg-success ms-2">
+                                            <i class="fas fa-plus-circle me-1"></i>Vous pouvez prendre {{ stats.assignments_remaining }} commande(s) de plus
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning ms-2">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Maximum de commandes atteint
+                                        </span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <i class="fas fa-shipping-fast fa-3x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-clipboard-list fa-2x text-primary mb-2"></i>
+                        <h5 class="card-title">{{ stats.assigned_orders }}</h5>
+                        <p class="card-text text-muted">Mes commandes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-boxes fa-2x text-success mb-2"></i>
+                        <h5 class="card-title">{{ stats.available_orders }}</h5>
+                        <p class="card-text text-muted">Disponibles</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-truck-loading fa-2x text-info mb-2"></i>
+                        <h5 class="card-title">{{ processing_orders|length }}</h5>
+                        <p class="card-text text-muted">En préparation</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-check-circle fa-2x text-warning mb-2"></i>
+                        <h5 class="card-title">{{ shipped_orders|length }}</h5>
+                        <p class="card-text text-muted">Expédiées</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation rapide -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Actions rapides</h6>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('livreur_orders', view='assigned') }}" class="btn btn-primary">
+                                <i class="fas fa-list me-1"></i>Mes commandes ({{ stats.assigned_orders }})
+                            </a>
+                            <a href="{{ url_for('livreur_orders', view='available') }}" class="btn btn-outline-success {% if not can_take_more %}disabled{% endif %}">
+                                <i class="fas fa-plus me-1"></i>Prendre une commande
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Mes commandes assignées -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-clipboard-list me-2"></i>Mes commandes assignées
+                        </h6>
+                        <a href="{{ url_for('livreur_orders', view='assigned') }}" class="btn btn-sm btn-outline-primary">
+                            Voir tout
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if assigned_orders %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Commande</th>
+                                            <th>Client</th>
+                                            <th>Marchand</th>
+                                            <th>Total</th>
+                                            <th>Statut</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order in assigned_orders[:5] %}
+                                        <tr>
+                                            <td>
+                                                <strong>#{{ order.order_number or order.id }}</strong><br>
+                                                <small class="text-muted">{{ order.created_at }}</small>
+                                            </td>
+                                            <td>{{ order.customer_name or 'Client' }}</td>
+                                            <td>{{ order.merchant_name }}</td>
+                                            <td><strong>{{ order.total|format_number }} KMF</strong></td>
+                                            <td>
+                                                <span class="badge bg-{{ order.status_color or 'secondary' }}">
+                                                    {{ order.status_text or order.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('livreur_order_detail', order_id=order.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p>Aucune commande assignée pour le moment.</p>
+                                {% if can_take_more %}
+                                    <a href="{{ url_for('livreur_orders', view='available') }}" class="btn btn-success">
+                                        <i class="fas fa-plus me-1"></i>Prendre une commande
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Commandes disponibles -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-boxes me-2"></i>Commandes disponibles
+                        </h6>
+                        <a href="{{ url_for('livreur_orders', view='available') }}" class="btn btn-sm btn-outline-success">
+                            Voir tout
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if available_orders and can_take_more %}
+                            {% for order in available_orders[:3] %}
+                            <div class="border rounded p-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong>#{{ order.order_number or order.id }}</strong><br>
+                                        <small class="text-muted">{{ order.merchant_name }}</small>
+                                    </div>
+                                    <span class="badge bg-{{ order.status_color or 'secondary' }}">
+                                        {{ order.status_text or order.status }}
+                                    </span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>{{ order.total|format_number }} KMF</strong>
+                                </div>
+                                <div class="d-grid">
+                                    <button class="btn btn-sm btn-success assign-order-btn" 
+                                            data-order-id="{{ order.id }}"
+                                            data-order-type="{{ order.type }}"
+                                            data-merchant-email="{{ order.merchant_email }}">
+                                        <i class="fas fa-hand-paper me-1"></i>Prendre
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% elif not can_take_more %}
+                            <div class="text-center text-muted">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                                <p>Vous avez atteint le maximum de 3 commandes assignées.</p>
+                            </div>
+                        {% else %}
+                            <div class="text-center text-muted">
+                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                <p>Aucune commande disponible pour le moment.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Gestion de l'assignation de commandes
+        document.addEventListener('DOMContentLoaded', function() {
+            const assignButtons = document.querySelectorAll('.assign-order-btn');
+            
+            assignButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    const orderType = this.getAttribute('data-order-type');
+                    const merchantEmail = this.getAttribute('data-merchant-email');
+                    
+                    if (confirm('Voulez-vous vraiment prendre cette commande ?')) {
+                        // Désactiver le bouton pendant le traitement
+                        this.disabled = true;
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Assignation...';
+                        
+                        // Préparer les données du formulaire
+                        const formData = new FormData();
+                        formData.append('order_id', orderId);
+                        formData.append('order_type', orderType);
+                        if (merchantEmail && merchantEmail !== 'admin') {
+                            formData.append('merchant_email', merchantEmail);
+                        }
+                        
+                        // Envoyer la requête d'assignation
+                        fetch('{{ url_for("livreur_assign_order") }}', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Afficher un message de succès et recharger la page
+                                alert('Commande assignée avec succès !');
+                                location.reload();
+                            } else {
+                                // Afficher le message d'erreur
+                                alert('Erreur: ' + data.message);
+                                // Réactiver le bouton
+                                this.disabled = false;
+                                this.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Prendre';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur:', error);
+                            alert('Une erreur est survenue lors de l\'assignation.');
+                            // Réactiver le bouton
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Prendre';
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

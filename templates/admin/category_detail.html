@@ -1,0 +1,432 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}{{ category.name }} - Détail Catégorie{% endblock %}
+
+{% block page_title %}{{ category.name }} - Catégories{% endblock %}
+
+{% block admin_content %}
+<!-- En-tête de page -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="{{ category.icon }}"></i> {{ category.name }}</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Accueil</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('admin_categories') }}">Catégories</a></li>
+                        <li class="breadcrumb-item active">{{ category.name }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informations de la catégorie -->
+<div class="row">
+    <div class="col-md-4">
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-info-circle"></i> Informations
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Nom :</strong>
+                                <p class="text-muted">{{ category.name }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Description :</strong>
+                                <p class="text-muted">{{ category.description }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Icône :</strong>
+                                <p><i class="{{ category.icon }}"></i> {{ category.icon }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Statut :</strong>
+                                {% if category.active %}
+                                    <span class="badge bg-success text-dark">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger text-white">Inactive</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editCategoryModal">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            {% if category.active %}
+                                <button type="button" class="btn btn-warning btn-sm" onclick="toggleCategoryStatus({{ category.id }}, false)">
+                                    <i class="fas fa-eye-slash"></i> Désactiver
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-success btn-sm" onclick="toggleCategoryStatus({{ category.id }}, true)">
+                                    <i class="fas fa-eye"></i> Activer
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <!-- Statistiques de la catégorie -->
+                    <div class="row">
+                        <div class="col-lg-3 col-6">
+                            <div class="small-box bg-info">
+                                <div class="inner">
+                                    <h3>{{ stats.total_products }}</h3>
+                                    <p>Total Produits</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-boxes"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-6">
+                            <div class="small-box bg-success">
+                                <div class="inner">
+                                    <h3>{{ stats.active_products }}</h3>
+                                    <p>Produits Actifs</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-6">
+                            <div class="small-box bg-warning">
+                                <div class="inner">
+                                    <h3>{{ stats.admin_products }}</h3>
+                                    <p>Produits Admin</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-6">
+                            <div class="small-box bg-secondary">
+                                <div class="inner">
+                                    <h3>{{ stats.merchant_products }}</h3>
+                                    <p>Produits Marchands</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-store"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prix moyen -->
+                    {% if stats.average_price > 0 %}
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-line"></i> Prix Moyen
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <h4 class="text-info">{{ "%.0f"|format(stats.average_price) }} KMF</h4>
+                            <p class="text-muted">Prix moyen des produits dans cette catégorie</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Liste des produits de la catégorie -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-list"></i> Produits dans cette catégorie
+                            </h3>
+                            <div class="card-tools">
+                                <a href="{{ url_for('admin_product_add') }}?category={{ category.id }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Ajouter un produit
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% if products %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Image</th>
+                                                <th>Nom</th>
+                                                <th>Prix</th>
+                                                <th>Stock</th>
+                                                <th>Source</th>
+                                                <th>Marchand</th>
+                                                <th>Statut</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for product in products %}
+                                            <tr>
+                                                <td>
+                                                    <img src="{{ product.image }}" alt="{{ product.name }}" 
+                                                         class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;">
+                                                </td>
+                                                <td>
+                                                    <strong>{{ product.name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        {{ product.description[:50] }}{% if product.description|length > 50 %}...{% endif %}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <span class="font-weight-bold text-success">{{ product.price }} KMF</span>
+                                                </td>
+                                                <td>
+                                                    {% if product.stock is defined %}
+                                                        {% if product.stock > 10 %}
+                                                            <span class="badge bg-success text-dark">{{ product.stock }}</span>
+                                                        {% elif product.stock > 0 %}
+                                                            <span class="badge bg-warning text-dark">{{ product.stock }}</span>
+                                                        {% else %}
+                                                            <span class="badge bg-danger text-white">Épuisé</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-secondary text-dark">N/A</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if product.source == 'merchant' %}
+                                                        <span class="badge bg-info text-dark">Marchand</span>
+                                                    {% else %}
+                                                        <span class="badge bg-primary text-white">Admin</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if product.merchant_name %}
+                                                        <small class="text-dark">{{ product.merchant_name }}</small>
+                                                    {% else %}
+                                                        <small class="text-muted">-</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if product.status == 'active' %}
+                                                        <span class="badge bg-success text-dark">Actif</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger text-white">Inactif</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="{{ url_for('product_detail', product_id=product.id) }}" 
+                                                           class="btn btn-sm btn-outline-info" title="Voir">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <a href="{{ url_for('admin_product_edit', product_id=product.id) }}" 
+                                                           class="btn btn-sm btn-outline-primary" title="Modifier">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                                onclick="deleteProduct({{ product.id }})" title="Supprimer">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">Aucun produit dans cette catégorie</h5>
+                                    <p class="text-muted">Commencez par ajouter des produits à cette catégorie.</p>
+                                    <a href="{{ url_for('admin_product_add') }}?category={{ category.id }}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Ajouter le premier produit
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+<!-- Modal de modification de catégorie -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier la catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editCategoryForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editCategoryName">Nom de la catégorie</label>
+                        <input type="text" class="form-control" id="editCategoryName" value="{{ category.name }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCategoryDescription">Description</label>
+                        <textarea class="form-control" id="editCategoryDescription" rows="3">{{ category.description }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCategoryIcon">Icône (classe CSS)</label>
+                        <input type="text" class="form-control" id="editCategoryIcon" value="{{ category.icon }}">
+                        <small class="form-text text-muted">Ex: fas fa-laptop, fas fa-tshirt, etc.</small>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="editCategoryActive" 
+                                   {% if category.active %}checked{% endif %}>
+                            <label class="form-check-label" for="editCategoryActive">Catégorie active</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Sauvegarder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonction utilitaire pour afficher des alertes
+function showAlert(type, message) {
+    // Créer l'élément d'alerte
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Ajouter l'alerte en haut de la page
+    const container = document.querySelector('.content-wrapper') || document.body;
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Supprimer automatiquement après 5 secondes
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Fonction pour basculer le statut d'une catégorie
+function toggleCategoryStatus(categoryId, active) {
+    const action = active ? 'activer' : 'désactiver';
+    
+    if (confirm(`Êtes-vous sûr de vouloir ${action} cette catégorie ?`)) {
+        // Désactiver le bouton pendant l'opération
+        const button = event.target;
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> En cours...';
+        button.disabled = true;
+        
+        fetch(`/admin/categories/${categoryId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Afficher le message de succès
+                showAlert('success', data.message);
+                
+                // Recharger la page pour mettre à jour l'interface
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                showAlert('error', data.message || 'Erreur lors de la modification du statut');
+                // Restaurer le bouton
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showAlert('error', 'Erreur lors de la modification du statut');
+            // Restaurer le bouton
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        });
+    }
+}
+
+// Fonction pour supprimer un produit
+function deleteProduct(productId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/products/${productId}/delete`;
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Gestion du formulaire de modification de catégorie
+document.getElementById('editCategoryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('name', document.getElementById('editCategoryName').value);
+    formData.append('description', document.getElementById('editCategoryDescription').value);
+    formData.append('icon', document.getElementById('editCategoryIcon').value);
+    formData.append('active', document.getElementById('editCategoryActive').checked ? 'true' : 'false');
+    
+    // Désactiver le bouton de soumission
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
+    submitBtn.disabled = true;
+    
+    fetch(`/admin/categories/{{ category.id }}/edit`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            
+            // Fermer la modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Recharger la page pour mettre à jour l'interface
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showAlert('error', data.message || 'Erreur lors de la modification de la catégorie');
+            // Restaurer le bouton
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showAlert('error', 'Erreur lors de la modification de la catégorie');
+        // Restaurer le bouton
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

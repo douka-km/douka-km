@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DOUKA KM - Commerce en ligne aux Comores{% endblock %}</title>
+    
+    <!-- Ajout du favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/products.css') }}">
+    {% block extra_css %}{% endblock %}
+    <style>
+        /* Styles pour le menu mobile slide-in */
+        .offcanvas-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: #fff;
+            z-index: 2000;
+            transition: left 0.3s ease;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+            overflow-y: auto;
+        }
+        
+        .offcanvas-menu.active {
+            left: 0;
+        }
+        
+        .offcanvas-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .offcanvas-body {
+            padding: 0;
+        }
+        
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1999;
+            display: none;
+        }
+        
+        .mobile-menu-overlay.active {
+            display: block;
+        }
+        
+        .offcanvas-menu .navbar-nav {
+            padding: 0;
+        }
+        
+        .offcanvas-menu .nav-item {
+            border-bottom: 1px solid #eee;
+        }
+        
+        .offcanvas-menu .nav-link {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            color: #333;
+        }
+        
+        .offcanvas-menu .nav-link i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .offcanvas-menu .btn {
+            margin: 15px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <button class="navbar-toggler me-2" type="button" id="mobile-menu-btn">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                                <a class="navbar-brand d-flex align-items-center" href="/">
+                    {% if site_settings.logo_url %}
+                        <img src="{{ site_settings.logo_url }}" alt="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}" class="me-2 navbar-logo" style="max-height: 40px; max-width: 150px;" onerror="this.style.display='none'">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="DOUKA KM Logo" class="me-2 navbar-logo" width="40" height="40" onerror="this.style.display='none'">
+                    {% endif %}
+                    <span class="navbar-text fw-bold">{{ site_settings.site_name or 'DOUKA KM' }}</span>
+                </a>
+                <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" style="visibility: hidden;">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <i class="fas fa-home"></i> Accueil
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/products">
+                                <i class="fas fa-box"></i> Produits
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/about">
+                                <i class="fas fa-info-circle"></i> À propos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/contact">
+                                <i class="fas fa-envelope"></i> Contact
+                            </a>
+                        </li>
+                    </ul>
+                    <div class="d-flex">
+                        <!-- Dans la section du panier dans la barre de navigation -->
+<a href="/cart" class="btn btn-outline-light me-2 position-relative">
+    <i class="fas fa-shopping-cart"></i> Panier 
+    <span class="cart-count position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="{% if cart_count == 0 %}display: none;{% endif %}">
+        {{ cart_count }}
+    </span>
+</a>
+
+    {% if user %}
+        <div class="dropdown">
+            <button class="btn btn-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-user-circle me-1"></i> {{ user.first_name }}
+            </button>
+            <!-- Modifier les liens du menu utilisateur dans la barre de navigation -->
+<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+    <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user me-2"></i>Mon profil</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('orders') }}"><i class="fas fa-box me-2"></i>Mes commandes</a></li>
+    <li><a class="dropdown-item" href="{{ url_for('wishlist') }}"><i class="fas fa-heart me-2"></i>Ma liste d'envies</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+</ul>
+        </div>
+    {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-light me-2">Connexion</a>
+        <a href="{{ url_for('register') }}" class="btn btn-outline-light">Inscription</a>
+    {% endif %}
+</div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Mobile Menu (slides from left) -->
+        <div class="mobile-menu-overlay" id="menu-overlay"></div>
+        <div class="offcanvas-menu" id="mobile-menu">
+            <div class="offcanvas-header">
+                <h5 class="mb-0">Menu</h5>
+                <button type="button" class="btn-close btn-close-white" id="close-mobile-menu"></button>
+            </div>
+            <div class="offcanvas-body">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home"></i> Accueil
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/products">
+                            <i class="fas fa-box"></i> Produits
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">
+                            <i class="fas fa-info-circle"></i> À propos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contact">
+                            <i class="fas fa-envelope"></i> Contact
+                        </a>
+                    </li>
+                </ul>
+                <a href="/cart" class="btn btn-outline-primary d-block position-relative">
+                    <i class="fas fa-shopping-cart"></i> Panier
+                    <span class="cart-count badge bg-danger ms-1" style="{% if cart_count == 0 %}display: none;{% endif %}">{{ cart_count }}</span>
+                </a>
+                
+                <div class="mt-3">
+                {% if user %}
+                    <div class="text-center mb-3">
+                        <span class="d-block mb-2">Connecté en tant que</span>
+                        <span class="fw-bold">{{ user.first_name }} {{ user.last_name }}</span>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('profile') }}" class="btn btn-outline-primary">Mon profil</a>
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Déconnexion</a>
+                    </div>
+                {% else %}
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('login') }}" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i> Connexion
+                        </a>
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-plus me-2"></i> Créer un compte
+                        </a>
+                    </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Barre de catégories optimisée pour l'affichage horizontal et les sous-menus -->
+        <div class="category-nav py-2 bg-light border-bottom">
+            <div class="container position-relative">
+                <div class="category-wrapper">
+                    <ul class="category-list">
+                        <li class="category-item">
+                            <a href="/category/electronics" class="category-link">
+                                <i class="fas fa-mobile-alt"></i> Électronique
+                            </a>
+                            <div class="subcategory-menu">
+                                <div class="subcategory-header">
+                                    <h5>Électronique</h5>
+                                    <p>Découvrez nos produits électroniques de qualité</p>
+                                </div>
+                                <div class="subcategory-content">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-mobile"></i> Téléphones</h6>
+                                                <ul>
+                                                    <li><a href="/category/electronics/smartphones">Smartphones</a></li>
+                                                    <li><a href="/category/electronics/feature-phones">Téléphones basiques</a></li>
+                                                    <li><a href="/category/electronics/accessories">Accessoires</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-laptop"></i> Ordinateurs</h6>
+                                                <ul>
+                                                    <li><a href="/category/electronics/laptops">Portables</a></li>
+                                                    <li><a href="/category/electronics/desktops">Ordinateurs de bureau</a></li>
+                                                    <li><a href="/category/electronics/tablets">Tablettes</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-tv"></i> Autres</h6>
+                                                <ul>
+                                                    <li><a href="/category/electronics/tv">Téléviseurs</a></li>
+                                                    <li><a href="/category/electronics/cameras">Appareils photo</a></li>
+                                                    <li><a href="/category/electronics/audio">Audio</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subcategory-footer">
+                                        <a href="/category/electronics" class="btn btn-sm btn-primary">Voir tous les produits électroniques</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="category-item">
+                            <a href="/category/clothing" class="category-link">
+                                <i class="fas fa-tshirt"></i> Vêtements
+                            </a>
+                            <div class="subcategory-menu">
+                                <div class="subcategory-header">
+                                    <h5>Vêtements</h5>
+                                    <p>Trouvez des vêtements tendance pour toute la famille</p>
+                                </div>
+                                <div class="subcategory-content">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-male"></i> Homme</h6>
+                                                <ul>
+                                                    <li><a href="/category/clothing/men-shirts">T-shirts & Chemises</a></li>
+                                                    <li><a href="/category/clothing/men-pants">Pantalons</a></li>
+                                                    <li><a href="/category/clothing/men-traditional">Tenues traditionnelles</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-female"></i> Femme</h6>
+                                                <ul>
+                                                    <li><a href="/category/clothing/women-dresses">Robes</a></li>
+                                                    <li><a href="/category/clothing/women-tops">Hauts</a></li>
+                                                    <li><a href="/category/clothing/women-traditional">Tenues traditionnelles</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-child"></i> Enfant</h6>
+                                                <ul>
+                                                    <li><a href="/category/clothing/kids-boys">Garçons</a></li>
+                                                    <li><a href="/category/clothing/kids-girls">Filles</a></li>
+                                                    <li><a href="/category/clothing/kids-babies">Bébés</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subcategory-footer">
+                                        <a href="/category/clothing" class="btn btn-sm btn-primary">Voir tous les vêtements</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="category-item">
+                            <a href="/products?category_filter=3" class="category-link">
+                                <i class="fas fa-utensils"></i> Alimentation
+                            </a>
+                            <div class="subcategory-menu">
+                                <div class="subcategory-header">
+                                    <h5>Alimentation</h5>
+                                    <p>Découvrez nos produits alimentaires frais et locaux</p>
+                                </div>
+                                <div class="subcategory-content">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-carrot"></i> Produits locaux</h6>
+                                                <ul>
+                                                    <li><a href="/products?category_filter=3&search=épices">Épices</a></li>
+                                                    <li><a href="/products?category_filter=3&search=fruits">Fruits</a></li>
+                                                    <li><a href="/products?category_filter=3&search=légumes">Légumes</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-glass-whiskey"></i> Boissons</h6>
+                                                <ul>
+                                                    <li><a href="/products?category_filter=3&search=boissons">Boissons gazeuses</a></li>
+                                                    <li><a href="/products?category_filter=3&search=jus">Jus</a></li>
+                                                    <li><a href="/products?category_filter=3&search=eau">Eau</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-basket"></i> Épicerie</h6>
+                                                <ul>
+                                                    <li><a href="/products?category_filter=3&search=riz">Riz</a></li>
+                                                    <li><a href="/products?category_filter=3&search=pâtes">Pâtes</a></li>
+                                                    <li><a href="/products?category_filter=3&search=conserves">Conserves</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subcategory-footer">
+                                        <a href="/products?category_filter=3" class="btn btn-sm btn-primary">Voir tous les produits alimentaires</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="category-item">
+                            <a href="/category/crafts" class="category-link">
+                                <i class="fas fa-paint-brush"></i> Artisanat
+                            </a>
+                            <div class="subcategory-menu">
+                                <div class="subcategory-header">
+                                    <h5>Artisanat</h5>
+                                    <p>Explorez notre collection d'artisanat local</p>
+                                </div>
+                                <div class="subcategory-content">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-paint-brush"></i> Art</h6>
+                                                <ul>
+                                                    <li><a href="/category/crafts/paintings">Peintures</a></li>
+                                                    <li><a href="/category/crafts/sculptures">Sculptures</a></li>
+                                                    <li><a href="/category/crafts/jewelry">Bijoux</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-home"></i> Décoration</h6>
+                                                <ul>
+                                                    <li><a href="/category/crafts/home-decor">Décoration intérieure</a></li>
+                                                    <li><a href="/category/crafts/baskets">Vannerie</a></li>
+                                                    <li><a href="/category/crafts/textiles">Textiles</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-gift"></i> Souvenirs</h6>
+                                                <ul>
+                                                    <li><a href="/category/crafts/keychains">Porte-clés</a></li>
+                                                    <li><a href="/category/crafts/magnets">Aimants</a></li>
+                                                    <li><a href="/category/crafts/postcards">Cartes postales</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subcategory-footer">
+                                        <a href="/category/crafts" class="btn btn-sm btn-primary">Voir tous les artisanats</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <!-- Nouvelle catégorie: Maison & Déco -->
+                        <li class="category-item">
+                            <a href="/category/home" class="category-link">
+                                <i class="fas fa-home"></i> Maison & Déco
+                            </a>
+                            <div class="subcategory-menu">
+                                <div class="subcategory-header">
+                                    <h5>Maison & Décoration</h5>
+                                    <p>Embellissez votre intérieur avec notre sélection</p>
+                                </div>
+                                <div class="subcategory-content">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-couch"></i> Mobilier</h6>
+                                                <ul>
+                                                    <li><a href="/category/home/living-room">Salon</a></li>
+                                                    <li><a href="/category/home/bedroom">Chambre à coucher</a></li>
+                                                    <li><a href="/category/home/dining">Salle à manger</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-lightbulb"></i> Décoration</h6>
+                                                <ul>
+                                                    <li><a href="/category/home/wall-decor">Décoration murale</a></li>
+                                                    <li><a href="/category/home/lighting">Éclairage</a></li>
+                                                    <li><a href="/category/home/textiles">Textiles maison</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-utensils"></i> Cuisine</h6>
+                                                <ul>
+                                                    <li><a href="/category/home/cookware">Ustensiles de cuisine</a></li>
+                                                    <li><a href="/category/home/tableware">Arts de la table</a></li>
+                                                    <li><a href="/category/home/appliances">Petits électroménagers</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subcategory-footer">
+                                        <a href="/category/home" class="btn btn-sm btn-primary">Voir tous les articles maison</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        
+                        <!-- Nouvelle catégorie: Santé & Beauté -->
+                        <li class="category-item">
+                            <a href="/category/beauty" class="category-link">
+                                <i class="fas fa-spa"></i> Santé & Beauté
+                            </a>
+                            <div class="subcategory-menu">
+                                <div class="subcategory-header">
+                                    <h5>Santé & Beauté</h5>
+                                    <p>Produits de bien-être et de soins personnels</p>
+                                </div>
+                                <div class="subcategory-content">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-pump-soap"></i> Soins du corps</h6>
+                                                <ul>
+                                                    <li><a href="/category/beauty/skin-care">Soins de la peau</a></li>
+                                                    <li><a href="/category/beauty/hair-care">Soins capillaires</a></li>
+                                                    <li><a href="/category/beauty/bath">Bain & douche</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-magic"></i> Cosmétiques</h6>
+                                                <ul>
+                                                    <li><a href="/category/beauty/makeup">Maquillage</a></li>
+                                                    <li><a href="/category/beauty/fragrances">Parfums</a></li>
+                                                    <li><a href="/category/beauty/tools">Accessoires beauté</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="subcategory-group">
+                                                <h6><i class="fas fa-heartbeat"></i> Bien-être</h6>
+                                                <ul>
+                                                    <li><a href="/category/beauty/wellness">Produits bien-être</a></li>
+                                                    <li><a href="/category/beauty/herbal">Produits naturels</a></li>
+                                                    <li><a href="/category/beauty/traditional">Remèdes traditionnels</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subcategory-footer">
+                                        <a href="/category/beauty" class="btn btn-sm btn-primary">Voir tous les produits beauté</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <!-- ...autres catégories... -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer-section">
+        <!-- Newsletter Section -->
+        <!-- Main Footer -->
+        <div class="main-footer bg-dark text-white py-5">
+            <div class="container">
+                                <div class="row justify-content-center g-4">
+                    <!-- Company Info à gauche -->
+                    <div class="col-md-6 mb-4">
+                        <div class="footer-widget">
+                            <div class="footer-logo mb-3">
+                                {% if site_settings.logo_url %}
+                                    <img src="{{ site_settings.logo_url }}" alt="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}" class="img-fluid" style="max-height: 50px;">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="DOUKA KM" class="img-fluid" style="max-height: 50px;">
+                                {% endif %}
+                                <h5 class="mt-2 text-warning">{{ site_settings.site_name or 'DOUKA KM' }}</h5>
+                            </div>
+                            <p class="text-light">{{ site_settings.site_description or 'La première plateforme de commerce électronique des Comores. Connectant acheteurs et vendeurs à travers l\'archipel.' }}</p>
+                            <div class="social-links mt-3">
+                                <a href="#" class="social-link me-2" title="Facebook">
+                                    <i class="fab fa-facebook-f"></i>
+                                </a>
+                                <a href="#" class="social-link me-2" title="Instagram">
+                                    <i class="fab fa-instagram"></i>
+                                </a>
+                                <a href="#" class="social-link me-2" title="Twitter">
+                                    <i class="fab fa-twitter"></i>
+                                </a>
+                                <a href="#" class="social-link me-2" title="WhatsApp">
+                                    <i class="fab fa-whatsapp"></i>
+                                </a>
+                                <a href="#" class="social-link" title="LinkedIn">
+                                    <i class="fab fa-linkedin-in"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                    <!-- Contact Info à droite -->
+                    <div class="col-md-6 mb-4">
+                        <div class="footer-widget">
+                            <h6 class="footer-title text-warning mb-3">Contactez-nous</h6>
+                            <div class="contact-info">
+                                <div class="contact-item mb-3">
+                                    <i class="fas fa-map-marker-alt text-warning me-2"></i>
+                                    <span>Moroni, Grande Comore<br>Union des Comores</span>
+                                </div>
+                                <div class="contact-item mb-3">
+                                    <i class="fas fa-phone text-warning me-2"></i>
+                                    <span>+269 3424 40 19</span>
+                                </div>
+                                <div class="contact-item mb-3">
+                                    <i class="fas fa-envelope text-warning me-2"></i>
+                                    <span>ledouka.km@gmail.com</span>
+                                </div>
+                                <div class="contact-item mb-3">
+                                    <i class="fas fa-clock text-warning me-2"></i>
+                                    <span>Lun - Sam: 8h00 - 18h00<br>Dimanche: 10h00 - 16h00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Methods & Guarantees -->
+                <div class="row mt-4 pt-4 border-top border-secondary">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-warning mb-3">Méthodes de paiement</h6>
+                        <div class="payment-methods">
+                            <img src="{{ url_for('static', filename='img/visa.png') }}" alt="Visa" class="payment-icon me-2">
+                            <img src="{{ url_for('static', filename='img/mastercard.png') }}" alt="Mastercard" class="payment-icon me-2">
+                            <img src="{{ url_for('static', filename='img/mvola.png') }}" alt="Mvola" class="payment-icon me-2">
+                            <img src="{{ url_for('static', filename='img/holo.png') }}" alt="Holo" class="payment-icon me-2">
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-warning mb-3">Nos garanties</h6>
+                        <div class="guarantees">
+                            <span class="badge bg-outline-warning me-2 mb-2">
+                                <i class="fas fa-shield-alt me-1"></i>Paiement sécurisé
+                            </span>
+                            <span class="badge bg-outline-warning me-2 mb-2">
+                                <i class="fas fa-truck me-1"></i>Livraison gratuite +50.000 KMF
+                            </span>
+                            <span class="badge bg-outline-warning me-2 mb-2">
+                                <i class="fas fa-undo me-1"></i>Retour 14 jours
+                            </span>
+                            <span class="badge bg-outline-warning me-2 mb-2">
+                                <i class="fas fa-headset me-1"></i>Support 24/7
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Footer -->
+        <div class="bottom-footer bg-dark py-3" style="border-top: 1px solid #495057;">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="mb-0 text-light">
+                            &copy; 2025 DOUKA KM. Tous droits réservés. 
+                            <span class="text-warning">Made with <i class="fas fa-heart text-danger"></i> in Comoros</span>
+                        </p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="footer-legal">
+                            <a href="{{ url_for('privacy_policy') }}" class="footer-link me-3">Politique de confidentialité</a>
+                            <a href="{{ url_for('terms_of_service') }}" class="footer-link me-3">Conditions d'utilisation</a>
+                            <a href="{{ url_for('legal_notice') }}" class="footer-link">Mentions légales</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast notification system for cart actions -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="cartToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-primary text-white">
+                <i class="fas fa-shopping-cart me-2"></i>
+                <strong class="me-auto">Panier</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                Produit ajouté au panier avec succès
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script>
+        // Mobile menu slide functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            const menuOverlay = document.getElementById('menu-overlay');
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const closeMenuBtn = document.getElementById('close-mobile-menu');
+            const mobileMenuLinks = document.querySelectorAll('#mobile-menu .nav-link, #mobile-menu .btn');
+            
+            // Fonction pour ouvrir le menu
+            function openMenu() {
+                mobileMenu.classList.add('active');
+                menuOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden'; // Empêche le défilement du body
+            }
+            
+            // Fonction pour fermer le menu
+            function closeMenu() {
+                mobileMenu.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                document.body.style.overflow = ''; // Rétablit le défilement
+            }
+            
+            // Ouvrir le menu au clic sur le bouton hamburger
+            mobileMenuBtn.addEventListener('click', openMenu);
+            
+            // Fermer le menu au clic sur le bouton de fermeture
+            closeMenuBtn.addEventListener('click', closeMenu);
+            
+            // Fermer le menu au clic sur l'overlay
+            menuOverlay.addEventListener('click', closeMenu);
+            
+            // Fermer le menu après clic sur un lien
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', closeMenu);
+            });
+            
+            // Fermer le menu si l'écran est redimensionné vers une largeur desktop
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 992) {
+                    closeMenu();
+                }
+            });
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+    // Script immédiat pour résoudre le problème des catégories sur mobile
+    document.addEventListener('DOMContentLoaded', function() {
+        // Correction pour les liens de catégories sur mobile
+        if (window.innerWidth <= 991) {
+            document.querySelectorAll('.category-link').forEach(function(link) {
+                // S'assurer que les liens fonctionnent
+                link.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    if (href && href !== '#') {
+                        window.location.href = href;
+                    }
+                }, true);
+            });
+        }
+    });
+    </script>
+    <script>
+// Fonction pour afficher une notification toast
+function showCartNotification(message, type = 'success') {
+    const toast = document.getElementById('cartToast');
+    if (toast) {
+        const toastBody = toast.querySelector('.toast-body');
+        const toastHeader = toast.querySelector('.toast-header');
+        
+        // Définir le contenu
+        toastBody.textContent = message;
+        
+        // Définir le type de notification
+        toast.classList.remove('toast-success', 'toast-error', 'toast-warning');
+        
+        if (type === 'error') {
+            toast.classList.add('toast-error');
+            toastHeader.querySelector('i').className = 'fas fa-exclamation-circle me-2';
+            toastHeader.querySelector('strong').textContent = 'Erreur';
+        } else if (type === 'warning') {
+            toast.classList.add('toast-warning');
+            toastHeader.querySelector('i').className = 'fas fa-exclamation-triangle me-2';
+            toastHeader.querySelector('strong').textContent = 'Attention';
+        } else {
+            toast.classList.add('toast-success');
+            toastHeader.querySelector('i').className = 'fas fa-shopping-cart me-2';
+            toastHeader.querySelector('strong').textContent = 'Panier';
+        }
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+    }
+}
+
+// Fonction globale pour ajouter au panier
+function addToCart(productId, quantity = 1) {
+    console.log(`Tentative d'ajout au panier: ID=${productId}, Qté=${quantity}`);
+    
+    fetch(`/add-to-cart/${productId}`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `quantity=${quantity}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Succès:', data);
+            
+            // Mettre à jour le compteur directement avec la valeur retournée par l'API
+            if (typeof data.cart_count !== 'undefined') {
+                updateCartCountDisplay(data.cart_count);
+                console.log(`🛒 Compteur mis à jour directement: ${data.cart_count}`);
+            } else {
+                // Fallback: recharger le compteur depuis l'API
+                updateCartCount();
+                console.log('🔄 Rechargement compteur via API');
+            }
+            
+            // Afficher la notification
+            showCartNotification(`${data.product_name || 'Produit'} ajouté au panier`);
+            
+            return true;
+        } else {
+            console.error('Erreur:', data);
+            return false;
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la requête:', error);
+        return false;
+    });
+}
+
+// Exposer la fonction globalement
+window.addToCart = addToCart;
+
+// Bouton "Retour en haut" - Uniquement sur la page d'accueil
+document.addEventListener('DOMContentLoaded', function() {
+    // Vérifier si nous sommes sur la page d'accueil
+    const currentPath = window.location.pathname;
+    const isHomePage = currentPath === '/' || currentPath === '/home';
+    
+    // Ne créer le bouton que sur la page d'accueil
+    if (!isHomePage) {
+        return;
+    }
+    
+    // Créer le bouton retour en haut
+    const scrollToTopBtn = document.createElement('button');
+    scrollToTopBtn.innerHTML = '<i class="fas fa-chevron-up"></i>';
+    scrollToTopBtn.className = 'scroll-to-top-btn';
+    scrollToTopBtn.setAttribute('title', 'Retour en haut');
+    scrollToTopBtn.setAttribute('aria-label', 'Retour en haut de la page');
+    document.body.appendChild(scrollToTopBtn);
+    
+    // Styles CSS pour le bouton
+    const style = document.createElement('style');
+    style.textContent = `
+        .scroll-to-top-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #0d6efd, #0056b3);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .scroll-to-top-btn.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .scroll-to-top-btn:hover {
+            background: linear-gradient(135deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4);
+        }
+        
+        .scroll-to-top-btn:active {
+            transform: translateY(0);
+        }
+        
+        @media (max-width: 768px) {
+            .scroll-to-top-btn {
+                bottom: 80px; /* Plus haut sur mobile pour éviter les éléments de navigation */
+                right: 15px;
+                width: 45px;
+                height: 45px;
+                font-size: 16px;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Fonction pour afficher/masquer le bouton selon le scroll
+    function toggleScrollButton() {
+        if (window.pageYOffset > 300) {
+            scrollToTopBtn.classList.add('show');
+        } else {
+            scrollToTopBtn.classList.remove('show');
+        }
+    }
+    
+    // Fonction pour le scroll fluide vers le haut
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+    
+    // Event listeners
+    window.addEventListener('scroll', toggleScrollButton);
+    scrollToTopBtn.addEventListener('click', scrollToTop);
+});
+    </script>
+    
+    <!-- Footer Newsletter Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Newsletter subscription
+        const newsletterBtn = document.querySelector('.newsletter-form .btn');
+        const newsletterInput = document.querySelector('.newsletter-form input[type="email"]');
+        
+        if (newsletterBtn && newsletterInput) {
+            newsletterBtn.addEventListener('click', function() {
+                const email = newsletterInput.value.trim();
+                
+                if (!email) {
+                    showFooterNotification('Veuillez saisir une adresse email', 'warning');
+                    return;
+                }
+                
+                // Simple email validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    showFooterNotification('Veuillez saisir une adresse email valide', 'error');
+                    return;
+                }
+                
+                // Simulate newsletter subscription
+                newsletterBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Inscription...';
+                newsletterBtn.disabled = true;
+                
+                setTimeout(() => {
+                    newsletterBtn.innerHTML = '<i class="fas fa-check me-1"></i>Inscrit !';
+                    newsletterInput.value = '';
+                    showFooterNotification('Merci ! Vous êtes maintenant abonné à notre newsletter.', 'success');
+                    
+                    setTimeout(() => {
+                        newsletterBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>S\'abonner';
+                        newsletterBtn.disabled = false;
+                    }, 2000);
+                }, 1500);
+            });
+            
+            // Allow Enter key to submit
+            newsletterInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    newsletterBtn.click();
+                }
+            });
+        }
+        
+        // Smooth scroll for footer links
+        document.querySelectorAll('.footer-link[href^="#"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Add hover effects to payment icons
+        document.querySelectorAll('.payment-icon').forEach(icon => {
+            icon.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1) rotate(5deg)';
+            });
+            
+            icon.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1) rotate(0deg)';
+            });
+        });
+    });
+    
+    // Function to show footer notifications
+    function showFooterNotification(message, type = 'success') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'success'} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+    </script>
+    
+    <!-- Script pour charger automatiquement le compteur du panier -->
+    <script>
+    // Fonction pour mettre à jour le compteur du panier
+    function updateCartCount() {
+        fetch('/get-cart-count', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Support pour les deux formats d'API (ancien et nouveau)
+            const count = data.cart_count !== undefined ? data.cart_count : data.count;
+            
+            if (typeof count !== 'undefined') {
+                updateCartCountDisplay(count);
+                console.log(`🛒 Compteur du panier mis à jour via API: ${count}`);
+            }
+        })
+        .catch(error => {
+            console.warn('Erreur lors de la mise à jour du compteur du panier:', error);
+        });
+    }
+    
+    // Fonction pour mettre à jour directement l'affichage du compteur
+    function updateCartCountDisplay(count) {
+        const cartCountElements = document.querySelectorAll('.cart-count');
+        cartCountElements.forEach(element => {
+            // Masquer complètement le badge si le panier est vide
+            if (count === 0 || count === null || count === undefined) {
+                element.style.display = 'none';
+            } else {
+                element.textContent = count;
+                element.style.display = '';
+            }
+        });
+    }
+    
+    // Charger le compteur au chargement de la page
+    document.addEventListener('DOMContentLoaded', updateCartCount);
+    
+    // Mettre à jour le compteur périodiquement (toutes les 30 secondes)
+    // setInterval(updateCartCount, 30000);
+    
+    // Mettre à jour le compteur toutes les 30 secondes (optionnel)
+    // setInterval(updateCartCount, 30000);
+    </script>
+    
+    <!-- Ajouter le script cart.js avant la fermeture du body -->
+<script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

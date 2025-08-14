@@ -1,0 +1,916 @@
+{% extends 'base.html' %}
+
+{% block title %}Mentions légales - DOUKA KM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .legal-page {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .legal-hero {
+        background: linear-gradient(135deg, #6f42c1, #5a31a0);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+        margin-bottom: 2rem;
+        border-radius: 0 0 30px 30px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .legal-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="legal-grid" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23legal-grid)"/></svg>');
+        opacity: 0.4;
+    }
+    
+    .legal-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .legal-hero p {
+        font-size: 1.1rem;
+        margin-bottom: 0;
+        position: relative;
+        z-index: 1;
+        opacity: 0.9;
+    }
+    
+    .legal-content {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 3rem;
+        margin-bottom: 2rem;
+    }
+    
+    .legal-nav {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .legal-nav h5 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .legal-nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .legal-nav li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .legal-nav a {
+        color: #6c757d;
+        text-decoration: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        display: block;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+    
+    .legal-nav a:hover,
+    .legal-nav a.active {
+        background: #6f42c1;
+        color: white;
+        transform: translateX(5px);
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .section-header h2 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin: 0;
+        flex: 1;
+    }
+    
+    .section-header .section-number {
+        background: #6f42c1;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .subsection {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border-left: 4px solid #6f42c1;
+    }
+    
+    .subsection h3 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .subsection p {
+        color: #6c757d;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+    
+    .subsection ul, .subsection ol {
+        color: #6c757d;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+    
+    .info-box {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border: 1px solid #2196f3;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .info-box h4 {
+        color: #1976d2;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .info-box p {
+        color: #0d47a1;
+        margin-bottom: 0;
+    }
+    
+    .company-card {
+        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+        border: 1px solid #9c27b0;
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+        text-align: center;
+    }
+    
+    .company-card h3 {
+        color: #7b1fa2;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        font-size: 1.5rem;
+    }
+    
+    .company-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .info-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-item h5 {
+        color: #6f42c1;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .info-item p {
+        color: #2c3e50;
+        margin: 0;
+        font-weight: 500;
+    }
+    
+    .team-section {
+        background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+        border: 1px solid #4caf50;
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+    }
+    
+    .team-section h3 {
+        color: #2e7d32;
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .team-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .team-member {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .team-member:hover {
+        transform: translateY(-5px);
+    }
+    
+    .team-member h4 {
+        color: #2e7d32;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .team-member p {
+        color: #66bb6a;
+        margin: 0;
+        font-size: 0.9rem;
+    }
+    
+    .contact-section {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        border: 1px solid #ff9800;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        margin-top: 3rem;
+    }
+    
+    .contact-section h3 {
+        color: #f57c00;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .contact-section p {
+        color: #e65100;
+        margin-bottom: 1.5rem;
+    }
+    
+    .contact-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .contact-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .contact-btn-primary {
+        background: #6f42c1;
+        color: white;
+        border: 2px solid #6f42c1;
+    }
+    
+    .contact-btn-primary:hover {
+        background: #5a31a0;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(111, 66, 193, 0.3);
+    }
+    
+    .contact-btn-secondary {
+        background: white;
+        color: #6f42c1;
+        border: 2px solid #6f42c1;
+    }
+    
+    .contact-btn-secondary:hover {
+        background: #6f42c1;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .last-updated {
+        text-align: center;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-top: 2rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .back-to-top {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #6f42c1;
+        color: white;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+    
+    .back-to-top:hover {
+        background: #5a31a0;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(111, 66, 193, 0.3);
+    }
+    
+    @media (max-width: 768px) {
+        .legal-content {
+            padding: 1.5rem;
+        }
+        
+        .legal-nav {
+            position: static;
+            margin-bottom: 1rem;
+        }
+        
+        .section-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .section-header .section-number {
+            margin-right: 0;
+            margin-bottom: 1rem;
+        }
+        
+        .company-info {
+            grid-template-columns: 1fr;
+        }
+        
+        .team-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+        
+        .contact-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .contact-btn {
+            width: 100%;
+            max-width: 250px;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-page">
+    <!-- Hero Section -->
+    <div class="legal-hero">
+        <div class="container">
+            <h1><i class="fas fa-balance-scale me-3"></i>Mentions légales</h1>
+            <p>Informations légales obligatoires concernant DOUKA KM et son exploitation.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <!-- Navigation latérale -->
+            <div class="col-lg-3">
+                <div class="legal-nav">
+                    <h5><i class="fas fa-list me-2"></i>Sommaire</h5>
+                    <ul>
+                        <li><a href="#editeur">Éditeur du site</a></li>
+                        <li><a href="#directeur-publication">Directeur de publication</a></li>
+                        <li><a href="#hebergement">Hébergement</a></li>
+                        <li><a href="#activite">Notre activité</a></li>
+                        <li><a href="#capital-structure">Capital et structure</a></li>
+                        <li><a href="#equipe">Notre équipe</a></li>
+                        <li><a href="#propriete-intellectuelle">Propriété intellectuelle</a></li>
+                        <li><a href="#protection-donnees">Protection des données</a></li>
+                        <li><a href="#cookies">Politique cookies</a></li>
+                        <li><a href="#mediation">Médiation</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="col-lg-9">
+                <div class="legal-content">
+                    <!-- Éditeur du site -->
+                    <section id="editeur">
+                        <div class="section-header">
+                            <div class="section-number">1</div>
+                            <h2>Éditeur du site</h2>
+                        </div>
+                        
+                        <div class="company-card">
+                            <h3><i class="fas fa-building me-2"></i>DOUKA KM</h3>
+                            <p>Marketplace spécialisée dans le commerce électronique aux Comores</p>
+                            
+                            <div class="company-info">
+                                <div class="info-item">
+                                    <h5>Dénomination sociale</h5>
+                                    <p>DOUKA KM SARL</p>
+                                </div>
+                                <div class="info-item">
+                                    <h5>Forme juridique</h5>
+                                    <p>Société à Responsabilité Limitée</p>
+                                </div>
+                                <div class="info-item">
+                                    <h5>Capital social</h5>
+                                    <p>500 000 KMF</p>
+                                </div>
+                                <div class="info-item">
+                                    <h5>Siège social</h5>
+                                    <p>Moroni, Union des Comores</p>
+                                </div>
+                                <div class="info-item">
+                                    <h5>Registre du commerce</h5>
+                                    <p>RC 2025-001-DKM</p>
+                                </div>
+                                <div class="info-item">
+                                    <h5>Numéro d'identification</h5>
+                                    <p>NIF : 123456789</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p>DOUKA KM est une société comorienne spécialisée dans le commerce électronique, offrant une plateforme marketplace connectant acheteurs et vendeurs à travers les îles des Comores.</p>
+                            
+                            <div class="info-box">
+                                <h4><i class="fas fa-info-circle me-2"></i>Mission</h4>
+                                <p>Notre mission est de démocratiser le commerce électronique aux Comores en offrant une plateforme sécurisée, accessible et adaptée aux spécificités locales.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Directeur de publication -->
+                    <section id="directeur-publication">
+                        <div class="section-header">
+                            <div class="section-number">2</div>
+                            <h2>Directeur de publication</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p><strong>Nom :</strong> Mohamed ABDALLAH</p>
+                            <p><strong>Qualité :</strong> Gérant de DOUKA KM SARL</p>
+                            <p><strong>Adresse :</strong> Moroni, Union des Comores</p>
+                            <p><strong>Email :</strong> direction@doukakm.com</p>
+                            
+                            <div class="info-box">
+                                <h4><i class="fas fa-user-tie me-2"></i>Responsabilité éditoriale</h4>
+                                <p>Le directeur de publication est responsable du contenu éditorial du site et des informations publiées sur la plateforme DOUKA KM.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Hébergement -->
+                    <section id="hebergement">
+                        <div class="section-header">
+                            <div class="section-number">3</div>
+                            <h2>Hébergement</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>3.1 Hébergeur web</h3>
+                            <p><strong>Société :</strong> DigitalOcean LLC</p>
+                            <p><strong>Adresse :</strong> 101 Avenue of the Americas, 10th Floor, New York, NY 10013, USA</p>
+                            <p><strong>Site web :</strong> <a href="https://www.digitalocean.com" target="_blank">www.digitalocean.com</a></p>
+                            
+                            <h3>3.2 Localisation des serveurs</h3>
+                            <ul>
+                                <li><strong>Serveurs principaux :</strong> Centre de données européen (Amsterdam)</li>
+                                <li><strong>CDN :</strong> Réseau de distribution mondial pour l'optimisation</li>
+                                <li><strong>Sauvegardes :</strong> Centres de données sécurisés en Europe</li>
+                            </ul>
+                            
+                            <div class="info-box">
+                                <h4><i class="fas fa-shield-alt me-2"></i>Sécurité des données</h4>
+                                <p>Nos hébergeurs respectent les standards internationaux de sécurité et de protection des données, incluant les certifications ISO 27001 et SOC 2.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Activité -->
+                    <section id="activite">
+                        <div class="section-header">
+                            <div class="section-number">4</div>
+                            <h2>Notre activité</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>4.1 Activité principale</h3>
+                            <p>DOUKA KM exploite une plateforme de commerce électronique (marketplace) permettant :</p>
+                            <ul>
+                                <li>La mise en relation entre acheteurs et vendeurs</li>
+                                <li>La vente de produits variés : alimentation, électronique, mode, maison</li>
+                                <li>La facilitation des paiements et livraisons</li>
+                                <li>Le support client et la résolution de litiges</li>
+                            </ul>
+                            
+                            <h3>4.2 Zone de couverture</h3>
+                            <p>Nos services couvrent l'ensemble du territoire comorien :</p>
+                            <ul>
+                                <li><strong>Grande Comore (Ngazidja) :</strong> Moroni et environs</li>
+                                <li><strong>Anjouan (Ndzuani) :</strong> Mutsamudu et régions</li>
+                                <li><strong>Mohéli (Mwali) :</strong> Fomboni et localités</li>
+                                <li><strong>Extension progressive :</strong> vers d'autres zones selon la demande</li>
+                            </ul>
+                            
+                            <h3>4.3 Code APE/NAF</h3>
+                            <p><strong>Code d'activité :</strong> 4791Z - Vente à distance sur catalogue spécialisé</p>
+                        </div>
+                    </section>
+
+                    <!-- Capital et structure -->
+                    <section id="capital-structure">
+                        <div class="section-header">
+                            <div class="section-number">5</div>
+                            <h2>Capital et structure</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>5.1 Structure du capital</h3>
+                            <p><strong>Capital social :</strong> 500 000 KMF entièrement libéré</p>
+                            <p><strong>Répartition :</strong></p>
+                            <ul>
+                                <li>Mohamed ABDALLAH : 70% (350 000 KMF)</li>
+                                <li>Associés fondateurs : 30% (150 000 KMF)</li>
+                            </ul>
+                            
+                            <h3>5.2 Gouvernance</h3>
+                            <ul>
+                                <li><strong>Gérant :</strong> Mohamed ABDALLAH</li>
+                                <li><strong>Durée :</strong> 99 ans à compter de l'immatriculation</li>
+                                <li><strong>Exercice social :</strong> du 1er janvier au 31 décembre</li>
+                            </ul>
+                            
+                            <h3>5.3 Assurances</h3>
+                            <p>DOUKA KM est couverte par :</p>
+                            <ul>
+                                <li><strong>Responsabilité civile professionnelle</strong></li>
+                                <li><strong>Cyber-assurance</strong> pour la protection des données</li>
+                                <li><strong>Assurance commerce électronique</strong></li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Équipe -->
+                    <section id="equipe">
+                        <div class="section-header">
+                            <div class="section-number">6</div>
+                            <h2>Notre équipe</h2>
+                        </div>
+                        
+                        <div class="team-section">
+                            <h3><i class="fas fa-users me-2"></i>L'équipe DOUKA KM</h3>
+                            <p>Une équipe passionnée et dédiée au service de nos utilisateurs</p>
+                            
+                            <div class="team-grid">
+                                <div class="team-member">
+                                    <h4>Mohamed ABDALLAH</h4>
+                                    <p>Fondateur & CEO</p>
+                                </div>
+                                <div class="team-member">
+                                    <h4>Équipe Tech</h4>
+                                    <p>Développement & Infrastructure</p>
+                                </div>
+                                <div class="team-member">
+                                    <h4>Service Client</h4>
+                                    <p>Support & Relation Client</p>
+                                </div>
+                                <div class="team-member">
+                                    <h4>Équipe Marketing</h4>
+                                    <p>Communication & Partenariats</p>
+                                </div>
+                                <div class="team-member">
+                                    <h4>Logistique</h4>
+                                    <p>Livraisons & Opérations</p>
+                                </div>
+                                <div class="team-member">
+                                    <h4>Équipe Marchands</h4>
+                                    <p>Accompagnement Vendeurs</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Propriété intellectuelle -->
+                    <section id="propriete-intellectuelle">
+                        <div class="section-header">
+                            <div class="section-number">7</div>
+                            <h2>Propriété intellectuelle</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>7.1 Marques et logos</h3>
+                            <p>Tous les éléments suivants sont la propriété exclusive de DOUKA KM :</p>
+                            <ul>
+                                <li>La marque "DOUKA KM"</li>
+                                <li>Le logo et l'identité visuelle</li>
+                                <li>Les slogans et éléments marketing</li>
+                                <li>Le nom de domaine doukakm.com</li>
+                            </ul>
+                            
+                            <h3>7.2 Contenus du site</h3>
+                            <p>Les contenus suivants sont protégés par le droit d'auteur :</p>
+                            <ul>
+                                <li>Textes, descriptions et contenus éditoriaux</li>
+                                <li>Photos et images (sauf indication contraire)</li>
+                                <li>Mise en page et design du site</li>
+                                <li>Code source et développements techniques</li>
+                            </ul>
+                            
+                            <h3>7.3 Utilisation autorisée</h3>
+                            <p>Les utilisateurs sont autorisés à :</p>
+                            <ul>
+                                <li>Consulter et naviguer sur le site</li>
+                                <li>Imprimer des pages pour usage personnel</li>
+                                <li>Partager des liens vers nos contenus</li>
+                            </ul>
+                            
+                            <div class="info-box">
+                                <h4><i class="fas fa-copyright me-2"></i>Droits réservés</h4>
+                                <p>Toute reproduction, représentation, modification ou distribution non autorisée des contenus est strictement interdite et constitue une contrefaçon.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Protection des données -->
+                    <section id="protection-donnees">
+                        <div class="section-header">
+                            <div class="section-number">8</div>
+                            <h2>Protection des données</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>8.1 Responsable du traitement</h3>
+                            <p><strong>DOUKA KM SARL</strong> est responsable du traitement des données personnelles collectées sur la plateforme.</p>
+                            
+                            <h3>8.2 Délégué à la protection des données</h3>
+                            <p><strong>Contact DPO :</strong> privacy@doukakm.com</p>
+                            
+                            <h3>8.3 Bases légales</h3>
+                            <p>Le traitement de vos données repose sur :</p>
+                            <ul>
+                                <li><strong>Exécution contractuelle</strong> : pour la gestion des commandes</li>
+                                <li><strong>Intérêt légitime</strong> : pour l'amélioration de nos services</li>
+                                <li><strong>Consentement</strong> : pour les communications marketing</li>
+                                <li><strong>Obligation légale</strong> : pour la comptabilité et la fiscalité</li>
+                            </ul>
+                            
+                            <h3>8.4 Vos droits</h3>
+                            <p>Conformément à la réglementation, vous disposez des droits :</p>
+                            <ul>
+                                <li>D'accès à vos données personnelles</li>
+                                <li>De rectification et de mise à jour</li>
+                                <li>D'effacement (droit à l'oubli)</li>
+                                <li>De limitation du traitement</li>
+                                <li>De portabilité de vos données</li>
+                                <li>D'opposition au traitement</li>
+                            </ul>
+                            
+                            <div class="info-box">
+                                <h4><i class="fas fa-user-shield me-2"></i>Exercer vos droits</h4>
+                                <p>Pour exercer vos droits, contactez-nous à privacy@doukakm.com ou via notre formulaire de contact. Réponse garantie sous 30 jours.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Cookies -->
+                    <section id="cookies">
+                        <div class="section-header">
+                            <div class="section-number">9</div>
+                            <h2>Politique cookies</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>9.1 Qu'est-ce qu'un cookie ?</h3>
+                            <p>Un cookie est un petit fichier texte déposé sur votre terminal lors de la visite d'un site web, permettant de reconnaitre votre navigateur et d'améliorer votre expérience.</p>
+                            
+                            <h3>9.2 Types de cookies utilisés</h3>
+                            <ul>
+                                <li><strong>Cookies techniques :</strong> nécessaires au fonctionnement du site</li>
+                                <li><strong>Cookies analytiques :</strong> pour comprendre l'utilisation du site</li>
+                                <li><strong>Cookies fonctionnels :</strong> pour mémoriser vos préférences</li>
+                                <li><strong>Cookies publicitaires :</strong> pour personnaliser la publicité (avec consentement)</li>
+                            </ul>
+                            
+                            <h3>9.3 Gestion des cookies</h3>
+                            <p>Vous pouvez gérer vos préférences cookies :</p>
+                            <ul>
+                                <li>Via notre bandeau de consentement</li>
+                                <li>Dans les paramètres de votre navigateur</li>
+                                <li>En utilisant des outils de désinscription</li>
+                            </ul>
+                            
+                            <h3>9.4 Durée de conservation</h3>
+                            <p>Les cookies sont conservés pour une durée maximale de 13 mois, conformément à la réglementation.</p>
+                        </div>
+                    </section>
+
+                    <!-- Médiation -->
+                    <section id="mediation">
+                        <div class="section-header">
+                            <div class="section-number">10</div>
+                            <h2>Médiation et résolution des litiges</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>10.1 Médiation interne</h3>
+                            <p>En cas de litige, nous privilégions une résolution amiable :</p>
+                            <ol>
+                                <li>Contactez notre service client via le formulaire de contact</li>
+                                <li>Exposez clairement votre problème avec les éléments de preuve</li>
+                                <li>Notre équipe étudie votre dossier sous 48h</li>
+                                <li>Une proposition de solution vous est faite sous 7 jours</li>
+                            </ol>
+                            
+                            <h3>10.2 Médiation externe</h3>
+                            <p>Si la médiation interne échoue, vous pouvez recourir à :</p>
+                            <ul>
+                                <li><strong>Médiateur de la consommation</strong> (si applicable selon la législation comorienne)</li>
+                                <li><strong>Centre de médiation commercial</strong> des Comores</li>
+                                <li><strong>Médiateur sectoriel</strong> du commerce électronique</li>
+                            </ul>
+                            
+                            <h3>10.3 Juridiction compétente</h3>
+                            <p>En dernier recours, les tribunaux compétents sont ceux de <strong>Moroni, Union des Comores</strong>.</p>
+                            
+                            <div class="info-box">
+                                <h4><i class="fas fa-handshake me-2"></i>Notre engagement</h4>
+                                <p>Nous nous engageons à traiter tous les litiges avec équité, transparence et dans le respect des droits de chacun.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Contact -->
+                    <section id="contact">
+                        <div class="section-header">
+                            <div class="section-number">11</div>
+                            <h2>Nous contacter</h2>
+                        </div>
+                        
+                        <div class="contact-section">
+                            <h3><i class="fas fa-envelope me-2"></i>Questions juridiques ?</h3>
+                            <p>Pour toute question concernant ces mentions légales ou nos obligations légales, notre équipe est à votre disposition.</p>
+                            
+                            <div class="contact-buttons">
+                                <a href="{{ url_for('contact') }}" class="contact-btn contact-btn-primary">
+                                    <i class="fas fa-comments"></i>
+                                    Formulaire de contact
+                                </a>
+                                <a href="mailto:legal@doukakm.com" class="contact-btn contact-btn-secondary">
+                                    <i class="fas fa-gavel"></i>
+                                    Service juridique
+                                </a>
+                            </div>
+                            
+                            <div style="margin-top: 2rem;">
+                                <h4>Coordonnées</h4>
+                                <p><strong>Adresse :</strong> Moroni, Union des Comores</p>
+                                <p><strong>Email général :</strong> contact@doukakm.com</p>
+                                <p><strong>Email juridique :</strong> legal@doukakm.com</p>
+                                <p><strong>Email confidentialité :</strong> privacy@doukakm.com</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Date de mise à jour -->
+                    <div class="last-updated">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <strong>Dernière mise à jour :</strong> 9 août 2025
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bouton retour en haut -->
+<button class="back-to-top" id="backToTop">
+    <i class="fas fa-chevron-up"></i>
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Navigation douce
+    const navLinks = document.querySelectorAll('.legal-nav a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                // Supprimer la classe active de tous les liens
+                navLinks.forEach(l => l.classList.remove('active'));
+                // Ajouter la classe active au lien cliqué
+                this.classList.add('active');
+                
+                // Scroll fluide vers la section
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Bouton retour en haut
+    const backToTop = document.getElementById('backToTop');
+    
+    window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 300) {
+            backToTop.style.display = 'flex';
+        } else {
+            backToTop.style.display = 'none';
+        }
+    });
+    
+    backToTop.addEventListener('click', function() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+    
+    // Mise en surbrillance de la section active
+    function highlightActiveSection() {
+        const sections = document.querySelectorAll('section[id]');
+        const scrollPos = window.pageYOffset + 100;
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.offsetHeight;
+            const sectionId = section.getAttribute('id');
+            const navLink = document.querySelector(`.legal-nav a[href="#${sectionId}"]`);
+            
+            if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                navLinks.forEach(l => l.classList.remove('active'));
+                if (navLink) {
+                    navLink.classList.add('active');
+                }
+            }
+        });
+    }
+    
+    // Écouter le scroll pour mettre en surbrillance la section active
+    window.addEventListener('scroll', highlightActiveSection);
+    
+    // Mettre en surbrillance la première section au chargement
+    highlightActiveSection();
+});
+</script>
+{% endblock %}

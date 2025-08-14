@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Accès refusé | DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <i class="fas fa-lock text-danger fa-5x mb-4"></i>
+                    <h1 class="mb-3">Accès refusé</h1>
+                    <p class="lead mb-4">Vous devez être connecté pour accéder à cette page.</p>
+                    <div class="d-flex justify-content-center">
+                        <a href="{{ url_for('login') }}" class="btn btn-primary me-3">Se connecter</a>
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary">Créer un compte</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{{ url_for('home') }}" class="text-decoration-none">
+                    <i class="fas fa-arrow-left me-2"></i> Retour à l'accueil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

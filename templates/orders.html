@@ -1,0 +1,637 @@
+{% extends 'base.html' %}
+
+{% block title %}Mes commandes | DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Menu latéral -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Mon compte</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user me-2"></i> Informations personnelles
+                    </a>
+                    <a href="{{ url_for('orders') }}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-box me-2"></i> Mes commandes
+                    </a>
+                    <a href="{{ url_for('addresses') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-map-marker-alt me-2"></i> Mes adresses
+                    </a>
+                    <a href="{{ url_for('wishlist') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-heart me-2"></i> Ma liste d'envies
+                    </a>
+                    <a href="{{ url_for('change_password') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-lock me-2"></i> Changer de mot de passe
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="col-md-9">
+            <h2>Mes commandes</h2>
+            
+            {% if not orders %}
+            <div class="alert alert-info">
+                <p class="mb-0">Vous n'avez pas encore passé de commande.</p>
+                <a href="{{ url_for('products') }}" class="btn btn-primary mt-2">Parcourir les produits</a>
+            </div>
+            {% else %}
+            <!-- Pour chaque commande, afficher les détails dans un accordéon -->
+            <div class="accordion mt-4" id="orderAccordion">
+                {% for order in orders %}
+                <div class="accordion-item mb-3 border">
+                    <h2 class="accordion-header" id="heading{{ order['id'] }}">
+                        <button class="accordion-button {% if not (new_order and loop.first) %}collapsed{% endif %}" 
+                                type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#order{{ order['id'] }}" 
+                                aria-expanded="{% if new_order and loop.first %}true{% else %}false{% endif %}" 
+                                aria-controls="order{{ order['id'] }}">
+                            <div class="d-flex justify-content-between align-items-center w-100">
+                                <div>
+                                    <strong>Commande #{{ order['order_number'] }}</strong>
+                                    <span class="text-muted ms-3">{{ order['date'] }}</span>
+                                    {% if order.get('merchant_name') %}
+                                        <br>
+                                        <small class="text-primary">
+                                            <i class="fas fa-store me-1"></i>{{ order['merchant_name'] }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ order['status_color'] }}">{{ order['status_text'] }}</span>
+                                    <br>
+                                    <span class="fw-bold">{{ order['total'] | format_number }} KMF</span>
+                                </div>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="order{{ order['id'] }}" 
+                         class="accordion-collapse collapse {% if new_order and loop.first %}show{% endif %}" 
+                         aria-labelledby="heading{{ order['id'] }}"
+                         data-bs-parent="#orderAccordion">
+                        <div class="accordion-body">
+                            <!-- Conteneur pour les détails de la commande -->
+                            <div class="order-details">
+                                <!-- Détails de l'adresse et paiement -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <h5>Adresse de livraison</h5>
+                                        <address>
+                                            {{ order['shipping_address']['full_name'] }}<br>
+                                            {{ order['shipping_address']['street'] }}<br>
+                                            {{ order['shipping_address']['city'] }}, {{ order['shipping_address']['region']|capitalize }}<br>
+                                            Tél: {{ order['shipping_address']['phone'] }}
+                                        </address>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5>Informations de paiement</h5>
+                                        <p><strong>Méthode:</strong> {{ order['payment_method'] }}</p>
+                                        <p><strong>Statut:</strong> 
+                                            <span class="badge bg-{% if order['payment_status'] == 'completed' %}success{% else %}warning{% endif %}">
+                                                {{ 'Payé' if order['payment_status'] == 'completed' else 'En attente' }}
+                                            </span>
+                                        </p>
+                                        <p><strong>Mode de livraison:</strong> {{ order['shipping_method'] }}</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Table des produits commandés -->
+                                <div class="table-responsive">
+                                    <table class="table table-bordered align-middle">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th scope="col">Produit</th>
+                                                <th scope="col">Prix unitaire</th>
+                                                <th scope="col">Quantité</th>
+                                                <th scope="col">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in order['items'] %}
+                                            <tr>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        {% if item['image'] %}
+                                                            {% if item['image'].startswith('http') %}
+                                                                <!-- Image via URL -->
+                                                                <img src="{{ item['image'] }}" 
+                                                                     alt="{{ item['name'] }}" 
+                                                                     class="img-thumbnail me-3" 
+                                                                     style="width: 60px;"
+                                                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/60x60/f8f9fa/6c757d?text=Produit';">
+                                                            {% else %}
+                                                                <!-- Image locale -->
+                                                                <img src="{{ url_for('static', filename=item['image'].replace('static/', '') if item['image'].startswith('static/') else item['image']) }}" 
+                                                                     alt="{{ item['name'] }}" 
+                                                                     class="img-thumbnail me-3" 
+                                                                     style="width: 60px;"
+                                                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/60x60/f8f9fa/6c757d?text=Produit';">
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <!-- Image placeholder -->
+                                                            <img src="https://via.placeholder.com/60x60/f8f9fa/6c757d?text=Produit" 
+                                                                 alt="Aucune image" 
+                                                                 class="img-thumbnail me-3" 
+                                                                 style="width: 60px;">
+                                                        {% endif %}
+                                                        <div>
+                                                            <h6 class="mb-0">{{ item['name'] }}</h6>
+                                                            {% if 'options' in item and item['options'] %}
+                                                                <small class="text-muted d-block">
+                                                                    {% for key, value in item['options'].items() %}
+                                                                        {% if key == 'color' %}
+                                                                            <span class="badge bg-primary text-white me-1" style="font-size: 0.7em;">
+                                                                                <i class="fas fa-palette me-1"></i>{{ value }}
+                                                                            </span>
+                                                                        {% elif key == 'size' %}
+                                                                            <span class="badge bg-success text-white me-1" style="font-size: 0.7em;">
+                                                                                <i class="fas fa-ruler me-1"></i>{{ value }}
+                                                                            </span>
+                                                                        {% elif key == 'storage' %}
+                                                                            <span class="badge bg-info text-white me-1" style="font-size: 0.7em;">
+                                                                                <i class="fas fa-hdd me-1"></i>{{ value }}
+                                                                            </span>
+                                                                        {% else %}
+                                                                            <span class="badge bg-secondary text-white me-1" style="font-size: 0.7em;">{{ key }}: {{ value }}</span>
+                                                                        {% endif %}
+                                                                    {% endfor %}
+                                                                </small>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>{{ item['price'] | format_number }} KMF</td>
+                                                <td>{{ item['quantity'] }}</td>
+                                                <td>{{ item['subtotal'] | format_number }} KMF</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- Récapitulatif des coûts -->
+                                <div class="row mt-3">
+                                    <div class="col-md-6 ms-auto">
+                                        <table class="table table-sm">
+                                            <tr>
+                                                <td>Sous-total</td>
+                                                <td class="text-end">{{ order['subtotal'] | format_number }} KMF</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Frais de livraison</td>
+                                                <td class="text-end">{{ order['shipping_fee'] | format_number }} KMF</td>
+                                            </tr>
+                                            {% if order['discount'] > 0 %}
+                                            <tr>
+                                                <td>Réduction</td>
+                                                <td class="text-end">-{{ order['discount'] | format_number }} KMF</td>
+                                            </tr>
+                                            {% endif %}
+                                            <tr class="fw-bold">
+                                                <td>Total</td>
+                                                <td class="text-end">{{ order['total'] | format_number }} KMF</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <!-- Boutons d'action -->
+                                <div class="mt-3">
+                                    <a href="{{ url_for('order_detail', order_id=order['id']) }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye me-2"></i> Voir les détails
+                                    </a>
+                                    {% if order['status'] == 'processing' %}
+                                    <button type="button" class="btn btn-outline-danger ms-2" id="cancel-btn-{{ order['id'] }}" onclick="checkAndCancelOrder({{ order['id'] }})">
+                                        <i class="fas fa-times me-2"></i> Annuler la commande
+                                    </button>
+                                    <div id="cancel-message-{{ order['id'] }}" class="mt-2" style="display: none;"></div>
+                                    {% endif %}
+                                    {% if order['status'] == 'delivered' %}
+                                    <a href="#" class="btn btn-outline-secondary ms-2" data-bs-toggle="modal" data-bs-target="#reviewModal{{ order['id'] }}">
+                                        <i class="fas fa-star me-2"></i> Évaluer
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals d'évaluation pour chaque commande livrée -->
+{% for order in orders %}
+{% if order['status'] == 'delivered' %}
+<div class="modal fade" id="reviewModal{{ order['id'] }}" tabindex="-1" aria-labelledby="reviewModalLabel{{ order['id'] }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reviewModalLabel{{ order['id'] }}">Évaluer les produits</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="review-form-{{ order['id'] }}" action="{{ url_for('submit_order_review') }}" method="POST">
+                    <input type="hidden" name="order_id" value="{{ order['id'] }}">
+                    {% for item in order['items'] %}
+                    <div class="mb-4" data-product-id="{{ item.get('id', item.get('product_id')) }}">
+                        <div class="d-flex align-items-center mb-2">
+                            {% if item.get('image', '') %}
+                                {% if item['image'].startswith('http') %}
+                                    <!-- Image via URL -->
+                                    <img src="{{ item['image'] }}" 
+                                         alt="{{ item['name'] }}" 
+                                         class="img-fluid rounded" 
+                                         width="50"
+                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/50x50/f8f9fa/6c757d?text=Produit';">
+                                {% else %}
+                                    <!-- Image locale -->
+                                    <img src="{{ url_for('static', filename=item['image'].replace('static/', '') if item['image'].startswith('static/') else item['image']) }}" 
+                                         alt="{{ item['name'] }}" 
+                                         class="img-fluid rounded" 
+                                         width="50"
+                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/50x50/f8f9fa/6c757d?text=Produit';">
+                                {% endif %}
+                            {% else %}
+                                <!-- Image placeholder -->
+                                <img src="https://via.placeholder.com/50x50/f8f9fa/6c757d?text=Produit" 
+                                     alt="Aucune image" 
+                                     class="img-fluid rounded" 
+                                     width="50">
+                            {% endif %}
+                            <h6 class="mb-0 ms-3">{{ item['name'] }}</h6>
+                        </div>
+                        <div class="rating">
+                            <input type="radio" id="star5-{{ order['id'] }}-{{ loop.index }}" name="rating-{{ order['id'] }}-{{ loop.index }}" value="5" />
+                            <label for="star5-{{ order['id'] }}-{{ loop.index }}"><i class="far fa-star"></i></label>
+                            <input type="radio" id="star4-{{ order['id'] }}-{{ loop.index }}" name="rating-{{ order['id'] }}-{{ loop.index }}" value="4" />
+                            <label for="star4-{{ order['id'] }}-{{ loop.index }}"><i class="far fa-star"></i></label>
+                            <input type="radio" id="star3-{{ order['id'] }}-{{ loop.index }}" name="rating-{{ order['id'] }}-{{ loop.index }}" value="3" />
+                            <label for="star3-{{ order['id'] }}-{{ loop.index }}"><i class="far fa-star"></i></label>
+                            <input type="radio" id="star2-{{ order['id'] }}-{{ loop.index }}" name="rating-{{ order['id'] }}-{{ loop.index }}" value="2" />
+                            <label for="star2-{{ order['id'] }}-{{ loop.index }}"><i class="far fa-star"></i></label>
+                            <input type="radio" id="star1-{{ order['id'] }}-{{ loop.index }}" name="rating-{{ order['id'] }}-{{ loop.index }}" value="1" />
+                            <label for="star1-{{ order['id'] }}-{{ loop.index }}"><i class="far fa-star"></i></label>
+                        </div>
+                        <textarea class="form-control mt-2 review-comment" rows="3" placeholder="Partagez votre avis sur ce produit (optionnel)"></textarea>
+                    </div>
+                    {% endfor %}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="submitOrderReviews({{ order['id'] }})">Soumettre</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Styles pour le système d'évaluation */
+    .rating {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+    
+    .rating input {
+        display: none;
+    }
+    
+    .rating label {
+        color: #ddd;
+        font-size: 24px;
+        padding: 0 3px;
+        cursor: pointer;
+    }
+    
+    .rating input:checked ~ label,
+    .rating label:hover,
+    .rating label:hover ~ label {
+        color: #ffc107;
+    }
+    
+    .accordion-button:not(.collapsed) {
+        background-color: rgba(var(--bs-primary-rgb), 0.05);
+    }
+    
+    .order-details {
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les accordéons Bootstrap
+    var orderItems = document.querySelectorAll('.accordion-item');
+    
+    // Système d'évaluation des produits
+    var ratings = document.querySelectorAll('.rating input');
+    ratings.forEach(function(input) {
+        input.addEventListener('change', function() {
+            var parentRating = this.closest('.rating');
+            var stars = parentRating.querySelectorAll('label i');
+            
+            // Réinitialiser toutes les étoiles
+            stars.forEach(function(star) {
+                star.className = 'far fa-star';
+            });
+            
+            // Remplir les étoiles jusqu'à la note sélectionnée
+            var value = parseInt(this.value);
+            for (var i = 0; i < value; i++) {
+                stars[4 - i].className = 'fas fa-star';
+            }
+        });
+    });
+    
+    // Gestion manuelle des accordéons au cas où Bootstrap n'est pas correctement initialisé
+    orderItems.forEach(function(item) {
+        var button = item.querySelector('.accordion-button');
+        var content = item.querySelector('.accordion-collapse');
+        var orderId = content.getAttribute('id');
+        
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Vérifions si Bootstrap a pris en charge le clic
+            setTimeout(function() {
+                // Si le contenu n'a pas été toggle par Bootstrap
+                if ((button.classList.contains('collapsed') && content.classList.contains('show')) || 
+                    (!button.classList.contains('collapsed') && !content.classList.contains('show'))) {
+                    
+                    // Toggle manuellement
+                    if (content.classList.contains('show')) {
+                        content.classList.remove('show');
+                        button.classList.add('collapsed');
+                        button.setAttribute('aria-expanded', 'false');
+                    } else {
+                        // Fermer tous les autres panneaux d'abord
+                        document.querySelectorAll('.accordion-collapse.show').forEach(function(el) {
+                            if (el.id !== orderId) {
+                                el.classList.remove('show');
+                                document.querySelector(`[aria-controls="${el.id}"]`).classList.add('collapsed');
+                                document.querySelector(`[aria-controls="${el.id}"]`).setAttribute('aria-expanded', 'false');
+                            }
+                        });
+                        
+                        // Ouvrir ce panneau
+                        content.classList.add('show');
+                        button.classList.remove('collapsed');
+                        button.setAttribute('aria-expanded', 'true');
+                    }
+                }
+            }, 50); // Court délai pour laisser Bootstrap agir d'abord s'il est chargé
+        });
+    });
+    
+    // Gestion des étoiles pour l'évaluation
+    document.querySelectorAll('.rating').forEach(function(ratingDiv) {
+        const inputs = ratingDiv.querySelectorAll('input[type="radio"]');
+        const labels = ratingDiv.querySelectorAll('label');
+        
+        labels.forEach((label, index) => {
+            label.addEventListener('mouseenter', function() {
+                // Surligner les étoiles jusqu'à celle survolée
+                for (let i = 0; i <= index; i++) {
+                    labels[i].querySelector('i').classList.remove('far');
+                    labels[i].querySelector('i').classList.add('fas');
+                }
+                for (let i = index + 1; i < labels.length; i++) {
+                    labels[i].querySelector('i').classList.remove('fas');
+                    labels[i].querySelector('i').classList.add('far');
+                }
+            });
+            
+            label.addEventListener('click', function() {
+                // Marquer l'input correspondant comme sélectionné
+                inputs[index].checked = true;
+            });
+        });
+        
+        // Réinitialiser les étoiles quand on quitte la zone de notation
+        ratingDiv.addEventListener('mouseleave', function() {
+            const checkedInput = ratingDiv.querySelector('input:checked');
+            const checkedValue = checkedInput ? parseInt(checkedInput.value) : 0;
+            
+            labels.forEach((label, index) => {
+                if ((labels.length - index) <= checkedValue) {
+                    label.querySelector('i').classList.remove('far');
+                    label.querySelector('i').classList.add('fas');
+                } else {
+                    label.querySelector('i').classList.remove('fas');
+                    label.querySelector('i').classList.add('far');
+                }
+            });
+        });
+    });
+});
+
+// Fonction pour soumettre les avis d'une commande
+function submitOrderReviews(orderId) {
+    const form = document.getElementById(`review-form-${orderId}`);
+    const products = form.querySelectorAll('[data-product-id]');
+    const reviews = [];
+    
+    // Collecter les données de chaque produit
+    products.forEach((productDiv, index) => {
+        const productId = productDiv.getAttribute('data-product-id');
+        const ratingInput = productDiv.querySelector('input[type="radio"]:checked');
+        const commentTextarea = productDiv.querySelector('.review-comment');
+        
+        if (ratingInput) {
+            reviews.push({
+                product_id: productId,
+                rating: parseInt(ratingInput.value),
+                comment: commentTextarea.value.trim()
+            });
+        }
+    });
+    
+    if (reviews.length === 0) {
+        alert('Veuillez donner au moins une note avant de soumettre.');
+        return;
+    }
+    
+    // Désactiver le bouton
+    const submitBtn = document.querySelector(`#reviewModal${orderId} .btn-primary`);
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Envoi en cours...';
+    
+    // Envoyer les données
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            order_id: orderId,
+            reviews: reviews
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Fermer le modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById(`reviewModal${orderId}`));
+            modal.hide();
+            
+            // Afficher un message de succès
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
+            
+            // Cacher le bouton d'évaluation pour cette commande
+            const evaluateBtn = document.querySelector(`button[data-bs-target="#reviewModal${orderId}"]`);
+            if (evaluateBtn) {
+                evaluateBtn.style.display = 'none';
+                // Ajouter un badge "Évalué"
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-success ms-2';
+                badge.textContent = 'Évalué';
+                evaluateBtn.parentNode.appendChild(badge);
+            }
+        } else {
+            throw new Error(data.message || 'Erreur lors de l\'envoi des avis');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert(error.message || 'Erreur lors de l\'envoi des avis. Veuillez réessayer.');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    });
+}
+
+// Fonction pour vérifier et annuler une commande
+function checkAndCancelOrder(orderId) {
+    const cancelBtn = document.getElementById(`cancel-btn-${orderId}`);
+    const messageDiv = document.getElementById(`cancel-message-${orderId}`);
+    
+    // Vérifier d'abord si la commande peut être annulée
+    fetch(`/api/order/${orderId}/can-cancel`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.message || 'Erreur lors de la vérification');
+        }
+        
+        if (!data.can_cancel) {
+            // La commande ne peut pas être annulée
+            messageDiv.className = 'alert alert-warning mt-2 small';
+            messageDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${data.reason}
+            `;
+            messageDiv.style.display = 'block';
+            
+            // Désactiver le bouton d'annulation
+            cancelBtn.disabled = true;
+            cancelBtn.innerHTML = '<i class="fas fa-ban me-2"></i> Non annulable';
+            cancelBtn.className = 'btn btn-secondary ms-2 btn-sm';
+            
+            return;
+        }
+        
+        // La commande peut être annulée, procéder avec la confirmation
+        const paymentInfo = data.payment_info;
+        let confirmMessage = 'Êtes-vous sûr de vouloir annuler cette commande ?';
+        
+        if (paymentInfo && paymentInfo.allows_cancellation) {
+            confirmMessage += '\n\nCette action ne peut pas être annulée.';
+        }
+        
+        if (confirm(confirmMessage)) {
+            cancelOrder(orderId);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        messageDiv.className = 'alert alert-danger mt-2 small';
+        messageDiv.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>
+            ${error.message || 'Erreur lors de la vérification de la commande'}
+        `;
+        messageDiv.style.display = 'block';
+    });
+}
+
+// Fonction pour annuler une commande
+function cancelOrder(orderId) {
+    
+    // Envoyer la requête d'annulation
+    fetch(`/cancel-order/${orderId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Afficher un message de succès
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
+            
+            // Recharger la page après 2 secondes
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            throw new Error(data.message || 'Erreur lors de l\'annulation de la commande');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert(error.message || 'Erreur lors de l\'annulation. Veuillez réessayer.');
+    });
+}
+</script>
+{% endblock %}

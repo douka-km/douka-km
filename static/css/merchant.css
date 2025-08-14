@@ -1,0 +1,49 @@
+/* Styles spécifiques pour l'interface marchand */
+
+/* Amélioration du menu dropdown */
+.dropdown-menu {
+    min-width: 200px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 0.25rem;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+    transition: background-color 0.3s;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: #f8f9fa;
+}
+
+.dropdown-item i {
+    margin-right: 8px;
+    width: 16px;
+    text-align: center;
+}
+
+/* Style pour les liens actifs dans le menu */
+.navbar .nav-link.active {
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+/* Amélioration du hover sur les liens de navigation */
+.navbar .nav-link {
+    transition: all 0.3s;
+    padding: 0.5rem 1rem;
+    margin: 0 0.1rem;
+}
+
+.navbar .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+/* Style pour améliorer la visibilité du profil marchand */
+.navbar .dropdown-toggle::after {
+    vertical-align: middle;
+    margin-left: 0.5em;
+}

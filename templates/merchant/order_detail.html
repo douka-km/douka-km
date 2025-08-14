@@ -1,0 +1,480 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Détail de la commande #{{ order.order_number }} - DOUKA KM Marchands{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Détail de la commande</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_dashboard') }}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_orders') }}">Commandes</a></li>
+        <li class="breadcrumb-item active">Commande #{{ order.order_number }}</li>
+    </ol>
+
+    <!-- Informations de base et actions rapides -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Informations de la commande
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Numéro de commande:</div>
+                        <div class="col-md-7">{{ order.order_number }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Date:</div>
+                        <div class="col-md-7">{{ order.created_at }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Statut:</div>
+                        <div class="col-md-7">
+                            <span class="badge 
+                                {% if order.status == 'processing' %}bg-warning
+                                {% elif order.status == 'shipped' %}bg-info
+                                {% elif order.status == 'delivered' %}bg-success
+                                {% elif order.status == 'cancelled' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ order.status_text|default(order.status) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Total:</div>
+                        <div class="col-md-7">{{ order.total|format_number }} KMF</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Mode de paiement:</div>
+                        <div class="col-md-7">{{ order.payment_method|default('Paiement à la livraison') }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Statut du paiement:</div>
+                        <div class="col-md-7">
+                            <span class="badge {% if order.payment_status == 'completed' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ 'Payé' if order.payment_status == 'completed' else 'En attente' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-user me-1"></i>
+                    Informations client
+                </div>
+                <div class="card-body">
+                    {% if order.shipping_address %}
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Nom du client:</div>
+                        <div class="col-md-7">{{ order.shipping_address.full_name }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Téléphone:</div>
+                        <div class="col-md-7">
+                            <a href="tel:{{ order.shipping_address.phone }}">{{ order.shipping_address.phone }}</a>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Adresse:</div>
+                        <div class="col-md-7">{{ order.shipping_address.street }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Ville:</div>
+                        <div class="col-md-7">{{ order.shipping_address.city }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Région:</div>
+                        <div class="col-md-7">{{ order.shipping_address.region }}</div>
+                    </div>
+                    {% else %}
+                    <div class="row mb-2">
+                        <div class="col-md-5 fw-bold">Nom du client:</div>
+                        <div class="col-md-7">{{ order.customer_name }}</div>
+                    </div>
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Informations détaillées non disponibles pour cette commande.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Produits commandés -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-shopping-cart me-1"></i>
+            Produits commandés
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Produit</th>
+                            <th>Prix unitaire</th>
+                            <th>Quantité</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if order.items is iterable and order.items is not string %}
+                            {% for item in order.items %}
+                            <tr>
+                                <td class="text-center" style="max-width: 80px;">
+                                    {% if item.image %}
+                                        {% if item.image.startswith('http') %}
+                                            <!-- Image via URL -->
+                                            <img src="{{ item.image }}" 
+                                                 alt="{{ item.name }}" 
+                                                 class="img-fluid" 
+                                                 style="max-height: 50px; object-fit: cover;"
+                                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit';">
+                                        {% else %}
+                                            <!-- Image locale -->
+                                            <img src="{{ url_for('static', filename=item.image.replace('static/', '') if item.image.startswith('static/') else item.image) }}" 
+                                                 alt="{{ item.name }}" 
+                                                 class="img-fluid" 
+                                                 style="max-height: 50px; object-fit: cover;"
+                                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit';">
+                                        {% endif %}
+                                    {% else %}
+                                        <!-- Image placeholder -->
+                                        <img src="https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit" 
+                                             alt="Aucune image" 
+                                             class="img-fluid" 
+                                             style="max-height: 50px; object-fit: cover;">
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>{{ item.name }}</div>
+                                    {% if (item.options is defined and item.options) or (item['options'] is defined and item['options']) %}
+                                    <small class="text-muted">
+                                        {% set options_dict = item.options if item.options is defined else item.get('options', {}) %}
+                                        {% for key, value in options_dict.items() %}
+                                            {% if key == 'color' %}
+                                                <span class="badge bg-primary text-white me-1">
+                                                    <i class="fas fa-palette me-1"></i>{{ value }}
+                                                </span>
+                                            {% elif key == 'size' %}
+                                                <span class="badge bg-success text-white me-1">
+                                                    <i class="fas fa-ruler me-1"></i>{{ value }}
+                                                </span>
+                                            {% elif key == 'storage' %}
+                                                <span class="badge bg-info text-white me-1">
+                                                    <i class="fas fa-hdd me-1"></i>{{ value }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary text-white me-1">{{ key }}: {{ value }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.price|format_number }} KMF</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ item.subtotal|format_number }} KMF</td>
+                            </tr>
+                            {% endfor %}
+                        {% elif order.products is defined and order.products is iterable %}
+                            {% for product in order.products %}
+                            <tr>
+                                <td class="text-center" style="max-width: 80px;">
+                                    {% if product.image %}
+                                        {% if product.image.startswith('http') %}
+                                            <!-- Image via URL -->
+                                            <img src="{{ product.image }}" 
+                                                 alt="{{ product.name }}" 
+                                                 class="img-fluid" 
+                                                 style="max-height: 50px; object-fit: cover;"
+                                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit';">
+                                        {% else %}
+                                            <!-- Image locale -->
+                                            <img src="{{ url_for('static', filename=product.image.replace('static/', '') if product.image.startswith('static/') else product.image) }}" 
+                                                 alt="{{ product.name }}" 
+                                                 class="img-fluid" 
+                                                 style="max-height: 50px; object-fit: cover;"
+                                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit';">
+                                        {% endif %}
+                                    {% else %}
+                                        <!-- Image placeholder -->
+                                        <img src="https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit" 
+                                             alt="Aucune image" 
+                                             class="img-fluid" 
+                                             style="max-height: 50px; object-fit: cover;">
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>{{ product.name if product.name else product.product_id }}</div>
+                                    {% if (product.options is defined and product.options) or (product['options'] is defined and product['options']) %}
+                                    <small class="text-muted">
+                                        {% set options_dict = product.options if product.options is defined else product.get('options', {}) %}
+                                        {% for key, value in options_dict.items() %}
+                                            {% if key == 'color' %}
+                                                <span class="badge bg-primary text-white me-1">
+                                                    <i class="fas fa-palette me-1"></i>{{ value }}
+                                                </span>
+                                            {% elif key == 'size' %}
+                                                <span class="badge bg-success text-white me-1">
+                                                    <i class="fas fa-ruler me-1"></i>{{ value }}
+                                                </span>
+                                            {% elif key == 'storage' %}
+                                                <span class="badge bg-info text-white me-1">
+                                                    <i class="fas fa-hdd me-1"></i>{{ value }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary text-white me-1">{{ key }}: {{ value }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ product.price|format_number }} KMF</td>
+                                <td>{{ product.quantity }}</td>
+                                <td>{{ (product.price * product.quantity)|format_number }} KMF</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">Aucun produit disponible pour cette commande</td>
+                            </tr>
+                        {% endif %}
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Sous-total:</td>
+                            <td>{{ order.subtotal|default(order.total)|format_number }} KMF</td>
+                        </tr>
+                        {% if order.shipping_fee is defined and order.shipping_fee %}
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Frais de livraison:</td>
+                            <td>{{ order.shipping_fee|format_number }} KMF</td>
+                        </tr>
+                        {% endif %}
+                        {% if order.discount is defined and order.discount %}
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Remise:</td>
+                            <td>-{{ order.discount|format_number }} KMF</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Total:</td>
+                            <td class="fw-bold">{{ order.total|format_number }} KMF</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Historique du statut -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-history me-1"></i>
+                    Historique du statut
+                </div>
+                <div class="card-body">
+                    {% if order.notes is defined and order.notes is iterable %}
+                    <div class="timeline">
+                        {% for note in order.notes %}
+                        <div class="timeline-item">
+                            <div class="timeline-date">{{ note.date }}</div>
+                            <div class="timeline-content">
+                                <div class="badge 
+                                    {% if note.status == 'processing' %}bg-warning
+                                    {% elif note.status == 'shipped' %}bg-info
+                                    {% elif note.status == 'delivered' %}bg-success
+                                    {% elif note.status == 'cancelled' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ note.status }}
+                                </div>
+                                <p class="mt-2">{{ note.text }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Pas d'historique disponible pour cette commande.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Mettre à jour le statut -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-edit me-1"></i>
+                    Mettre à jour le statut
+                </div>
+                <div class="card-body">
+                    {% if order.status == 'delivered' %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Cette commande a été livrée. Le statut ne peut plus être modifié.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Statut actuel</label>
+                            <input type="text" class="form-control" value="Livrée" readonly>
+                        </div>
+                    {% else %}
+                        <form id="updateOrderStatusForm" action="{{ url_for('merchant_update_order_status', order_id=order.id) }}" method="post">
+                            <div class="mb-3">
+                                <label for="order-status" class="form-label">Nouveau statut</label>
+                                <select class="form-select" id="order-status" name="status">
+                                    {% if order.status != 'shipped' and order.status != 'delivered' %}
+                                        <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>
+                                            En cours de préparation
+                                        </option>
+                                    {% endif %}
+                                    {% if order.status != 'delivered' %}
+                                        <option value="shipped" {% if order.status == 'shipped' %}selected{% endif %}>
+                                            Expédiée
+                                        </option>
+                                    {% endif %}
+                                    <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>
+                                        Livrée
+                                    </option>
+                                    <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>
+                                        Annulée
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="status-notes" class="form-label">Notes (optionnel)</label>
+                                <textarea class="form-control" id="status-notes" name="notes" rows="3" 
+                                          placeholder="Ajoutez des informations sur ce changement de statut..."></textarea>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i> Mettre à jour le statut
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Style pour l'historique chronologique */
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+.timeline:before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+.timeline-date {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+.timeline-content {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+.timeline-item:before {
+    content: '';
+    position: absolute;
+    left: -30px;
+    top: 12px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #007bff;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #007bff;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion de la soumission du formulaire avec AJAX
+        document.getElementById('updateOrderStatusForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const form = this;
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: new URLSearchParams(formData),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Afficher une notification de réussite
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        <i class="fas fa-check-circle me-2"></i>
+                        ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    
+                    // Insérer la notification avant le formulaire
+                    form.parentNode.insertBefore(alertDiv, form);
+                    
+                    // Rafraîchir la page après 2 secondes pour voir les mises à jour
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    // Afficher une notification d'erreur
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    
+                    // Insérer la notification avant le formulaire
+                    form.parentNode.insertBefore(alertDiv, form);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                
+                // Afficher une notification d'erreur générique
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Une erreur est survenue lors de la mise à jour du statut.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                // Insérer la notification avant le formulaire
+                form.parentNode.insertBefore(alertDiv, form);
+            });
+        });
+    });
+</script>
+{% endblock %}

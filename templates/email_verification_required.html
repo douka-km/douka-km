@@ -1,0 +1,1416 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Vérification d'email requise - DOUKA KM{% endblock %}
+
+{% block content %}
+<!-- Particles background -->
+<div id="particles-js"></div>
+
+<div class="auth-card enhanced-card">
+    <!-- Progress Bar -->
+    <div class="verification-progress mb-4">
+        <div class="progress-container">
+            <div class="progress-step active">
+                <div class="step-circle">1</div>
+                <span class="step-label">Inscription</span>
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step current">
+                <div class="step-circle">2</div>
+                <span class="step-label">Vérification</span>
+            </div>
+            <div class="progress-line"></div>
+            <div class="progress-step">
+                <div class="step-circle">3</div>
+                <span class="step-label">Activation</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- En-tête animé avec effet 3D -->
+    <div class="text-center mb-4">
+        <div class="verification-icon-container mb-3">
+            <div class="floating-envelope">
+                <div class="envelope-wrapper">
+                    <div class="envelope">
+                        <div class="envelope-flap"></div>
+                        <div class="envelope-body">
+                            <i class="fas fa-at text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="email-particles">
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="verification-badge pulse-badge">
+                <i class="fas fa-clock text-warning"></i>
+            </div>
+        </div>
+        <h2 class="auth-title gradient-text-3d">
+            Vérification d'email requise
+        </h2>
+        <p class="text-muted lead animated-text">
+            <span class="typewriter">Pour votre sécurité, nous devons vérifier votre adresse email</span>
+        </p>
+    </div>
+
+    <!-- Email envoyé à avec animation -->
+    {% if session.get('verification_email') %}
+    <div class="alert alert-info border-0 shadow-lg mb-4 slide-in-alert">
+        <div class="d-flex align-items-center">
+            <div class="alert-icon-container">
+                <i class="fas fa-paper-plane text-primary"></i>
+                <div class="icon-ripple"></div>
+            </div>
+            <div class="ms-3">
+                <strong>Email envoyé à :</strong><br>
+                <span class="text-primary font-weight-bold">{{ session.get('verification_email') }}</span>
+                <div class="email-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">En attente de vérification</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Instructions détaillées avec timeline interactive -->
+    <div class="verification-timeline mb-4">
+        <h5 class="mb-3 section-title">
+            <i class="fas fa-list-check me-2 text-success"></i>
+            <span>Étapes à suivre :</span>
+        </h5>
+        
+        <div class="timeline-container">
+            <div class="timeline-item" data-step="1">
+                <div class="timeline-dot">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="timeline-content">
+                    <h6>Vérifiez votre boîte de réception</h6>
+                    <p class="small text-muted">Recherchez un email de DOUKA KM dans votre boîte de réception</p>
+                    <div class="timeline-tips">
+                        <span class="tip-badge">💡 Astuce</span>
+                        <span class="tip-text">Vérifiez aussi vos spams</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-step="2">
+                <div class="timeline-dot">
+                    <i class="fas fa-mouse-pointer"></i>
+                </div>
+                <div class="timeline-content">
+                    <h6>Cliquez sur le lien de vérification</h6>
+                    <p class="small text-muted">Le lien expire dans 24 heures pour votre sécurité</p>
+                    <div class="security-badge">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        <span>Lien sécurisé</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-step="3">
+                <div class="timeline-dot">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="timeline-content">
+                    <h6>Profitez de DOUKA KM</h6>
+                    <p class="small text-muted">Votre compte sera immédiatement activé</p>
+                    <div class="features-preview">
+                        <span class="feature-tag">Shopping</span>
+                        <span class="feature-tag">Wishlist</span>
+                        <span class="feature-tag">Commandes</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conseils avancés avec accordion -->
+    <div class="tips-accordion mb-4">
+        <div class="accordion-header" onclick="toggleAccordion()">
+            <h6 class="mb-0">
+                <i class="fas fa-lightbulb text-warning me-2"></i>
+                Conseils utiles
+                <i class="fas fa-chevron-down accordion-icon"></i>
+            </h6>
+        </div>
+        <div class="accordion-content" id="tipsContent">
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <div>
+                        <strong>Vérifiez vos spams</strong>
+                        <p class="small">L'email peut être dans vos courriers indésirables</p>
+                    </div>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-address-book text-info"></i>
+                    <div>
+                        <strong>Ajoutez à vos contacts</strong>
+                        <p class="small">noreply@doukakm.com</p>
+                    </div>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-clock text-danger"></i>
+                    <div>
+                        <strong>Délai d'expiration</strong>
+                        <p class="small">24 heures pour la sécurité</p>
+                    </div>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-mobile-alt text-success"></i>
+                    <div>
+                        <strong>Vérifiez sur mobile</strong>
+                        <p class="small">Consultez aussi votre app email</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions avec effet glassmorphism -->
+    <div class="actions-container mb-4">
+        <div class="glass-card">
+            <form method="POST" action="{{ url_for('resend_verification') }}" class="resend-form">
+                <button type="submit" class="btn btn-primary-gradient btn-lg w-100 pulse-button" id="resendBtn">
+                    <span class="button-content">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Renvoyer l'email de vérification
+                    </span>
+                    <div class="button-shine"></div>
+                </button>
+                <div id="resendMessage" class="text-center mt-3" style="display: none;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Countdown timer avancé -->
+    <div class="text-center mb-4">
+        <div class="countdown-container glass-card" id="countdownContainer" style="display: none;">
+            <div class="countdown-header">
+                <i class="fas fa-hourglass-half text-warning"></i>
+                <span>Nouveau renvoi possible dans :</span>
+            </div>
+            <div class="countdown-display">
+                <div class="countdown-circle">
+                    <svg class="countdown-svg" width="80" height="80">
+                        <circle class="countdown-bg" cx="40" cy="40" r="35"></circle>
+                        <circle class="countdown-progress" cx="40" cy="40" r="35" id="countdownCircle"></circle>
+                    </svg>
+                    <div class="countdown-number">
+                        <span id="countdown">60</span>
+                        <small>sec</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status indicator -->
+    <div class="status-indicator mb-4">
+        <div class="status-card">
+            <div class="status-icon">
+                <i class="fas fa-envelope-open-text"></i>
+            </div>
+            <div class="status-info">
+                <h6 class="status-title">Statut de vérification</h6>
+                <p class="status-desc">En attente de votre action</p>
+                <div class="status-progress-bar">
+                    <div class="status-progress-fill" style="width: 50%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liens utiles avec design moderne -->
+    <div class="navigation-container">
+        <div class="nav-card">
+            <h6 class="nav-title">Actions rapides</h6>
+            <div class="nav-buttons">
+                <a href="{{ url_for('login') }}" class="nav-btn secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Retour à la connexion</span>
+                </a>
+                <a href="{{ url_for('home') }}" class="nav-btn primary">
+                    <i class="fas fa-home"></i>
+                    <span>Accueil</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ rapide -->
+    <div class="faq-section mt-4">
+        <div class="faq-toggle" onclick="toggleFAQ()">
+            <i class="fas fa-question-circle me-2"></i>
+            Questions fréquentes
+            <i class="fas fa-chevron-down faq-icon"></i>
+        </div>
+        <div class="faq-content" id="faqContent">
+            <div class="faq-item">
+                <strong>❓ Je n'ai pas reçu l'email</strong>
+                <p>Vérifiez vos spams et cliquez sur "Renvoyer l'email"</p>
+            </div>
+            <div class="faq-item">
+                <strong>⏰ Le lien a expiré</strong>
+                <p>Renvoyez un nouvel email de vérification</p>
+            </div>
+            <div class="faq-item">
+                <strong>📱 Problème sur mobile</strong>
+                <p>Essayez d'ouvrir le lien dans votre navigateur</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styles CSS avancés -->
+<style>
+/* Particles background */
+#particles-js {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    opacity: 0.3;
+}
+
+/* Enhanced card with glassmorphism */
+.enhanced-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    border-radius: 25px;
+    position: relative;
+    overflow: hidden;
+}
+
+.enhanced-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+}
+
+/* Progress Bar */
+.verification-progress {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    margin: -1.5rem -1.5rem 2rem -1.5rem;
+    color: white;
+}
+
+.progress-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .step-circle {
+    background: #28a745;
+    color: white;
+}
+
+.progress-step.current .step-circle {
+    background: #ffc107;
+    color: #333;
+    animation: pulse-glow 2s infinite;
+}
+
+.progress-step:not(.active):not(.current) .step-circle {
+    background: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.step-label {
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.progress-line {
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    flex: 1;
+    margin: 0 1rem;
+    position: relative;
+    top: -20px;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    50% { box-shadow: 0 0 20px 10px rgba(255, 193, 7, 0); }
+}
+
+/* 3D Envelope Animation */
+.floating-envelope {
+    perspective: 1000px;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotateY(0deg); }
+    50% { transform: translateY(-10px) rotateY(5deg); }
+}
+
+.envelope-wrapper {
+    position: relative;
+    transform-style: preserve-3d;
+}
+
+.envelope {
+    width: 80px;
+    height: 60px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 123, 255, 0.3);
+    transform: rotateX(15deg);
+}
+
+.envelope-flap {
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    height: 30px;
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    clip-path: polygon(0 0, 50% 70%, 100% 0);
+    border-radius: 8px 8px 0 0;
+    animation: flap-open 2s ease-in-out infinite;
+}
+
+@keyframes flap-open {
+    0%, 100% { transform: rotateX(0deg); }
+    50% { transform: rotateX(-30deg); }
+}
+
+.envelope-body {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    color: white;
+}
+
+.email-particles {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.particle {
+    width: 4px;
+    height: 4px;
+    background: #007bff;
+    border-radius: 50%;
+    position: absolute;
+    animation: particle-float 2s ease-in-out infinite;
+}
+
+.particle:nth-child(1) { left: -10px; animation-delay: 0s; }
+.particle:nth-child(2) { left: 0px; animation-delay: 0.5s; }
+.particle:nth-child(3) { left: 10px; animation-delay: 1s; }
+
+@keyframes particle-float {
+    0% { transform: translateY(0) opacity(1); }
+    100% { transform: translateY(-30px) opacity(0); }
+}
+
+.pulse-badge {
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* 3D Gradient Text */
+.gradient-text-3d {
+    background: linear-gradient(45deg, #007bff, #6f42c1, #e83e8c);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 3s ease infinite;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-weight: bold;
+}
+
+@keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Typewriter Effect */
+.typewriter {
+    display: inline-block;
+    border-right: 2px solid #007bff;
+    animation: typewriter 3s steps(40) 1s 1 normal both, blink 1s infinite;
+}
+
+@keyframes typewriter {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@keyframes blink {
+    from, to { border-color: transparent; }
+    50% { border-color: #007bff; }
+}
+
+/* Animated Alert */
+.slide-in-alert {
+    animation: slideInLeft 0.5s ease-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.slide-in-alert::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.alert-icon-container {
+    position: relative;
+    font-size: 1.2rem;
+}
+
+.icon-ripple {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 2px solid #007bff;
+    border-radius: 50%;
+    animation: ripple 2s infinite;
+}
+
+@keyframes ripple {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+
+.email-status {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #ffc107;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Timeline Interactive */
+.verification-timeline {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    border: 1px solid #dee2e6;
+}
+
+.section-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.timeline-container {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline-container::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #007bff, #28a745);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+    padding-left: 3rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.timeline-item:hover {
+    transform: translateX(5px);
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -2.5rem;
+    top: 0;
+    width: 45px;
+    height: 45px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+    animation: timeline-pulse 2s infinite;
+}
+
+@keyframes timeline-pulse {
+    0%, 100% { box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3); }
+    50% { box-shadow: 0 4px 25px rgba(0, 123, 255, 0.6); }
+}
+
+.timeline-content h6 {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-tips {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.tip-badge {
+    background: linear-gradient(135deg, #ffc107, #ff8c00);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+
+.security-badge {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+.features-preview {
+    margin-top: 0.5rem;
+}
+
+.feature-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #6f42c1, #e83e8c);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    margin-right: 0.3rem;
+    margin-bottom: 0.3rem;
+}
+
+/* Accordion */
+.tips-accordion {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.accordion-header {
+    padding: 1.2rem;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.accordion-header:hover {
+    background: linear-gradient(135deg, #e9ecef, #dee2e6);
+}
+
+.accordion-icon {
+    transition: transform 0.3s ease;
+}
+
+.accordion-header.active .accordion-icon {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.accordion-content.active {
+    max-height: 500px;
+}
+
+.tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    padding: 1.5rem;
+}
+
+.tip-card {
+    display: flex;
+    align-items: flex-start;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border-left: 4px solid #007bff;
+    transition: all 0.3s ease;
+}
+
+.tip-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.tip-card i {
+    font-size: 1.2rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+}
+
+.tip-card strong {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: #333;
+}
+
+.tip-card .small {
+    color: #6c757d;
+    margin: 0;
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Advanced Button */
+.btn-primary-gradient {
+    background: linear-gradient(135deg, #007bff, #6f42c1);
+    border: none;
+    border-radius: 25px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-primary-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 123, 255, 0.3);
+}
+
+.pulse-button {
+    animation: pulse-button 2s infinite;
+}
+
+@keyframes pulse-button {
+    0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+}
+
+.button-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-primary-gradient:hover .button-shine {
+    left: 100%;
+}
+
+/* Advanced Countdown */
+.countdown-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.countdown-circle {
+    position: relative;
+    width: 80px;
+    height: 80px;
+}
+
+.countdown-svg {
+    transform: rotate(-90deg);
+}
+
+.countdown-bg {
+    fill: none;
+    stroke: rgba(0, 0, 0, 0.1);
+    stroke-width: 3;
+}
+
+.countdown-progress {
+    fill: none;
+    stroke: #ff6b6b;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 220;
+    stroke-dashoffset: 220;
+    transition: stroke-dashoffset 1s linear;
+}
+
+.countdown-number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-weight: bold;
+    color: #ff6b6b;
+}
+
+.countdown-number span {
+    font-size: 1.5rem;
+}
+
+.countdown-number small {
+    display: block;
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+/* Status Card */
+.status-card {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border-radius: 15px;
+    border-left: 5px solid #ffc107;
+}
+
+.status-icon {
+    width: 50px;
+    height: 50px;
+    background: #ffc107;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.3rem;
+    color: white;
+}
+
+.status-title {
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+    color: #333;
+}
+
+.status-desc {
+    margin: 0 0 1rem 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.status-progress-bar {
+    width: 200px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.status-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ffc107, #ff8c00);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Navigation Card */
+.nav-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.nav-title {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 1rem;
+}
+
+.nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.nav-btn.primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+}
+
+.nav-btn.secondary {
+    background: #f8f9fa;
+    color: #333;
+    border-color: #dee2e6;
+}
+
+.nav-btn:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: inherit;
+}
+
+.nav-btn.primary:hover {
+    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+    color: white;
+}
+
+.nav-btn.secondary:hover {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.nav-btn i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* FAQ Section */
+.faq-section {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.faq-toggle {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+.faq-toggle:hover {
+    background: #e9ecef;
+}
+
+.faq-icon {
+    transition: transform 0.3s ease;
+}
+
+.faq-toggle.active .faq-icon {
+    transform: rotate(180deg);
+}
+
+.faq-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.faq-content.active {
+    max-height: 300px;
+}
+
+.faq-item {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.faq-item:last-child {
+    border-bottom: none;
+}
+
+.faq-item strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.faq-item p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .progress-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .progress-line {
+        display: none;
+    }
+    
+    .tips-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .nav-buttons {
+        flex-direction: column;
+    }
+    
+    .envelope {
+        width: 60px;
+        height: 45px;
+    }
+    
+    .timeline-item {
+        padding-left: 2rem;
+    }
+    
+    .timeline-dot {
+        left: -1.5rem;
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading * {
+    animation-play-state: paused;
+}
+</style>
+
+<!-- JavaScript avancé pour les interactions -->
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize particles.js
+    particlesJS('particles-js', {
+        particles: {
+            number: { value: 50, density: { enable: true, value_area: 800 } },
+            color: { value: ['#007bff', '#6f42c1', '#e83e8c'] },
+            shape: { type: 'circle' },
+            opacity: { value: 0.5, random: true },
+            size: { value: 3, random: true },
+            line_linked: { enable: true, distance: 150, color: '#007bff', opacity: 0.2, width: 1 },
+            move: { enable: true, speed: 2, direction: 'none', random: false, straight: false, out_mode: 'out', bounce: false }
+        },
+        interactivity: {
+            detect_on: 'canvas',
+            events: { onhover: { enable: true, mode: 'repulse' }, onclick: { enable: true, mode: 'push' }, resize: true },
+            modes: { grab: { distance: 400, line_linked: { opacity: 1 } }, bubble: { distance: 400, size: 40, duration: 2, opacity: 8, speed: 3 }, repulse: { distance: 200, duration: 0.4 }, push: { particles_nb: 4 }, remove: { particles_nb: 2 } }
+        },
+        retina_detect: true
+    });
+
+    const resendBtn = document.getElementById('resendBtn');
+    const resendMessage = document.getElementById('resendMessage');
+    const countdownContainer = document.getElementById('countdownContainer');
+    const countdownElement = document.getElementById('countdown');
+    const countdownCircle = document.getElementById('countdownCircle');
+    
+    let canResend = true;
+    let countdownTime = 60;
+    let countdownInterval;
+
+    // Initialize timeline animations
+    initializeTimeline();
+    
+    // Initialize entrance animations
+    initializeEntranceAnimations();
+
+    // Gérer le renvoi d'email avec animations avancées
+    document.querySelector('.resend-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!canResend) return;
+        
+        // Animation de loading
+        resendBtn.classList.add('loading');
+        resendBtn.disabled = true;
+        
+        const buttonContent = resendBtn.querySelector('.button-content');
+        buttonContent.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Envoi en cours...';
+        
+        // Simulation d'envoi avec progress
+        simulateEmailSending().then(() => {
+            showSuccessMessage();
+            startAdvancedCountdown();
+        });
+    });
+    
+    function simulateEmailSending() {
+        return new Promise(resolve => {
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                // Vous pouvez ajouter une barre de progression ici
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    resolve();
+                }
+            }, 200);
+        });
+    }
+    
+    function showSuccessMessage() {
+        resendMessage.innerHTML = `
+            <div class="alert alert-success border-0 shadow-lg">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <span>✅ Email renvoyé avec succès!</span>
+                </div>
+            </div>
+        `;
+        resendMessage.style.display = 'block';
+        
+        // Animation d'apparition
+        resendMessage.style.opacity = '0';
+        resendMessage.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            resendMessage.style.transition = 'all 0.5s ease';
+            resendMessage.style.opacity = '1';
+            resendMessage.style.transform = 'translateY(0)';
+        }, 100);
+        
+        // Masquer après 4 secondes
+        setTimeout(() => {
+            resendMessage.style.opacity = '0';
+            resendMessage.style.transform = 'translateY(-20px)';
+            setTimeout(() => {
+                resendMessage.style.display = 'none';
+            }, 500);
+        }, 4000);
+    }
+    
+    function startAdvancedCountdown() {
+        canResend = false;
+        countdownTime = 60;
+        
+        // Afficher le container avec animation
+        countdownContainer.style.display = 'block';
+        countdownContainer.style.opacity = '0';
+        countdownContainer.style.transform = 'scale(0.8)';
+        
+        setTimeout(() => {
+            countdownContainer.style.transition = 'all 0.5s ease';
+            countdownContainer.style.opacity = '1';
+            countdownContainer.style.transform = 'scale(1)';
+        }, 100);
+        
+        // Animation du cercle
+        const circumference = 2 * Math.PI * 35;
+        countdownCircle.style.strokeDasharray = circumference;
+        
+        countdownInterval = setInterval(() => {
+            countdownElement.textContent = countdownTime;
+            
+            // Calculer le progress du cercle
+            const progress = (60 - countdownTime) / 60;
+            const offset = circumference * progress;
+            countdownCircle.style.strokeDashoffset = circumference - offset;
+            
+            countdownTime--;
+            
+            if (countdownTime < 0) {
+                clearInterval(countdownInterval);
+                hideCountdown();
+                resetResendButton();
+            }
+        }, 1000);
+    }
+    
+    function hideCountdown() {
+        countdownContainer.style.opacity = '0';
+        countdownContainer.style.transform = 'scale(0.8)';
+        setTimeout(() => {
+            countdownContainer.style.display = 'none';
+        }, 500);
+    }
+    
+    function resetResendButton() {
+        canResend = true;
+        resendBtn.disabled = false;
+        resendBtn.classList.remove('loading');
+        
+        const buttonContent = resendBtn.querySelector('.button-content');
+        buttonContent.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Renvoyer l\'email de vérification';
+        
+        // Animation de réactivation
+        resendBtn.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+            resendBtn.style.transform = 'scale(1)';
+        }, 200);
+    }
+    
+    function initializeTimeline() {
+        const timelineItems = document.querySelectorAll('.timeline-item');
+        
+        timelineItems.forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(-50px)';
+            
+            setTimeout(() => {
+                item.style.transition = 'all 0.6s ease';
+                item.style.opacity = '1';
+                item.style.transform = 'translateX(0)';
+            }, 200 + (index * 100));
+            
+            // Ajouter interaction hover
+            item.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateX(10px) scale(1.02)';
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateX(0) scale(1)';
+            });
+        });
+    }
+    
+    function initializeEntranceAnimations() {
+        const authCard = document.querySelector('.enhanced-card');
+        authCard.style.opacity = '0';
+        authCard.style.transform = 'translateY(50px) scale(0.95)';
+        
+        setTimeout(() => {
+            authCard.style.transition = 'all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            authCard.style.opacity = '1';
+            authCard.style.transform = 'translateY(0) scale(1)';
+        }, 300);
+        
+        // Animation des éléments internes
+        const elements = [
+            '.verification-progress',
+            '.verification-icon-container',
+            '.gradient-text-3d',
+            '.slide-in-alert',
+            '.verification-timeline'
+        ];
+        
+        elements.forEach((selector, index) => {
+            const element = document.querySelector(selector);
+            if (element) {
+                element.style.opacity = '0';
+                element.style.transform = 'translateY(30px)';
+                
+                setTimeout(() => {
+                    element.style.transition = 'all 0.6s ease';
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }, 500 + (index * 150));
+            }
+        });
+    }
+});
+
+// Fonctions globales pour les interactions
+function toggleAccordion() {
+    const header = document.querySelector('.accordion-header');
+    const content = document.getElementById('tipsContent');
+    const icon = document.querySelector('.accordion-icon');
+    
+    header.classList.toggle('active');
+    content.classList.toggle('active');
+    
+    if (content.classList.contains('active')) {
+        content.style.maxHeight = content.scrollHeight + 'px';
+    } else {
+        content.style.maxHeight = '0';
+    }
+}
+
+function toggleFAQ() {
+    const toggle = document.querySelector('.faq-toggle');
+    const content = document.getElementById('faqContent');
+    const icon = document.querySelector('.faq-icon');
+    
+    toggle.classList.toggle('active');
+    content.classList.toggle('active');
+    
+    if (content.classList.contains('active')) {
+        content.style.maxHeight = content.scrollHeight + 'px';
+    } else {
+        content.style.maxHeight = '0';
+    }
+}
+
+// Effets de survol avancés
+document.addEventListener('mouseover', function(e) {
+    // Effet ripple sur les boutons
+    if (e.target.matches('.nav-btn') || e.target.closest('.nav-btn')) {
+        const btn = e.target.matches('.nav-btn') ? e.target : e.target.closest('.nav-btn');
+        createRippleEffect(btn, e);
+    }
+});
+
+function createRippleEffect(element, event) {
+    const circle = document.createElement('span');
+    const diameter = Math.max(element.clientWidth, element.clientHeight);
+    const radius = diameter / 2;
+    
+    circle.style.width = circle.style.height = diameter + 'px';
+    circle.style.left = (event.clientX - element.offsetLeft - radius) + 'px';
+    circle.style.top = (event.clientY - element.offsetTop - radius) + 'px';
+    circle.classList.add('ripple');
+    
+    const ripple = element.getElementsByClassName('ripple')[0];
+    if (ripple) {
+        ripple.remove();
+    }
+    
+    element.appendChild(circle);
+}
+
+// Ajout du style pour l'effet ripple
+const rippleStyle = document.createElement('style');
+rippleStyle.textContent = `
+    .nav-btn {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.3);
+        transform: scale(0);
+        animation: ripple-animation 0.6s linear;
+        pointer-events: none;
+    }
+    
+    @keyframes ripple-animation {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(rippleStyle);
+
+// Intersection Observer pour les animations au scroll
+const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+};
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('animate-in');
+        }
+    });
+}, observerOptions);
+
+// Observer les éléments à animer
+document.querySelectorAll('.timeline-item, .tip-card, .glass-card').forEach(el => {
+    observer.observe(el);
+});
+</script>
+{% endblock %}

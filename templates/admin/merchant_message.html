@@ -1,0 +1,358 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Envoyer un message à {{ merchant.store_name }} - Admin DOUKA KM{% endblock %}
+{% block page_title %}Envoyer un message au marchand{% endblock %}
+
+{% block admin_content %}
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_merchants') }}">Marchands</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_merchant_detail', merchant_id=merchant.id) }}">{{ merchant.store_name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Envoyer un message</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-envelope me-2"></i>
+                        Envoyer un message à {{ merchant.store_name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Informations du destinataire -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i class="fas fa-user-circle fa-2x"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Destinataire :</h6>
+                                <p class="mb-1">
+                                    <strong>{{ merchant.first_name }} {{ merchant.last_name }}</strong> 
+                                    ({{ merchant.store_name }})
+                                </p>
+                                <p class="mb-0 text-muted">
+                                    <i class="fas fa-envelope me-1"></i> {{ merchant_email }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="POST" id="messageForm">
+                        <!-- Type de message -->
+                        <div class="mb-4">
+                            <label for="message_type" class="form-label">Type de message</label>
+                            <select class="form-select" id="message_type" name="message_type" required>
+                                <option value="info">Information générale</option>
+                                <option value="warning">Avertissement</option>
+                                <option value="success">Félicitations</option>
+                                <option value="danger">Notification importante</option>
+                            </select>
+                            <div class="form-text">
+                                Le type influence l'apparence de l'email envoyé
+                            </div>
+                        </div>
+
+                        <!-- Sujet -->
+                        <div class="mb-4">
+                            <label for="subject" class="form-label">Sujet *</label>
+                            <input type="text" class="form-control" id="subject" name="subject" 
+                                   maxlength="100" required>
+                            <div class="form-text">
+                                Maximum 100 caractères
+                            </div>
+                        </div>
+
+                        <!-- Message -->
+                        <div class="mb-4">
+                            <label for="message" class="form-label">Message *</label>
+                            <textarea class="form-control" id="message" name="message" 
+                                      rows="10" maxlength="2000" required></textarea>
+                            <div class="form-text">
+                                Maximum 2000 caractères. Le formatage basique sera préservé.
+                            </div>
+                        </div>
+
+                        <!-- Messages prédéfinis -->
+                        <div class="mb-4">
+                            <label class="form-label">Messages prédéfinis (optionnel)</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-2" 
+                                            onclick="fillTemplate('welcome')">
+                                        <i class="fas fa-handshake me-1"></i> Message de bienvenue
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning btn-sm w-100 mb-2" 
+                                            onclick="fillTemplate('policy_reminder')">
+                                        <i class="fas fa-exclamation-triangle me-1"></i> Rappel des règles
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-outline-success btn-sm w-100 mb-2" 
+                                            onclick="fillTemplate('performance')">
+                                        <i class="fas fa-chart-line me-1"></i> Félicitations performance
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info btn-sm w-100 mb-2" 
+                                            onclick="fillTemplate('update')">
+                                        <i class="fas fa-bullhorn me-1"></i> Mise à jour plateforme
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                Cliquez sur un modèle pour remplir automatiquement le message
+                            </div>
+                        </div>
+
+                        <!-- Aperçu -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-eye me-2"></i>Aperçu du message
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="preview_content" class="border rounded p-3 bg-light">
+                                    <p class="text-muted">Tapez votre message pour voir l'aperçu...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_merchant_detail', merchant_id=merchant.id) }}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="sendBtn">
+                                <i class="fas fa-paper-plane me-2"></i>Envoyer le message
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block admin_extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const subjectInput = document.getElementById('subject');
+    const messageInput = document.getElementById('message');
+    const messageTypeSelect = document.getElementById('message_type');
+    const previewContent = document.getElementById('preview_content');
+    const form = document.getElementById('messageForm');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // Templates de messages prédéfinis
+    const templates = {
+        welcome: {
+            subject: 'Bienvenue sur DOUKA KM !',
+            message: `Cher(e) {{ merchant.first_name }} {{ merchant.last_name }},
+
+Nous sommes ravis de vous accueillir sur DOUKA KM, la marketplace de référence aux Comores !
+
+Votre boutique "{{ merchant.store_name }}" fait désormais partie de notre communauté de marchands de confiance.
+
+Quelques conseils pour bien commencer :
+• Complétez votre profil boutique avec une description attrayante
+• Ajoutez des photos de qualité pour vos produits
+• Respectez les délais de livraison annoncés
+• Maintenez un excellent service client
+
+Notre équipe reste à votre disposition pour toute question ou assistance.
+
+Nous vous souhaitons beaucoup de succès dans vos ventes !
+
+Cordialement,
+L'équipe DOUKA KM`,
+            type: 'success'
+        },
+        policy_reminder: {
+            subject: 'Rappel - Règles et bonnes pratiques DOUKA KM',
+            message: `Cher(e) marchand(e),
+
+Nous tenons à vous rappeler l'importance de respecter les règles de notre plateforme pour maintenir une expérience de qualité pour tous nos utilisateurs.
+
+Points importants à respecter :
+• Descriptions produits honnêtes et précises
+• Photos représentatives de vos articles
+• Délais de livraison respectés
+• Service client réactif et professionnel
+• Prix justes et transparents
+
+Le non-respect de ces règles peut entraîner des sanctions, y compris la suspension temporaire ou définitive de votre compte.
+
+Merci pour votre collaboration et votre professionnalisme.
+
+Cordialement,
+L'équipe DOUKA KM`,
+            type: 'warning'
+        },
+        performance: {
+            subject: 'Félicitations pour vos excellentes performances !',
+            message: `Cher(e) {{ merchant.first_name }} {{ merchant.last_name }},
+
+Nous tenons à vous féliciter pour les excellents résultats de votre boutique "{{ merchant.store_name }}" !
+
+Vos performances remarquables contribuent au succès de notre plateforme :
+• Satisfaction client élevée
+• Respect des délais de livraison
+• Qualité de vos produits reconnue
+• Service client exemplaire
+
+Continuez sur cette voie ! Votre professionnalisme est un exemple pour tous nos marchands.
+
+Merci pour votre engagement et votre contribution à DOUKA KM.
+
+Cordialement,
+L'équipe DOUKA KM`,
+            type: 'success'
+        },
+        update: {
+            subject: 'Nouveautés et améliorations DOUKA KM',
+            message: `Cher(e) marchand(e),
+
+Nous avons le plaisir de vous informer des dernières améliorations apportées à votre espace marchand :
+
+Nouvelles fonctionnalités :
+• Gestion simplifiée des stocks
+• Nouvelles options de personnalisation des produits
+• Statistiques de vente améliorées
+• Notifications en temps réel
+
+Ces améliorations vous permettront de mieux gérer votre activité et d'augmenter vos ventes.
+
+Pour toute question ou assistance, notre équipe support reste à votre disposition.
+
+Cordialement,
+L'équipe DOUKA KM`,
+            type: 'info'
+        }
+    };
+
+    // Fonction pour remplir avec un template
+    window.fillTemplate = function(templateKey) {
+        const template = templates[templateKey];
+        if (template) {
+            subjectInput.value = template.subject;
+            messageInput.value = template.message;
+            messageTypeSelect.value = template.type;
+            updatePreview();
+        }
+    };
+
+    // Mise à jour de l'aperçu
+    function updatePreview() {
+        const subject = subjectInput.value.trim();
+        const message = messageInput.value.trim();
+        const type = messageTypeSelect.value;
+
+        if (subject || message) {
+            const typeColors = {
+                info: '#d1ecf1',
+                warning: '#fff3cd',
+                success: '#d4edda',
+                danger: '#f8d7da'
+            };
+
+            const typeIcons = {
+                info: 'fas fa-info-circle',
+                warning: 'fas fa-exclamation-triangle',
+                success: 'fas fa-check-circle',
+                danger: 'fas fa-exclamation-circle'
+            };
+
+            previewContent.innerHTML = `
+                <div style="background-color: ${typeColors[type]}; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff;">
+                    <h6><i class="${typeIcons[type]} me-2"></i>${subject || 'Sujet du message'}</h6>
+                    <div style="white-space: pre-line; margin-top: 10px;">
+                        ${message || 'Contenu du message...'}
+                    </div>
+                </div>
+            `;
+        } else {
+            previewContent.innerHTML = '<p class="text-muted">Tapez votre message pour voir l\'aperçu...</p>';
+        }
+    }
+
+    // Écouter les changements pour mettre à jour l'aperçu
+    subjectInput.addEventListener('input', updatePreview);
+    messageInput.addEventListener('input', updatePreview);
+    messageTypeSelect.addEventListener('change', updatePreview);
+
+    // Validation du formulaire
+    form.addEventListener('submit', function(e) {
+        const subject = subjectInput.value.trim();
+        const message = messageInput.value.trim();
+
+        if (!subject || !message) {
+            e.preventDefault();
+            
+            if (!subject) {
+                subjectInput.classList.add('is-invalid');
+                subjectInput.focus();
+            }
+            
+            if (!message) {
+                messageInput.classList.add('is-invalid');
+                if (!subject) messageInput.focus();
+            }
+            
+            return false;
+        }
+
+        // Confirmation avant envoi
+        if (!confirm('Êtes-vous sûr de vouloir envoyer ce message ?')) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Désactiver le bouton pour éviter les double-clics
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Envoi en cours...';
+    });
+
+    // Enlever les classes d'erreur lors de la saisie
+    subjectInput.addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+
+    messageInput.addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+
+    // Compteurs de caractères
+    function updateCharCount(input, maxLength) {
+        const remaining = maxLength - input.value.length;
+        const formText = input.parentNode.querySelector('.form-text');
+        const originalText = formText.textContent.split(' - ')[0]; // Garder le texte original
+        
+        formText.textContent = `${originalText} - ${remaining} caractères restants`;
+        
+        if (remaining < 20) {
+            formText.classList.add('text-warning');
+        } else {
+            formText.classList.remove('text-warning');
+        }
+    }
+
+    subjectInput.addEventListener('input', function() {
+        updateCharCount(this, 100);
+    });
+
+    messageInput.addEventListener('input', function() {
+        updateCharCount(this, 2000);
+    });
+
+    // Initialiser les compteurs
+    updateCharCount(subjectInput, 100);
+    updateCharCount(messageInput, 2000);
+});
+</script>
+{% endblock %}

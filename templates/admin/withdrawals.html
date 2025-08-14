@@ -1,0 +1,328 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Demandes de retrait - Administration - DOUKA KM{% endblock %}
+
+{% block page_title %}Demandes de retrait{% endblock %}
+
+{% block admin_content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>
+                    Demandes de retrait des marchands
+                </h5>
+                <div class="d-flex gap-2">
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="statusFilter" id="all" autocomplete="off" checked>
+                        <label class="btn btn-outline-primary btn-sm" for="all">Toutes</label>
+                        
+                        <input type="radio" class="btn-check" name="statusFilter" id="pending" autocomplete="off">
+                        <label class="btn btn-outline-warning btn-sm" for="pending">En attente</label>
+                        
+                        <input type="radio" class="btn-check" name="statusFilter" id="approved" autocomplete="off">
+                        <label class="btn btn-outline-success btn-sm" for="approved">Approuvées</label>
+                        
+                        <input type="radio" class="btn-check" name="statusFilter" id="processing" autocomplete="off">
+                        <label class="btn btn-outline-info btn-sm" for="processing">En traitement</label>
+                        
+                        <input type="radio" class="btn-check" name="statusFilter" id="completed" autocomplete="off">
+                        <label class="btn btn-outline-primary btn-sm" for="completed">Terminées</label>
+                        
+                        <input type="radio" class="btn-check" name="statusFilter" id="rejected" autocomplete="off">
+                        <label class="btn btn-outline-danger btn-sm" for="rejected">Rejetées</label>
+                        
+                        <input type="radio" class="btn-check" name="statusFilter" id="cancelled" autocomplete="off">
+                        <label class="btn btn-outline-secondary btn-sm" for="cancelled">Annulées</label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if withdrawal_requests %}
+                    <!-- Statistiques -->
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            <div class="card text-center border-warning">
+                                <div class="card-body">
+                                    <h6 class="card-title text-warning">En attente</h6>
+                                    <h4 class="card-text" id="pendingCount">{{ withdrawal_requests|selectattr("status", "equalto", "pending")|list|length }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card text-center border-success">
+                                <div class="card-body">
+                                    <h6 class="card-title text-success">Approuvées</h6>
+                                    <h4 class="card-text" id="approvedCount">{{ withdrawal_requests|selectattr("status", "equalto", "approved")|list|length }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card text-center border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title text-info">En traitement</h6>
+                                    <h4 class="card-text" id="processingCount">{{ withdrawal_requests|selectattr("status", "equalto", "processing")|list|length }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card text-center border-primary">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">Terminées</h6>
+                                    <h4 class="card-text" id="completedCount">{{ withdrawal_requests|selectattr("status", "equalto", "completed")|list|length }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card text-center border-danger">
+                                <div class="card-body">
+                                    <h6 class="card-title text-danger">Rejetées</h6>
+                                    <h4 class="card-text" id="rejectedCount">{{ withdrawal_requests|selectattr("status", "equalto", "rejected")|list|length }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card text-center border-secondary">
+                                <div class="card-body">
+                                    <h6 class="card-title text-secondary">Annulées</h6>
+                                    <h4 class="card-text" id="cancelledCount">{{ withdrawal_requests|selectattr("status", "equalto", "cancelled")|list|length }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Marchand</th>
+                                    <th>Montant</th>
+                                    <th>Méthode</th>
+                                    <th>Date de demande</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdrawalsTable">
+                                {% for request in withdrawal_requests %}
+                                <tr data-status="{{ request.status }}">
+                                    <td>
+                                        <span class="badge bg-light text-dark">#{{ request.id }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="ms-2">
+                                                <strong>{{ request.merchant_name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ request.merchant_email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">{{ "%.0f"|format(request.amount) }} KMF</strong>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <span class="badge bg-info">{{ request.method.title() }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            {{ request.requested_at[:10] }}
+                                            <br>
+                                            <small class="text-muted">{{ request.requested_at[11:16] }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if request.status == 'pending' %}
+                                            <span class="badge bg-warning">En attente</span>
+                                        {% elif request.status == 'approved' %}
+                                            <span class="badge bg-success">Approuvée</span>
+                                        {% elif request.status == 'rejected' %}
+                                            <span class="badge bg-danger">Rejetée</span>
+                                        {% elif request.status == 'processing' %}
+                                            <span class="badge bg-info">En traitement</span>
+                                        {% elif request.status == 'completed' %}
+                                            <span class="badge bg-primary">Terminée</span>
+                                        {% elif request.status == 'cancelled' %}
+                                            <span class="badge bg-secondary">Annulée</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#withdrawalModal"
+                                                    onclick="viewWithdrawal('{{ request.id }}')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            {% if request.status == 'pending' %}
+                                                <button type="button" class="btn btn-outline-success" 
+                                                        onclick="updateStatus('{{ request.id }}', 'approved')">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger" 
+                                                        onclick="updateStatus('{{ request.id }}', 'rejected')">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            {% elif request.status == 'approved' %}
+                                                <button type="button" class="btn btn-outline-info" 
+                                                        onclick="updateStatus('{{ request.id }}', 'processing')">
+                                                    <i class="fas fa-clock"></i>
+                                                </button>
+                                            {% elif request.status == 'processing' %}
+                                                <button type="button" class="btn btn-outline-primary" 
+                                                        onclick="updateStatus('{{ request.id }}', 'completed')">
+                                                    <i class="fas fa-check-double"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune demande de retrait</h5>
+                        <p class="text-muted">Les demandes de retrait des marchands apparaîtront ici.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de détail -->
+<div class="modal fade" id="withdrawalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails de la demande de retrait</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="withdrawalDetails">
+                <!-- Contenu chargé dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmMessage">
+                <!-- Message de confirmation -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="confirmAction">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtrage par statut
+    const statusFilters = document.querySelectorAll('input[name="statusFilter"]');
+    const tableRows = document.querySelectorAll('#withdrawalsTable tr');
+    
+    statusFilters.forEach(filter => {
+        filter.addEventListener('change', function() {
+            const selectedStatus = this.id;
+            
+            tableRows.forEach(row => {
+                const rowStatus = row.getAttribute('data-status');
+                
+                if (selectedStatus === 'all' || selectedStatus === rowStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+
+function viewWithdrawal(requestId) {
+    // Charger les détails de la demande
+    fetch(`/admin/withdrawal/${requestId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('withdrawalDetails').innerHTML = data.html;
+            } else {
+                document.getElementById('withdrawalDetails').innerHTML = 
+                    '<div class="alert alert-danger">Erreur lors du chargement des détails.</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            document.getElementById('withdrawalDetails').innerHTML = 
+                '<div class="alert alert-danger">Erreur lors du chargement des détails.</div>';
+        });
+}
+
+function updateStatus(requestId, newStatus) {
+    const statusLabels = {
+        'approved': 'approuver',
+        'rejected': 'rejeter',
+        'processing': 'mettre en traitement',
+        'completed': 'marquer comme terminée'
+    };
+    
+    const message = `Êtes-vous sûr de vouloir ${statusLabels[newStatus]} cette demande de retrait ?`;
+    document.getElementById('confirmMessage').textContent = message;
+    
+    const confirmBtn = document.getElementById('confirmAction');
+    confirmBtn.onclick = function() {
+        // Envoyer la requête de mise à jour
+        fetch(`/admin/withdrawal/${requestId}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                status: newStatus,
+                admin_notes: prompt('Notes de l\'administrateur (optionnel):') || ''
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload(); // Recharger la page pour voir les changements
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors de la mise à jour');
+        });
+        
+        // Fermer le modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+        modal.hide();
+    };
+    
+    // Afficher le modal de confirmation
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    confirmModal.show();
+}
+</script>
+{% endblock %}

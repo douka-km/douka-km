@@ -1,0 +1,975 @@
+{% extends 'base.html' %}
+
+{% block title %}Panier | DOUKA KM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cart-item {
+        border-bottom: 1px solid #e9ecef;
+        padding: 20px 0;
+    }
+    
+    .cart-item:last-child {
+        border-bottom: none;
+    }
+    
+    .cart-item-img {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+    }
+    
+    .cart-summary-card {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+    }
+    
+    /* Amélioration de la visibilité du contrôle de quantité */
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        max-width: 120px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .quantity-input {
+        width: 40px;
+        text-align: center;
+        border: none;
+        border-radius: 0;
+        padding: 0.375rem 0;
+        font-weight: bold;
+        color: #212529;
+        background-color: #fff;
+    }
+    
+    .quantity-btn {
+        border: none;
+        background-color: #f8f9fa;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .quantity-btn:hover {
+        background-color: #e9ecef;
+    }
+    
+    .quantity-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background-color: #f8f9fa;
+    }
+    
+    .stock-info .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* Animation de secousse pour le feedback visuel */
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+        20%, 40%, 60%, 80% { transform: translateX(2px); }
+    }
+    
+    .empty-cart-container {
+        text-align: center;
+        padding: 50px 0;
+    }
+    
+    .empty-cart-icon {
+        font-size: 70px;
+        color: #d1d1d1;
+        margin-bottom: 20px;
+    }
+    
+    /* S'assurer que l'input est bien visible sur les appareils mobiles */
+    @media (max-width: 767.98px) {
+        .quantity-control {
+            margin: 0 auto;
+        }
+        
+        .quantity-input {
+            -webkit-appearance: none;
+            appearance: none;
+            font-size: 16px; /* Empêche le zoom sur iOS */
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Panier</h1>
+    
+    <div class="row">
+        <!-- Messages flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Contenu du panier -->
+        {% if products %}
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="select-all" checked>
+                                <label class="form-check-label fw-bold" for="select-all">
+                                    Sélectionner tout
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">
+                                <span id="selected-count">{{ products|length }}</span> sur {{ products|length }} produit(s) sélectionné(s)
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% for product in products %}
+                    <div class="cart-item" data-product-id="{{ product.id if not product.is_food else 'f_' + product.id|string }}">
+                        <div class="row align-items-center">
+                            <div class="col-md-1 col-2">
+                                <div class="form-check">
+                                    <input class="form-check-input product-select" 
+                                           type="checkbox" 
+                                           id="select-{{ product.id if not product.is_food else 'f_' + product.id|string }}"
+                                           data-product-id="{{ product.id if not product.is_food else 'f_' + product.id|string }}"
+                                           data-price="{{ product.price }}"
+                                           checked>
+                                    <label class="form-check-label" for="select-{{ product.id if not product.is_food else 'f_' + product.id|string }}">
+                                        <span class="visually-hidden">Sélectionner ce produit</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-2 col-4">
+                                {% if product.image %}
+                                    {% if product.image.startswith('http') %}
+                                        <!-- Image via URL -->
+                                        <img src="{{ product.image }}" 
+                                             alt="{{ product.name }}" 
+                                             class="img-fluid rounded"
+                                             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit';">
+                                    {% else %}
+                                        <!-- Image locale -->
+                                        <img src="{{ url_for('static', filename=product.image.replace('static/', '') if product.image.startswith('static/') else product.image) }}" 
+                                             alt="{{ product.name }}" 
+                                             class="img-fluid rounded"
+                                             onerror="this.onerror=null; this.src='https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit';">
+                                    {% endif %}
+                                {% else %}
+                                    <!-- Image placeholder -->
+                                    <img src="https://via.placeholder.com/150x150/f8f9fa/6c757d?text=Produit" 
+                                         alt="Aucune image" 
+                                         class="img-fluid rounded">
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <h5>{{ product.name }}</h5>
+                                
+                                <!-- Ajout des détails d'options du produit -->
+                                {% if product.options %}
+                                    <div class="product-options small text-muted mb-2">
+                                        {% if product.options.color %}
+                                            <div><strong>Couleur:</strong> {{ product.options.color }}</div>
+                                        {% endif %}
+                                        
+                                        {% if product.options.size %}
+                                            <div><strong>Taille:</strong> {{ product.options.size }}</div>
+                                        {% endif %}
+                                        
+                                        {% if product.options.storage %}
+                                            <div><strong>Stockage:</strong> {{ product.options.storage }}</div>
+                                        {% endif %}
+                                        
+                                        <!-- Affichage des options supplémentaires s'il y en a -->
+                                        {% for key, value in product.options.items() %}
+                                            {% if key not in ['color', 'size', 'storage'] %}
+                                                <div><strong>{{ key|capitalize }}:</strong> {{ value }}</div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="price">
+                                    {{ product.price|format_number }} KMF
+                                    
+                                    <!-- Afficher le prix de base si un modificateur de prix est appliqué -->
+                                    {% if product.price_modifier is defined and product.price_modifier > 0 %}
+                                        <small class="text-muted d-block">(Prix de base: {{ product.base_price|format_number }} KMF)</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 col-6 mt-2 mt-md-0">
+                                <form action="{{ url_for('update_cart', product_id=product.id) }}" method="post" class="update-quantity-form">
+                                    <div class="quantity-control">
+                                        <button type="button" 
+                                                class="quantity-btn decrease-btn" 
+                                                data-product-id="{{ product.id }}"
+                                                {% if product.quantity <= 1 %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <input type="number" 
+                                               name="quantity" 
+                                               value="{{ product.quantity }}" 
+                                               min="1" 
+                                               max="{{ product.stock if product.stock else 99 }}"
+                                               class="form-control quantity-input" 
+                                               data-product-id="{{ product.id }}"
+                                               data-max-stock="{{ product.stock if product.stock else 99 }}"
+                                               readonly>
+                                        <button type="button" 
+                                                class="quantity-btn increase-btn" 
+                                                data-product-id="{{ product.id }}"
+                                                {% if product.stock and product.quantity >= product.stock %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Badge de stock -->
+                                    {% if product.stock %}
+                                        <div class="stock-info mt-1 text-center">
+                                            {% if product.stock == 0 %}
+                                                <span class="badge bg-danger">Rupture de stock</span>
+                                            {% elif product.stock <= 5 %}
+                                                <span class="badge bg-warning text-dark">Stock limité: {{ product.stock }}</span>
+                                            {% elif product.stock <= 10 %}
+                                                <span class="badge bg-info">Stock: {{ product.stock }}</span>
+                                            {% else %}
+                                                <span class="badge bg-success">En stock: {{ product.stock }}</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </form>
+                            </div>
+                            <div class="col-md-3 col-6 mt-2 mt-md-0">
+                                <div class="d-flex justify-content-end h-100 align-items-center">
+                                    <div class="text-primary fw-bold me-3">{{ product.subtotal|format_number }} KMF</div>
+                                    <form action="{{ url_for('remove_from_cart', product_id=product.id) }}" method="post" class="remove-item-form">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <a href="{{ url_for('products') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-chevron-left me-2"></i> Continuer vos achats
+                    </a>
+                    <button type="button" class="btn btn-outline-danger me-2" id="remove-selected-btn" disabled>
+                        <i class="fas fa-trash-alt me-2"></i> Supprimer sélectionnés
+                    </button>
+                </div>
+                <form action="{{ url_for('clear_cart') }}" method="post" id="clear-cart-form">
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="fas fa-trash-alt me-2"></i> Vider le panier
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="cart-summary-card">
+                <h5 class="mb-3">Récapitulatif</h5>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Sous-total</span>
+                    <strong id="selected-subtotal">{{ total|format_number }} KMF</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-muted small">
+                    <span>Livraison</span>
+                    <span>Calculé à la caisse</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-4">
+                    <span class="h5 mb-0">Total</span>
+                    <span class="h5 mb-0" id="selected-total">{{ total|format_number }} KMF</span>
+                </div>
+                
+                <div id="selection-warning" class="alert alert-warning d-none" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i> 
+                    Veuillez sélectionner au moins un produit pour continuer.
+                </div>
+                
+                <button class="btn btn-primary w-100" id="checkout-btn" onclick="checkoutSelected('regular')">
+                    Commander les produits sélectionnés <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+                
+            </div>
+        </div>
+        {% else %}
+        <!-- Panier vide -->
+        <div class="col-12">
+            <div class="empty-cart-container">
+                <div class="empty-cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <h3>Votre panier est vide</h3>
+                <p class="text-muted mb-4">Vous n'avez pas encore ajouté de produits à votre panier.</p>
+                <a href="{{ url_for('products') }}" class="btn btn-primary">
+                    Découvrir nos produits <i class="fas fa-chevron-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion des boutons de quantité avec validation du stock
+        document.querySelectorAll('.decrease-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const productId = this.dataset.productId;
+                const input = this.nextElementSibling;
+                let value = parseInt(input.value);
+                
+                if (value > 1) {
+                    input.value = value - 1;
+                    updateCartButtonStates(productId);
+                    // Mettre à jour immédiatement l'affichage avant l'envoi
+                    updateSelectionDisplay();
+                    submitForm(this.closest('form'));
+                }
+            });
+        });
+        
+        document.querySelectorAll('.increase-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const productId = this.dataset.productId;
+                const input = this.previousElementSibling;
+                const maxStock = parseInt(input.dataset.maxStock) || 99;
+                let value = parseInt(input.value);
+                
+                if (value < maxStock) {
+                    input.value = value + 1;
+                    updateCartButtonStates(productId);
+                    // Mettre à jour immédiatement l'affichage avant l'envoi
+                    updateSelectionDisplay();
+                    submitForm(this.closest('form'));
+                } else {
+                    // Feedback visuel quand on atteint la limite de stock
+                    const stockInfo = input.closest('form').querySelector('.stock-info');
+                    if (stockInfo) {
+                        stockInfo.style.animation = 'shake 0.5s';
+                        setTimeout(() => {
+                            stockInfo.style.animation = '';
+                        }, 500);
+                    }
+                }
+            });
+        });
+        
+        // Fonction pour mettre à jour les états des boutons selon le stock
+        function updateCartButtonStates(productId) {
+            const quantityInput = document.querySelector(`.quantity-input[data-product-id="${productId}"]`);
+            if (!quantityInput) return;
+            
+            const currentQuantity = parseInt(quantityInput.value) || 1;
+            const maxStock = parseInt(quantityInput.dataset.maxStock) || 99;
+            
+            const decreaseBtn = document.querySelector(`.decrease-btn[data-product-id="${productId}"]`);
+            const increaseBtn = document.querySelector(`.increase-btn[data-product-id="${productId}"]`);
+            
+            // Gérer le bouton de diminution
+            if (decreaseBtn) {
+                if (currentQuantity <= 1) {
+                    decreaseBtn.disabled = true;
+                    decreaseBtn.style.opacity = '0.5';
+                    decreaseBtn.style.cursor = 'not-allowed';
+                } else {
+                    decreaseBtn.disabled = false;
+                    decreaseBtn.style.opacity = '1';
+                    decreaseBtn.style.cursor = 'pointer';
+                }
+            }
+            
+            // Gérer le bouton d'augmentation
+            if (increaseBtn) {
+                if (currentQuantity >= maxStock) {
+                    increaseBtn.disabled = true;
+                    increaseBtn.style.opacity = '0.5';
+                    increaseBtn.style.cursor = 'not-allowed';
+                } else {
+                    increaseBtn.disabled = false;
+                    increaseBtn.style.opacity = '1';
+                    increaseBtn.style.cursor = 'pointer';
+                }
+            }
+        }
+        
+        // Initialiser les états des boutons au chargement
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            const productId = input.dataset.productId;
+            updateCartButtonStates(productId);
+        });
+        
+        // Correction pour s'assurer que les champs de quantité sont visibles et correctement mis à jour
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            const productId = input.dataset.productId;
+            const maxStock = parseInt(input.dataset.maxStock) || 99;
+            
+            // S'assurer que la valeur est visible
+            const currentValue = input.value;
+            input.value = '';
+            input.value = currentValue;
+            
+            // Mettre un attribut readonly plutôt que disabled pour éviter les problèmes de visibilité
+            input.removeAttribute('disabled');
+            input.setAttribute('readonly', 'readonly');
+            
+            // Ajouter un événement click pour permettre la modification via le pavé numérique si nécessaire
+            input.addEventListener('click', function() {
+                this.removeAttribute('readonly');
+                this.focus();
+                this.select();
+            });
+            
+            // Réappliquer readonly après modification et valider le stock
+            input.addEventListener('blur', function() {
+                const newValue = parseInt(this.value) || 1;
+                
+                // Valider contre le stock disponible
+                if (newValue > maxStock) {
+                    this.value = maxStock;
+                    // Feedback visuel
+                    const stockInfo = this.closest('form').querySelector('.stock-info');
+                    if (stockInfo) {
+                        stockInfo.style.animation = 'shake 0.5s';
+                        setTimeout(() => {
+                            stockInfo.style.animation = '';
+                        }, 500);
+                    }
+                } else if (newValue < 1) {
+                    this.value = 1;
+                }
+                
+                this.setAttribute('readonly', 'readonly');
+                updateCartButtonStates(productId);
+            });
+            
+            input.addEventListener('change', function() {
+                const newValue = parseInt(this.value) || 1;
+                
+                // Valider contre le stock disponible
+                if (newValue > maxStock) {
+                    this.value = maxStock;
+                } else if (newValue < 1) {
+                    this.value = 1;
+                }
+                
+                updateCartButtonStates(productId);
+                // Mettre à jour immédiatement l'affichage avant l'envoi
+                updateSelectionDisplay();
+                submitForm(this.closest('form'));
+            });
+            
+            // Validation en temps réel pendant la frappe
+            input.addEventListener('input', function() {
+                const newValue = parseInt(this.value) || 0;
+                
+                if (newValue > maxStock) {
+                    this.value = maxStock;
+                } else if (newValue < 0) {
+                    this.value = '';
+                }
+                
+                updateCartButtonStates(productId);
+            });
+        });
+        
+        // Fonction pour soumettre un formulaire
+        function submitForm(form) {
+            const formData = new FormData(form);
+            const actionUrl = form.getAttribute('action');
+            
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mise à jour du nombre total d'articles dans l'icône du panier
+                    const cartCountElement = document.querySelector('.cart-count');
+                    if (cartCountElement) {
+                        cartCountElement.textContent = data.cart_count;
+                    }
+                    
+                    // Si on est redirigé (panier vide), recharger la page
+                    if (data.reload) {
+                        localStorage.removeItem(SELECTION_STORAGE_KEY); // Nettoyer la sélection
+                        window.location.reload();
+                        return;
+                    }
+                    
+                    // Gérer les avertissements de stock
+                    if (data.warning && data.max_quantity) {
+                        // Mettre à jour l'input avec la quantité maximale
+                        const quantityInput = form.querySelector('.quantity-input');
+                        if (quantityInput) {
+                            quantityInput.value = data.max_quantity;
+                            const productId = quantityInput.dataset.productId;
+                            updateCartButtonStates(productId);
+                            
+                            // Feedback visuel d'avertissement
+                            const stockInfo = form.querySelector('.stock-info');
+                            if (stockInfo) {
+                                stockInfo.style.animation = 'shake 0.5s';
+                                setTimeout(() => {
+                                    stockInfo.style.animation = '';
+                                }, 500);
+                            }
+                        }
+                    }
+                    
+                    // Pour les mises à jour de quantité, mettre à jour dynamiquement les totaux
+                    if (actionUrl.includes('update-cart')) {
+                        // Recalculer et mettre à jour l'affichage des totaux sans recharger
+                        updateSelectionDisplay();
+                        
+                        // Afficher un feedback visuel que la mise à jour a réussi
+                        const quantityInput = form.querySelector('.quantity-input');
+                        if (quantityInput) {
+                            const originalBorder = quantityInput.style.border;
+                            const borderColor = data.warning ? '#ffc107' : '#28a745';  // Jaune pour avertissement, vert pour succès
+                            quantityInput.style.border = `2px solid ${borderColor}`;
+                            setTimeout(() => {
+                                quantityInput.style.border = originalBorder;
+                            }, 1000);
+                        }
+                    } else {
+                        // Pour les autres actions, mettre à jour immédiatement l'affichage
+                        updateSelectionDisplay();
+                    }
+                    
+                    // Afficher un message d'information si c'est un avertissement
+                    if (data.warning && data.message) {
+                        console.log('Stock limité:', data.message);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la mise à jour du panier:', error);
+                // En cas d'erreur, recharger la page pour sécurité
+                window.location.reload();
+            });
+        }
+        
+        // Gestion de la suppression d'un élément
+        document.querySelectorAll('.remove-item-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (confirm('Êtes-vous sûr de vouloir supprimer cet article du panier?')) {
+                    const formData = new FormData(form);
+                    
+                    // S'assurer que l'ID du produit est transmis comme une chaîne
+                    const actionUrl = form.getAttribute('action');
+                    
+                    fetch(actionUrl, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Mise à jour du nombre total d'articles dans l'icône du panier
+                            const cartCountElement = document.querySelector('.cart-count');
+                            if (cartCountElement) {
+                                cartCountElement.textContent = data.cart_count;
+                            }
+                            
+                            // Si le panier est maintenant vide, nettoyer la sélection
+                            if (data.cart_count === 0) {
+                                localStorage.removeItem(SELECTION_STORAGE_KEY);
+                            }
+                            
+                            // Recharger la page pour mettre à jour le panier
+                            window.location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la suppression du produit:', error);
+                    });
+                }
+            });
+        });
+        
+        // Gestion du bouton "Vider le panier"
+        const clearCartForm = document.getElementById('clear-cart-form');
+        if (clearCartForm) {
+            clearCartForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (confirm('Êtes-vous sûr de vouloir vider votre panier?')) {
+                    const formData = new FormData(clearCartForm);
+                    fetch(clearCartForm.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Mise à jour du nombre d'articles dans l'icône du panier
+                            const cartCountElement = document.querySelector('.cart-count');
+                            if (cartCountElement) {
+                                cartCountElement.textContent = data.cart_count;
+                            }
+                            
+                            // Nettoyer la sélection quand le panier est vidé
+                            localStorage.removeItem(SELECTION_STORAGE_KEY);
+                            
+                            // Recharger la page pour montrer le panier vide
+                            window.location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors du vidage du panier:', error);
+                    });
+                }
+            });
+        }
+        
+        // === GESTION DE LA SÉLECTION DES PRODUITS ===
+        
+        // Variables globales pour la sélection
+        let selectedProducts = new Set();
+        const SELECTION_STORAGE_KEY = 'cart_product_selection';
+        
+        // Sauvegarder l'état de sélection dans localStorage
+        function saveSelectionState() {
+            const selectionState = Array.from(selectedProducts);
+            localStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(selectionState));
+        }
+        
+        // Restaurer l'état de sélection depuis localStorage
+        function loadSelectionState() {
+            try {
+                const saved = localStorage.getItem(SELECTION_STORAGE_KEY);
+                if (saved) {
+                    const selectionState = JSON.parse(saved);
+                    selectedProducts = new Set(selectionState);
+                    return true;
+                }
+            } catch (error) {
+                console.warn('Erreur lors du chargement de l\'état de sélection:', error);
+            }
+            return false;
+        }
+        
+        // Nettoyer la sélection des produits qui n'existent plus
+        function cleanupSelectionState() {
+            const currentProductIds = new Set();
+            document.querySelectorAll('.product-select').forEach(checkbox => {
+                currentProductIds.add(checkbox.dataset.productId);
+            });
+            
+            // Supprimer de la sélection les produits qui ne sont plus dans le panier
+            const updatedSelection = new Set();
+            selectedProducts.forEach(productId => {
+                if (currentProductIds.has(productId)) {
+                    updatedSelection.add(productId);
+                }
+            });
+            
+            selectedProducts = updatedSelection;
+            saveSelectionState();
+        }
+        
+        // Initialiser la sélection
+        function initializeSelection() {
+            const productCheckboxes = document.querySelectorAll('.product-select');
+            
+            // Essayer de charger l'état sauvegardé
+            const hasRestoredState = loadSelectionState();
+            
+            if (hasRestoredState) {
+                // Nettoyer les produits qui n'existent plus
+                cleanupSelectionState();
+                
+                // Vérifier s'il y a de nouveaux produits qui ne sont pas dans la sélection
+                productCheckboxes.forEach(checkbox => {
+                    const productId = checkbox.dataset.productId;
+                    if (!selectedProducts.has(productId)) {
+                        // Nouveau produit : l'ajouter automatiquement à la sélection
+                        selectedProducts.add(productId);
+                    }
+                });
+                
+                // Appliquer l'état restauré aux checkboxes (maintenant avec les nouveaux produits inclus)
+                productCheckboxes.forEach(checkbox => {
+                    const productId = checkbox.dataset.productId;
+                    const isSelected = selectedProducts.has(productId);
+                    checkbox.checked = isSelected;
+                });
+            } else {
+                // État par défaut : tous les produits sélectionnés
+                productCheckboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    selectedProducts.add(checkbox.dataset.productId);
+                });
+            }
+            
+            // Mettre à jour la case "Sélectionner tout" selon l'état réel
+            const allCheckboxes = document.querySelectorAll('.product-select');
+            const allSelected = Array.from(allCheckboxes).every(cb => cb.checked);
+            const someSelected = Array.from(allCheckboxes).some(cb => cb.checked);
+            
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allSelected;
+                selectAllCheckbox.indeterminate = someSelected && !allSelected;
+            }
+            
+            // Sauvegarder l'état mis à jour (avec les nouveaux produits inclus)
+            saveSelectionState();
+            updateSelectionDisplay();
+        }
+        
+        // Gestion du "Sélectionner tout"
+        const selectAllCheckbox = document.getElementById('select-all');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                const productCheckboxes = document.querySelectorAll('.product-select');
+                const isChecked = this.checked;
+                
+                productCheckboxes.forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                    if (isChecked) {
+                        selectedProducts.add(checkbox.dataset.productId);
+                    } else {
+                        selectedProducts.delete(checkbox.dataset.productId);
+                    }
+                });
+                
+                saveSelectionState();
+                updateSelectionDisplay();
+            });
+        }
+        
+        // Gestion des cases à cocher individuelles
+        document.querySelectorAll('.product-select').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const productId = this.dataset.productId;
+                
+                if (this.checked) {
+                    selectedProducts.add(productId);
+                } else {
+                    selectedProducts.delete(productId);
+                }
+                
+                // Mettre à jour la case "Sélectionner tout"
+                const allCheckboxes = document.querySelectorAll('.product-select');
+                const allSelected = Array.from(allCheckboxes).every(cb => cb.checked);
+                const someSelected = Array.from(allCheckboxes).some(cb => cb.checked);
+                
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allSelected;
+                    selectAllCheckbox.indeterminate = someSelected && !allSelected;
+                }
+                
+                saveSelectionState();
+                updateSelectionDisplay();
+            });
+        });
+        
+        // Mettre à jour l'affichage de la sélection
+        function updateSelectionDisplay() {
+            const selectedCount = selectedProducts.size;
+            const totalCount = document.querySelectorAll('.product-select').length;
+            
+            // Mettre à jour le compteur
+            const selectedCountElement = document.getElementById('selected-count');
+            if (selectedCountElement) {
+                selectedCountElement.textContent = selectedCount;
+            }
+            
+            // Calculer le total des produits sélectionnés et mettre à jour les sous-totaux individuels
+            let selectedSubtotal = 0;
+            document.querySelectorAll('.product-select').forEach(checkbox => {
+                const price = parseFloat(checkbox.dataset.price) || 0;
+                const productRow = checkbox.closest('.cart-item');
+                const quantityInput = productRow.querySelector('.quantity-input');
+                const quantity = parseInt(quantityInput.value) || 1;
+                const subtotal = price * quantity;
+                
+                // Mettre à jour le sous-total individuel affiché pour ce produit
+                const subtotalElement = productRow.querySelector('.text-primary.fw-bold');
+                if (subtotalElement) {
+                    subtotalElement.textContent = subtotal.toLocaleString('fr-FR') + ' KMF';
+                }
+                
+                // Ajouter au total seulement si le produit est sélectionné
+                if (checkbox.checked) {
+                    selectedSubtotal += subtotal;
+                }
+            });
+            
+            // Mettre à jour l'affichage des totaux
+            const subtotalElement = document.getElementById('selected-subtotal');
+            const totalElement = document.getElementById('selected-total');
+            if (subtotalElement && totalElement) {
+                const formattedSubtotal = selectedSubtotal.toLocaleString('fr-FR');
+                subtotalElement.textContent = formattedSubtotal + ' KMF';
+                totalElement.textContent = formattedSubtotal + ' KMF';
+            }
+            
+            // Afficher/masquer l'avertissement de sélection
+            const warningElement = document.getElementById('selection-warning');
+            if (warningElement) {
+                if (selectedCount === 0) {
+                    warningElement.classList.remove('d-none');
+                } else {
+                    warningElement.classList.add('d-none');
+                }
+            }
+            
+            // Activer/désactiver les boutons
+            const checkoutBtn = document.getElementById('checkout-btn');
+            const checkoutFoodBtn = document.getElementById('checkout-food-btn');
+            const checkoutRegularBtn = document.getElementById('checkout-regular-btn');
+            const removeSelectedBtn = document.getElementById('remove-selected-btn');
+            
+            const hasSelection = selectedCount > 0;
+            
+            if (checkoutBtn) checkoutBtn.disabled = !hasSelection;
+            if (checkoutFoodBtn) checkoutFoodBtn.disabled = !hasSelection;
+            if (checkoutRegularBtn) checkoutRegularBtn.disabled = !hasSelection;
+            if (removeSelectedBtn) removeSelectedBtn.disabled = !hasSelection;
+        }
+        
+        // Fonction pour procéder au checkout avec les produits sélectionnés
+        window.checkoutSelected = function(type) {
+            if (selectedProducts.size === 0) {
+                alert('Veuillez sélectionner au moins un produit.');
+                return;
+            }
+            
+            // Créer un formulaire caché pour envoyer les produits sélectionnés
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url_for("checkout") }}';
+            
+            // Ajouter les IDs des produits sélectionnés
+            selectedProducts.forEach(productId => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_products[]';
+                input.value = productId;
+                form.appendChild(input);
+            });
+            
+            // Ajouter un champ pour indiquer que c'est une sélection partielle
+            const partialInput = document.createElement('input');
+            partialInput.type = 'hidden';
+            partialInput.name = 'partial_checkout';
+            partialInput.value = 'true';
+            form.appendChild(partialInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        };
+        
+        // Fonction pour supprimer les produits sélectionnés
+        const removeSelectedBtn = document.getElementById('remove-selected-btn');
+        if (removeSelectedBtn) {
+            removeSelectedBtn.addEventListener('click', function() {
+                if (selectedProducts.size === 0) {
+                    alert('Veuillez sélectionner au moins un produit à supprimer.');
+                    return;
+                }
+                
+                const selectedCount = selectedProducts.size;
+                const productsToRemove = Array.from(selectedProducts);
+                
+                if (confirm(`Êtes-vous sûr de vouloir supprimer ${selectedCount} produit(s) sélectionné(s) ?`)) {
+                    // Créer un formulaire pour supprimer les produits sélectionnés
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '{{ url_for("remove_selected_from_cart") }}';
+                    
+                    productsToRemove.forEach(productId => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'selected_products[]';
+                        input.value = productId;
+                        form.appendChild(input);
+                        
+                        // Supprimer le produit de la sélection
+                        selectedProducts.delete(productId);
+                    });
+                    
+                    // Sauvegarder l'état de sélection mis à jour
+                    saveSelectionState();
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        }
+        
+        // Initialiser la sélection au chargement de la page
+        initializeSelection();
+    });
+    
+    // Fonction pour filtrer les articles du panier avant de passer à la caisse
+    function filterCartItems(type) {
+        const formData = new FormData();
+        formData.append('filter_type', type);
+        
+        fetch('/filter-cart', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '{{ url_for("checkout") }}';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du filtrage du panier:', error);
+        });
+    }
+</script>
+{% endblock %}

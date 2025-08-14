@@ -1,0 +1,363 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Tableau de bord marchand - DOUKA KM{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Tableau de bord</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item active">Dashboard</li>
+    </ol>
+    
+    <!-- Information sur les paramètres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Paramètres de vente actuels</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Taux de commission :</strong> {{ site_settings.commission_rate }}%</p>
+                        <small class="text-muted">Prélevé sur chaque vente</small>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Frais de livraison :</strong> {{ site_settings.shipping_fee|format_number }} KMF</p>
+                        <small class="text-muted">Gratuite pour commandes ≥ {{ site_settings.free_shipping_threshold|format_number }} KMF</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Message de bienvenue -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h4>Bienvenue, {{ merchant.store_name }}</h4>
+                    <p>Voici un aperçu de votre activité sur DOUKA KM.</p>
+                    
+                    {% if not merchant.store_verified %}
+                    <div class="alert alert-warning mb-0 d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-3 fa-lg"></i>
+                        <div>
+                            <strong>Boutique en attente de vérification</strong><br>
+                            Vous ne pouvez pas ajouter, modifier ou supprimer des produits tant que votre boutique n'est pas vérifiée par nos administrateurs.
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success mb-0 d-flex align-items-center">
+                        <i class="fas fa-check-circle me-3 fa-lg"></i>
+                        <div>
+                            <strong>Boutique vérifiée</strong><br>
+                            Votre boutique est vérifiée ! Vous pouvez maintenant gérer vos produits librement.
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistiques principales -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Produits</h6>
+                            <h2 class="mt-2 mb-0">{{ stats.total_products|format_number }}</h2>
+                        </div>
+                        <div><i class="fas fa-boxes fa-3x text-white-50"></i></div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('merchant_products') }}">Voir les détails</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Commandes en attente</h6>
+                            <h2 class="mt-2 mb-0">{{ stats.pending_orders|format_number }}</h2>
+                        </div>
+                        <div><i class="fas fa-clock fa-3x text-white-50"></i></div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('merchant_orders') }}">Voir les détails</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Solde du compte</h6>
+                            <h2 class="mt-2 mb-0">{{ stats.balance|format_number }} KMF</h2>
+                        </div>
+                        <div><i class="fas fa-wallet fa-3x text-white-50"></i></div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <!-- Modifié pour supprimer la référence à 'merchant_payments' -->
+                    <span class="small text-white">Montant disponible</span>
+                    <div class="small text-white"><i class="fas fa-check"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-danger text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total des commandes</h6>
+                            <h2 class="mt-2 mb-0">{{ stats.total_orders|format_number }}</h2>
+                        </div>
+                        <div><i class="fas fa-shopping-cart fa-3x text-white-50"></i></div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('merchant_orders') }}">Voir les détails</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section détaillée du solde -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-wallet me-2"></i> Détails du solde</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <h6 class="text-muted mb-1">Gains totaux</h6>
+                                <h4 class="text-success mb-0">{{ stats.total_earnings|format_number }} KMF</h4>
+                                <small class="text-muted">{{ stats.delivered_orders_count }} commandes livrées</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <h6 class="text-muted mb-1">Commission ({{ (stats.commission_rate * 100)|int }}%)</h6>
+                                <h4 class="text-warning mb-0">{{ stats.commission_fees|format_number }} KMF</h4>
+                                <small class="text-muted">Frais de la plateforme</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <h6 class="text-muted mb-1">Solde disponible</h6>
+                                <h4 class="text-primary mb-0">{{ stats.balance|format_number }} KMF</h4>
+                                <small class="text-muted">Prêt pour retrait</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3">
+                                {% if stats.balance >= 10000 %}
+                                <a href="{{ url_for('merchant_payments') }}" class="btn btn-success btn-lg w-100">
+                                    <i class="fas fa-money-bill-wave me-2"></i>
+                                    Demander un retrait
+                                </a>
+                                {% else %}
+                                <button class="btn btn-secondary btn-lg w-100" disabled title="Solde minimum requis: 10 000 KMF">
+                                    <i class="fas fa-money-bill-wave me-2"></i>
+                                    Demander un retrait
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if stats.balance >= 10000 %}
+                    <div class="mt-3 p-3 bg-success bg-opacity-10 border border-success rounded">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <div>
+                                <strong>Félicitations !</strong> 
+                                Vous avez un solde de <strong>{{ stats.balance|format_number }} KMF</strong>. 
+                                Vous pouvez demander un retrait.
+                                <a href="{{ url_for('merchant_payments') }}" class="btn btn-sm btn-success ms-2">
+                                    <i class="fas fa-arrow-right me-1"></i> Faire un retrait
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="mt-3 p-3 bg-info bg-opacity-10 border border-info rounded">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle text-info me-2"></i>
+                            <div>
+                                <strong>Information :</strong> 
+                                Solde actuel: <strong>{{ stats.balance|format_number }} KMF</strong>. 
+                                Minimum requis pour un retrait: <strong>10 000 KMF</strong>.
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Nouvelle section des évaluations -->
+    <div class="row mb-4">
+        <div class="col-xl-6 col-md-6">
+            <div class="card bg-info text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Note moyenne</h6>
+                            <h2 class="mt-2 mb-0">
+                                {% if stats.avg_rating > 0 %}
+                                    {{ "%.1f"|format(stats.avg_rating) }}
+                                    <small class="h6">/ 5</small>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </h2>
+                            <small>{{ stats.total_reviews }} avis</small>
+                        </div>
+                        <div><i class="fas fa-star fa-3x text-white-50"></i></div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a class="small text-white stretched-link" href="{{ url_for('merchant_reviews') }}">Voir tous les avis</a>
+                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6 col-md-6">
+            <div class="card bg-secondary text-white mb-4">
+                <div class="card-body">
+                    <h6 class="card-title mb-2">Répartition des notes</h6>
+                    {% if stats.total_reviews > 0 %}
+                        {% for rating in range(5, 0, -1) %}
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="me-2">{{ rating }}★</span>
+                            <div class="progress flex-grow-1 me-2" style="height: 10px;">
+                                <div class="progress-bar bg-warning" 
+                                     style="width: {{ stats.rating_distribution[rating] }}%"></div>
+                            </div>
+                            <small>{{ stats.rating_distribution[rating] }}%</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="mb-0">Aucune évaluation pour le moment</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Commandes récentes -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-table me-1"></i>
+            Commandes récentes
+        </div>
+        <div class="card-body">
+            {% if recent_orders %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="recentOrdersTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Numéro commande</th>
+                                <th>Date</th>
+                                <th>Client</th>
+                                <th>Total</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>{{ order.order_number }}</td>
+                                <td>{{ order.created_at }}</td>
+                                <td>{{ order.customer_name }}</td>
+                                <td>{{ order.total|format_number }} KMF</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if order.status == 'processing' %}bg-warning
+                                        {% elif order.status == 'shipped' %}bg-info
+                                        {% elif order.status == 'delivered' %}bg-success
+                                        {% elif order.status == 'cancelled' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ order.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('merchant_order_detail', order_id=order.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Vous n'avez pas encore reçu de commandes.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Dernières évaluations -->
+    {% if recent_reviews %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-star me-1"></i>
+            Dernières évaluations
+        </div>
+        <div class="card-body">
+            {% for review in recent_reviews %}
+            <div class="border-bottom pb-3 mb-3">
+                <div class="d-flex align-items-start">
+                    <img src="{{ review.product_image or 'static/img/default-product.png' }}" 
+                         alt="{{ review.product_name }}" class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ review.product_name }}</h6>
+                                <div class="mb-1">
+                                    {% for i in range(review.rating) %}
+                                        <i class="fas fa-star text-warning"></i>
+                                    {% endfor %}
+                                    {% for i in range(5 - review.rating) %}
+                                        <i class="far fa-star text-warning"></i>
+                                    {% endfor %}
+                                </div>
+                                <p class="mb-1 text-muted small">{{ review.title }}</p>
+                                {% if review.comment %}
+                                <p class="mb-1">{{ review.comment }}</p>
+                                {% endif %}
+                                <small class="text-muted">Par {{ review.user_name }} - {{ review.created_at }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="text-center">
+                <a href="{{ url_for('merchant_reviews') }}" class="btn btn-outline-primary">
+                    Voir toutes les évaluations
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Paramètres - {{ merchant.store_name if merchant else 'Marchand' }}{% endblock %}
+{% block page_title %}Paramètres{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Paramètres du compte</h1>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Paramètres du compte -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Paramètres de sécurité</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('merchant_change_password') }}" method="POST">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="current_password" class="form-label">Mot de passe actuel</label>
+                                <input type="password" class="form-control" id="current_password" name="current_password" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="new_password" class="form-label">Nouveau mot de passe</label>
+                                <input type="password" class="form-control" id="new_password" name="new_password" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="confirm_password" class="form-label">Confirmer le nouveau mot de passe</label>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Changer le mot de passe
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Paramètres de notification -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Paramètres de notification</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('merchant_update_notifications') }}" method="POST">
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="email_orders" name="email_orders" 
+                                       {% if merchant.notifications and merchant.notifications.email_orders %}checked{% endif %}>
+                                <label class="form-check-label" for="email_orders">
+                                    <i class="fas fa-shopping-cart text-primary me-2"></i>
+                                    Recevoir des emails pour les nouvelles commandes
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="email_messages" name="email_messages"
+                                       {% if merchant.notifications and merchant.notifications.email_messages %}checked{% endif %}>
+                                <label class="form-check-label" for="email_messages">
+                                    <i class="fas fa-envelope text-info me-2"></i>
+                                    Recevoir des emails pour les nouveaux messages
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="email_payment_changes" name="email_payment_changes"
+                                       {% if merchant.notifications and merchant.notifications.email_payment_changes %}checked{% endif %}>
+                                <label class="form-check-label" for="email_payment_changes">
+                                    <i class="fas fa-credit-card text-warning me-2"></i>
+                                    Recevoir des emails pour tous changements dans la gestion de paiement
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="sms_orders" name="sms_orders"
+                                       {% if merchant.notifications and merchant.notifications.sms_orders %}checked{% endif %}>
+                                <label class="form-check-label" for="sms_orders">
+                                    <i class="fas fa-sms text-success me-2"></i>
+                                    Recevoir des SMS pour les nouvelles commandes
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Sauvegarder les préférences
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Informations du compte -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Informations du compte</h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if merchant.store_logo and merchant.store_logo.startswith('http') %}
+                            <img src="{{ merchant.store_logo }}" alt="Logo de la boutique" 
+                                 class="img-fluid rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
+                        {% elif merchant.store_logo %}
+                            <img src="{{ url_for('static', filename=merchant.store_logo.replace('static/', '')) }}" 
+                                 alt="Logo de la boutique" class="img-fluid rounded-circle" 
+                                 style="width: 100px; height: 100px; object-fit: cover;">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='img/merchants/store_logo_default.png') }}" 
+                                 alt="Logo de la boutique" class="img-fluid rounded-circle" 
+                                 style="width: 100px; height: 100px; object-fit: cover;">
+                        {% endif %}
+                    </div>
+                    
+                    <h5 class="text-center">{{ merchant.store_name }}</h5>
+                    <p class="text-center text-muted">{{ merchant.first_name }} {{ merchant.last_name }}</p>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <p class="mb-0"><strong>Email:</strong></p>
+                        </div>
+                        <div class="col-sm-6">
+                            <p class="text-muted mb-0">{{ session.get('merchant_email', '') }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <p class="mb-0"><strong>Téléphone:</strong></p>
+                        </div>
+                        <div class="col-sm-6">
+                            <p class="text-muted mb-0">{{ merchant.phone }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <p class="mb-0"><strong>Ville:</strong></p>
+                        </div>
+                        <div class="col-sm-6">
+                            <p class="text-muted mb-0">{{ merchant.store_city }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <p class="mb-0"><strong>Statut:</strong></p>
+                        </div>
+                        <div class="col-sm-6">
+                            {% if merchant.store_verified %}
+                                <span class="badge bg-success">Vérifié</span>
+                            {% else %}
+                                <span class="badge bg-warning">Non vérifié</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <a href="{{ url_for('merchant_profile') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-edit"></i> Modifier le profil
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Actions rapides</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('merchant_products') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-box"></i> Gérer les produits
+                        </a>
+                        <a href="{{ url_for('merchant_orders') }}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-shopping-cart"></i> Voir les commandes
+                        </a>
+                        <a href="{{ url_for('merchant_profile') }}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-user"></i> Profil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation du formulaire de changement de mot de passe
+    const passwordForm = document.querySelector('form[action*="change_password"]');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', function(e) {
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            
+            if (newPassword !== confirmPassword) {
+                e.preventDefault();
+                alert('Les mots de passe ne correspondent pas.');
+                return false;
+            }
+            
+            if (newPassword.length < 6) {
+                e.preventDefault();
+                alert('Le mot de passe doit contenir au moins 6 caractères.');
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

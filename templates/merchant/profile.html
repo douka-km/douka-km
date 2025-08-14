@@ -1,0 +1,451 @@
+{% extends 'merchant/layout.html' %}
+
+{% block title %}Profil Boutique - DOUKA KM Marchands{% endblock %}
+
+{% block merchant_content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Profil de la boutique</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('merchant_dashboard') }}">Tableau de bord</a></li>
+        <li class="breadcrumb-item active">Boutique</li>
+    </ol>
+
+    <div class="row">
+        <!-- Informations générales -->
+        <div class="col-xl-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-store me-1"></i>
+                    Aperçu de la boutique
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        {% if merchant.store_logo and merchant.store_logo != 'static/img/merchants/store_logo_default.png' %}
+                            <img src="{{ merchant.store_logo }}" alt="Logo de la boutique" class="img-fluid rounded-circle mb-2" style="width: 150px; height: 150px; object-fit: cover;"
+                                 onerror="this.src='/static/img/merchants/store_logo_default.png'">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='img/merchants/store_logo_default.png') }}" alt="Logo de la boutique" class="img-fluid rounded-circle mb-2" style="width: 150px; height: 150px; object-fit: cover;">
+                        {% endif %}
+                        <div class="small font-italic text-muted mb-2">Logo de la boutique</div>
+                        <button class="btn btn-sm btn-primary" id="changeLogo">Modifier</button>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5 class="card-title">{{ merchant.store_name }}</h5>
+                        <div class="text-muted mb-1">{{ merchant.store_description }}</div>
+                        {% if merchant.store_verified %}
+                            <span class="badge bg-success">Vérifié</span>
+                        {% else %}
+                            <span class="badge bg-warning">En attente de vérification</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="text-muted mb-1"><i class="fas fa-map-marker-alt me-1"></i> {{ merchant.store_address }}, {{ merchant.store_city }}</div>
+                        <div class="text-muted mb-1"><i class="fas fa-globe me-1"></i> {{ merchant.store_region }}</div>
+                        <div class="text-muted"><i class="fas fa-phone me-1"></i> {{ merchant.phone }}</div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="badge bg-primary text-white mb-2">
+                            Inscription: {{ merchant.registration_date }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Performances -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-line me-1"></i>
+                    Performances
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Produits en vente:</span>
+                        <strong>{{ merchant.products|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Commandes reçues:</span>
+                        <strong>{{ merchant.orders|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Note moyenne:</span>
+                        <strong>
+                            {% if merchant_stats.avg_rating > 0 %}
+                                {{ "%.1f"|format(merchant_stats.avg_rating) }}/5.0
+                                <i class="fas fa-star text-warning"></i>
+                                <small class="text-muted">({{ merchant_stats.total_reviews }} avis)</small>
+                            {% else %}
+                                N/A
+                                <small class="text-muted">(Aucun avis)</small>
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formulaire d'édition -->
+        <div class="col-xl-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-edit me-1"></i>
+                    Modifier les informations de la boutique
+                </div>
+                <div class="card-body">
+                    <form id="storeInfoForm" action="{{ url_for('merchant_profile_update') }}" method="post">
+                        <!-- Informations personnelles -->
+                        <h5 class="mb-3">Informations personnelles</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">Prénom</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" value="{{ merchant.first_name }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Nom</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" value="{{ merchant.last_name }}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ merchant.phone }}" required>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <!-- Informations de la boutique -->
+                        <h5 class="mb-3">Informations de la boutique</h5>
+                        <div class="mb-3">
+                            <label for="store_name" class="form-label">Nom de la boutique</label>
+                            <input type="text" class="form-control" id="store_name" name="store_name" value="{{ merchant.store_name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="store_description" class="form-label">Description</label>
+                            <textarea class="form-control" id="store_description" name="store_description" rows="3">{{ merchant.store_description }}</textarea>
+                            <div class="form-text">Une brève description de votre boutique qui apparaîtra sur votre profil public.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="store_address" class="form-label">Adresse</label>
+                            <input type="text" class="form-control" id="store_address" name="store_address" value="{{ merchant.store_address }}">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="store_city" class="form-label">Ville</label>
+                                <input type="text" class="form-control" id="store_city" name="store_city" value="{{ merchant.store_city }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="store_region" class="form-label">Région</label>
+                                <input type="text" class="form-control" id="store_region" name="store_region" value="{{ merchant.store_region }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Coordonnées GPS -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="latitude" class="form-label">Latitude (GPS)</label>
+                                <input type="text" class="form-control" id="latitude" name="latitude" 
+                                       value="{{ merchant.latitude if merchant.latitude is not none else '' }}" 
+                                       placeholder="Ex: -11.7172">
+                                <small class="text-muted">Format décimal (ex: -11.7172)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="longitude" class="form-label">Longitude (GPS)</label>
+                                <input type="text" class="form-control" id="longitude" name="longitude" 
+                                       value="{{ merchant.longitude if merchant.longitude is not none else '' }}" 
+                                       placeholder="Ex: 43.2587">
+                                <small class="text-muted">Format décimal (ex: 43.2587)</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Aide pour trouver les coordonnées GPS -->
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-primary btn-sm me-2" id="useCurrentLocation">
+                                <i class="fas fa-map-marker-alt"></i> Utiliser ma position actuelle
+                            </button>
+                            <a href="https://www.google.com/maps" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-map-marker-alt"></i> Trouver mes coordonnées sur Google Maps
+                            </a>
+                            <small class="text-muted ms-2 d-block mt-2">Cliquez sur "Utiliser ma position actuelle" pour détecter automatiquement votre position GPS</small>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <!-- Bannière de la boutique -->
+                        <h5 class="mb-3">Bannière de la boutique</h5>
+                        <div class="mb-3">
+                            <div class="text-center mb-3">
+                                {% if merchant.store_banner and merchant.store_banner != 'static/img/merchants/store_banner_default.jpg' %}
+                                    {% if merchant.store_banner.startswith('http') %}
+                                        <img src="{{ merchant.store_banner }}" alt="Bannière de la boutique" class="img-fluid rounded mb-2" style="max-height: 150px; width: 100%; object-fit: cover;">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename=merchant.store_banner.replace('static/', '')) }}" alt="Bannière de la boutique" class="img-fluid rounded mb-2" style="max-height: 150px; width: 100%; object-fit: cover;">
+                                    {% endif %}
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='img/merchants/store_banner_default.jpg') }}" alt="Bannière de la boutique" class="img-fluid rounded mb-2" style="max-height: 150px; width: 100%; object-fit: cover;">
+                                {% endif %}
+                            </div>
+                            <div class="text-center">
+                                <button type="button" class="btn btn-sm btn-primary" id="changeBanner">Changer la bannière</button>
+                                <div class="form-text">Dimension recommandée: 1200 x 300 pixels</div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary">Sauvegarder les modifications</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            
+
+<!-- Modal pour changer le logo -->
+<div class="modal fade" id="logoModal" tabindex="-1" aria-labelledby="logoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logoModalLabel">Changer le logo de la boutique</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="logoForm" action="{{ url_for('merchant_update_logo') }}" method="post">
+                    <div class="mb-3">
+                        <label for="logo_url" class="form-label">URL du logo</label>
+                        <input type="url" class="form-control" id="logo_url" name="logo_url" 
+                               value="{{ merchant.store_logo if merchant.store_logo != 'static/img/merchants/store_logo_default.png' else '' }}" 
+                               placeholder="https://exemple.com/mon-logo.jpg" required>
+                        <div class="form-text">Entrez l'URL de votre logo. Format recommandé: image carrée (1:1) d'au moins 200x200 pixels</div>
+                    </div>
+                    <div class="text-center my-3">
+                        <img id="logoPreview" src="{{ merchant.store_logo }}" alt="Aperçu du logo" 
+                             style="max-width: 200px; max-height: 200px; border: 1px solid #dee2e6; border-radius: 8px;">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour changer la bannière -->
+<div class="modal fade" id="bannerModal" tabindex="-1" aria-labelledby="bannerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bannerModalLabel">Changer la bannière de la boutique</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bannerForm" action="{{ url_for('merchant_update_banner') }}" method="post">
+                    <div class="mb-3">
+                        <label for="banner_url" class="form-label">URL de la bannière</label>
+                        <input type="url" class="form-control" id="banner_url" name="banner_url" 
+                               value="{{ merchant.store_banner if merchant.store_banner != 'static/img/merchants/store_banner_default.jpg' else '' }}" 
+                               placeholder="https://exemple.com/ma-banniere.jpg" required>
+                        <div class="form-text">Entrez l'URL de votre bannière. Format recommandé: image rectangulaire (4:1) d'au moins 1200x300 pixels</div>
+                    </div>
+                    <div class="text-center my-3">
+                        {% if merchant.store_banner and merchant.store_banner != 'static/img/merchants/store_banner_default.jpg' %}
+                            {% if merchant.store_banner.startswith('http') %}
+                                <img id="bannerPreview" src="{{ merchant.store_banner }}" alt="Aperçu de la bannière" 
+                                     style="max-width: 100%; max-height: 150px; border: 1px solid #dee2e6; border-radius: 8px;">
+                            {% else %}
+                                <img id="bannerPreview" src="{{ url_for('static', filename=merchant.store_banner.replace('static/', '')) }}" alt="Aperçu de la bannière" 
+                                     style="max-width: 100%; max-height: 150px; border: 1px solid #dee2e6; border-radius: 8px;">
+                            {% endif %}
+                        {% else %}
+                            <img id="bannerPreview" src="{{ url_for('static', filename='img/merchants/store_banner_default.jpg') }}" alt="Aperçu de la bannière" 
+                                 style="max-width: 100%; max-height: 150px; border: 1px solid #dee2e6; border-radius: 8px;">
+                        {% endif %}
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Mettre à jour</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Fonction pour détecter la position GPS actuelle
+    function requestLocation() {
+        const locationBtn = document.getElementById('useCurrentLocation');
+        const originalText = locationBtn.innerHTML;
+        
+        // Vérifier si la géolocalisation est supportée
+        if (!navigator.geolocation) {
+            alert('La géolocalisation n\'est pas supportée par votre navigateur.');
+            return;
+        }
+        
+        // Changer le texte du bouton pour indiquer le chargement
+        locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Détection en cours...';
+        locationBtn.disabled = true;
+        
+        // Options de géolocalisation
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000 // 5 minutes
+        };
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                // Succès - remplir les champs
+                const latitude = position.coords.latitude.toFixed(6);
+                const longitude = position.coords.longitude.toFixed(6);
+                
+                document.getElementById('latitude').value = latitude;
+                document.getElementById('longitude').value = longitude;
+                
+                // Réinitialiser le bouton
+                locationBtn.innerHTML = originalText;
+                locationBtn.disabled = false;
+                
+                // Notification de succès
+                alert('Position détectée avec succès!\nLatitude: ' + latitude + '\nLongitude: ' + longitude);
+            },
+            function(error) {
+                // Erreur - afficher message d'erreur
+                let errorMessage = 'Erreur lors de la détection de la position: ';
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage += 'Vous avez refusé l\'autorisation de géolocalisation.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage += 'Les informations de position ne sont pas disponibles.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage += 'La demande de géolocalisation a expiré.';
+                        break;
+                    default:
+                        errorMessage += 'Une erreur inconnue s\'est produite.';
+                        break;
+                }
+                
+                alert(errorMessage + '\nVeuillez vérifier vos paramètres de géolocalisation et réessayer.');
+                
+                // Réinitialiser le bouton
+                locationBtn.innerHTML = originalText;
+                locationBtn.disabled = false;
+            },
+            options
+        );
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion du bouton de géolocalisation
+        document.getElementById('useCurrentLocation').addEventListener('click', function(e) {
+            e.preventDefault();
+            requestLocation();
+        });
+        
+        // Gestion du modal de changement de logo
+        const logoModal = new bootstrap.Modal(document.getElementById('logoModal'));
+        document.getElementById('changeLogo').addEventListener('click', function(e) {
+            e.preventDefault();
+            logoModal.show();
+        });
+        
+        // Prévisualisation du logo à partir de l'URL
+        document.getElementById('logo_url').addEventListener('input', function() {
+            const url = this.value.trim();
+            const preview = document.getElementById('logoPreview');
+            
+            if (url) {
+                // Tester si l'URL est valide en chargeant l'image
+                const testImg = new Image();
+                testImg.onload = function() {
+                    preview.src = url;
+                };
+                testImg.onerror = function() {
+                    preview.src = '/static/img/merchants/store_logo_default.png';
+                };
+                testImg.src = url;
+            } else {
+                preview.src = '/static/img/merchants/store_logo_default.png';
+            }
+        });
+        
+        // Gestion du modal de changement de bannière
+        const bannerModal = new bootstrap.Modal(document.getElementById('bannerModal'));
+        document.getElementById('changeBanner').addEventListener('click', function(e) {
+            e.preventDefault();
+            bannerModal.show();
+        });
+        
+        // Prévisualisation de la bannière à partir de l'URL
+        document.getElementById('banner_url').addEventListener('input', function() {
+            const url = this.value.trim();
+            const preview = document.getElementById('bannerPreview');
+            
+            if (url) {
+                // Tester si l'URL est valide en chargeant l'image
+                const testImg = new Image();
+                testImg.onload = function() {
+                    preview.src = url;
+                };
+                testImg.onerror = function() {
+                    preview.src = '/static/img/merchants/store_banner_default.jpg';
+                };
+                testImg.src = url;
+            } else {
+                preview.src = '/static/img/merchants/store_banner_default.jpg';
+            }
+        });
+        
+        // Validation du formulaire de changement de mot de passe
+        document.getElementById('passwordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('current_password').value;
+            const newPassword = document.getElementById('new_password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('Veuillez remplir tous les champs.');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('Les nouveaux mots de passe ne correspondent pas.');
+                return;
+            }
+            
+            // Envoi du formulaire via AJAX
+            fetch('{{ url_for("merchant_change_password") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new URLSearchParams({
+                    'current_password': currentPassword,
+                    'new_password': newPassword,
+                    'confirm_password': confirmPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Mot de passe modifié avec succès.');
+                    document.getElementById('passwordForm').reset();
+                } else {
+                    alert('Erreur: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Une erreur est survenue. Veuillez réessayer.');
+                console.error('Error:', error);
+            });
+        });
+    });
+</script>
+{% endblock %}

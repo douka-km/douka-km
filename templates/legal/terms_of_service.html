@@ -1,0 +1,943 @@
+{% extends 'base.html' %}
+
+{% block title %}Conditions d'utilisation - DOUKA KM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .legal-page {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .legal-hero {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+        margin-bottom: 2rem;
+        border-radius: 0 0 30px 30px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .legal-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="terms-grid" width="15" height="15" patternUnits="userSpaceOnUse"><path d="M 15 0 L 0 0 0 15" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23terms-grid)"/></svg>');
+        opacity: 0.4;
+    }
+    
+    .legal-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .legal-hero p {
+        font-size: 1.1rem;
+        margin-bottom: 0;
+        position: relative;
+        z-index: 1;
+        opacity: 0.9;
+    }
+    
+    .legal-content {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 3rem;
+        margin-bottom: 2rem;
+    }
+    
+    .legal-nav {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .legal-nav h5 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .legal-nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .legal-nav li {
+        margin-bottom: 0.5rem;
+    }
+    
+    .legal-nav a {
+        color: #6c757d;
+        text-decoration: none;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        display: block;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+    
+    .legal-nav a:hover,
+    .legal-nav a.active {
+        background: #28a745;
+        color: white;
+        transform: translateX(5px);
+    }
+    
+    .section-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .section-header h2 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin: 0;
+        flex: 1;
+    }
+    
+    .section-header .section-number {
+        background: #28a745;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .subsection {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border-left: 4px solid #28a745;
+    }
+    
+    .subsection h3 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .subsection p {
+        color: #6c757d;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+    
+    .subsection ul, .subsection ol {
+        color: #6c757d;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+    
+    .highlight-box {
+        background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+        border: 1px solid #9c27b0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .highlight-box h4 {
+        color: #7b1fa2;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .highlight-box p {
+        color: #4a148c;
+        margin-bottom: 0;
+    }
+    
+    .warning-box {
+        background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+        border: 1px solid #ff9800;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .warning-box h4 {
+        color: #f57c00;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .warning-box p {
+        color: #e65100;
+        margin-bottom: 0;
+    }
+    
+    .success-box {
+        background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+        border: 1px solid #4caf50;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .success-box h4 {
+        color: #2e7d32;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .success-box p {
+        color: #1b5e20;
+        margin-bottom: 0;
+    }
+    
+    .contact-section {
+        background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+        border: 1px solid #4caf50;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        margin-top: 3rem;
+    }
+    
+    .contact-section h3 {
+        color: #2e7d32;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .contact-section p {
+        color: #1b5e20;
+        margin-bottom: 1.5rem;
+    }
+    
+    .contact-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .contact-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .contact-btn-primary {
+        background: #28a745;
+        color: white;
+        border: 2px solid #28a745;
+    }
+    
+    .contact-btn-primary:hover {
+        background: #1e7e34;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
+    
+    .contact-btn-secondary {
+        background: white;
+        color: #28a745;
+        border: 2px solid #28a745;
+    }
+    
+    .contact-btn-secondary:hover {
+        background: #28a745;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .last-updated {
+        text-align: center;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-top: 2rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .back-to-top {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+        z-index: 1000;
+    }
+    
+    .back-to-top:hover {
+        background: #1e7e34;
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
+    
+    @media (max-width: 768px) {
+        .legal-content {
+            padding: 1.5rem;
+        }
+        
+        .legal-nav {
+            position: static;
+            margin-bottom: 1rem;
+        }
+        
+        .section-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .section-header .section-number {
+            margin-right: 0;
+            margin-bottom: 1rem;
+        }
+        
+        .contact-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .contact-btn {
+            width: 100%;
+            max-width: 250px;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-page">
+    <!-- Hero Section -->
+    <div class="legal-hero">
+        <div class="container">
+            <h1><i class="fas fa-file-contract me-3"></i>Conditions d'utilisation</h1>
+            <p>Les règles et conditions qui régissent l'utilisation de notre marketplace DOUKA KM.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <!-- Navigation latérale -->
+            <div class="col-lg-3">
+                <div class="legal-nav">
+                    <h5><i class="fas fa-list me-2"></i>Sommaire</h5>
+                    <ul>
+                        <li><a href="#acceptation">Acceptation</a></li>
+                        <li><a href="#definitions">Définitions</a></li>
+                        <li><a href="#acces-services">Accès aux services</a></li>
+                        <li><a href="#comptes-utilisateurs">Comptes utilisateurs</a></li>
+                        <li><a href="#commandes-paiements">Commandes et paiements</a></li>
+                        <li><a href="#livraisons">Livraisons</a></li>
+                        <li><a href="#retours-remboursements">Retours</a></li>
+                        <li><a href="#responsabilites">Responsabilités</a></li>
+                        <li><a href="#propriete-intellectuelle">Propriété intellectuelle</a></li>
+                        <li><a href="#suspension-resiliation">Suspension</a></li>
+                        <li><a href="#modification-conditions">Modifications</a></li>
+                        <li><a href="#droit-applicable">Droit applicable</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="col-lg-9">
+                <div class="legal-content">
+                    <!-- Acceptation -->
+                    <section id="acceptation">
+                        <div class="section-header">
+                            <div class="section-number">1</div>
+                            <h2>Acceptation des conditions</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p>En accédant et en utilisant la plateforme DOUKA KM, vous acceptez expressément d'être lié par les présentes conditions d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser nos services.</p>
+                            
+                            <div class="warning-box">
+                                <h4><i class="fas fa-exclamation-triangle me-2"></i>Important</h4>
+                                <p>L'utilisation continue de nos services après modification de ces conditions constitue votre acceptation des nouvelles conditions.</p>
+                            </div>
+                            
+                            <p>Ces conditions s'appliquent à tous les utilisateurs de la plateforme, qu'ils soient acheteurs ou vendeurs (marchands).</p>
+                        </div>
+                    </section>
+
+                    <!-- Définitions -->
+                    <section id="definitions">
+                        <div class="section-header">
+                            <div class="section-number">2</div>
+                            <h2>Définitions</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p>Dans le contexte de ces conditions d'utilisation :</p>
+                            
+                            <ul>
+                                <li><strong>"DOUKA KM" ou "nous"</strong> : la société exploitant la marketplace</li>
+                                <li><strong>"Plateforme" ou "Site"</strong> : le site web et l'application mobile DOUKA KM</li>
+                                <li><strong>"Utilisateur" ou "vous"</strong> : toute personne utilisant nos services</li>
+                                <li><strong>"Acheteur"</strong> : utilisateur effectuant des achats sur la plateforme</li>
+                                <li><strong>"Marchand" ou "Vendeur"</strong> : utilisateur proposant des produits à la vente</li>
+                                <li><strong>"Produits"</strong> : tous les biens proposés à la vente sur la plateforme</li>
+                                <li><strong>"Commande"</strong> : achat effectué par un acheteur auprès d'un marchand</li>
+                                <li><strong>"Compte"</strong> : espace personnel créé par l'utilisateur sur la plateforme</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Accès aux services -->
+                    <section id="acces-services">
+                        <div class="section-header">
+                            <div class="section-number">3</div>
+                            <h2>Accès aux services</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>3.1 Conditions d'accès</h3>
+                            <p>Pour utiliser nos services, vous devez :</p>
+                            <ul>
+                                <li>Être âgé d'au moins 18 ans ou avoir l'autorisation de vos parents/tuteurs</li>
+                                <li>Résider aux Comores ou dans une zone de livraison couverte</li>
+                                <li>Fournir des informations exactes et complètes</li>
+                                <li>Respecter les lois locales en vigueur</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>3.2 Disponibilité du service</h3>
+                            <p>Nous nous efforçons de maintenir la plateforme accessible 24h/24 et 7j/7. Cependant, nous nous réservons le droit :</p>
+                            <ul>
+                                <li>D'interrompre temporairement le service pour maintenance</li>
+                                <li>De modifier ou améliorer nos fonctionnalités</li>
+                                <li>De restreindre l'accès en cas de problème technique</li>
+                            </ul>
+                            
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-info-circle me-2"></i>Maintenance programmée</h4>
+                                <p>Nous vous informerons à l'avance des maintenances programmées via nos canaux de communication habituels.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Comptes utilisateurs -->
+                    <section id="comptes-utilisateurs">
+                        <div class="section-header">
+                            <div class="section-number">4</div>
+                            <h2>Comptes utilisateurs</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>4.1 Création de compte</h3>
+                            <p>Pour effectuer des achats ou vendre sur la plateforme, vous devez créer un compte en fournissant :</p>
+                            <ul>
+                                <li>Une adresse email valide</li>
+                                <li>Un mot de passe sécurisé</li>
+                                <li>Vos informations personnelles exactes</li>
+                                <li>Une adresse de livraison valide</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>4.2 Sécurité du compte</h3>
+                            <p>Vous êtes responsable de :</p>
+                            <ul>
+                                <li>Maintenir la confidentialité de vos identifiants</li>
+                                <li>Toutes les activités effectuées sous votre compte</li>
+                                <li>Nous informer immédiatement de toute utilisation non autorisée</li>
+                                <li>Mettre à jour vos informations personnelles</li>
+                            </ul>
+                            
+                            <div class="warning-box">
+                                <h4><i class="fas fa-shield-alt me-2"></i>Sécurité</h4>
+                                <p>Ne partagez jamais vos identifiants avec des tiers. Utilisez un mot de passe fort et unique pour votre compte DOUKA KM.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>4.3 Comptes marchands</h3>
+                            <p>Les marchands doivent en plus :</p>
+                            <ul>
+                                <li>Fournir des documents d'identification valides</li>
+                                <li>Respecter nos standards de qualité</li>
+                                <li>Maintenir un niveau de service satisfaisant</li>
+                                <li>Respecter les délais de livraison annoncés</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Commandes et paiements -->
+                    <section id="commandes-paiements">
+                        <div class="section-header">
+                            <div class="section-number">5</div>
+                            <h2>Commandes et paiements</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>5.1 Processus de commande</h3>
+                            <p>Lorsque vous passez une commande :</p>
+                            <ol>
+                                <li>Ajoutez les produits souhaités à votre panier</li>
+                                <li>Vérifiez le contenu et les prix</li>
+                                <li>Sélectionnez votre adresse de livraison</li>
+                                <li>Choisissez votre mode de paiement</li>
+                                <li>Confirmez votre commande</li>
+                            </ol>
+                            
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-check-circle me-2"></i>Confirmation</h4>
+                                <p>Une fois votre commande confirmée, vous recevrez un email de confirmation avec le détail de votre achat.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>5.2 Prix et disponibilité</h3>
+                            <p>Les prix affichés sur la plateforme :</p>
+                            <ul>
+                                <li>Sont exprimés en francs comoriens (KMF)</li>
+                                <li>Incluent toutes les taxes applicables</li>
+                                <li>Peuvent varier selon les promotions en cours</li>
+                                <li>N'incluent pas les frais de livraison (sauf mention contraire)</li>
+                            </ul>
+                            
+                            <p>Nous nous réservons le droit de modifier les prix à tout moment, mais les commandes confirmées ne seront pas affectées.</p>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>5.3 Moyens de paiement</h3>
+                            <p>Nous acceptons les modes de paiement suivants :</p>
+                            <ul>
+                                <li>Paiement à la livraison (cash)</li>
+                                <li>Virements bancaires</li>
+                                <li>Mobile money (MVola, Orange Money)</li>
+                                <li>Cartes bancaires (selon disponibilité)</li>
+                            </ul>
+                            
+                            <div class="success-box">
+                                <h4><i class="fas fa-credit-card me-2"></i>Paiement sécurisé</h4>
+                                <p>Toutes les transactions en ligne sont sécurisées et protégées par des systèmes de chiffrement avancés.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Livraisons -->
+                    <section id="livraisons">
+                        <div class="section-header">
+                            <div class="section-number">6</div>
+                            <h2>Livraisons</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>6.1 Zones de livraison</h3>
+                            <p>Nous livrons actuellement :</p>
+                            <ul>
+                                <li>Moroni et ses environs</li>
+                                <li>Mutsamudu (Anjouan)</li>
+                                <li>Fomboni (Mohéli)</li>
+                                <li>Autres localités selon disponibilité des transporteurs</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>6.2 Délais de livraison</h3>
+                            <p>Les délais de livraison varient selon :</p>
+                            <ul>
+                                <li><strong>Zone urbaine :</strong> 1-3 jours ouvrables</li>
+                                <li><strong>Zone périurbaine :</strong> 2-5 jours ouvrables</li>
+                                <li><strong>Autres îles :</strong> 3-7 jours ouvrables</li>
+                                <li><strong>Zones reculées :</strong> 5-10 jours ouvrables</li>
+                            </ul>
+                            
+                            <div class="warning-box">
+                                <h4><i class="fas fa-clock me-2"></i>Délais indicatifs</h4>
+                                <p>Ces délais sont indicatifs et peuvent être impactés par des conditions météorologiques ou des événements exceptionnels.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>6.3 Frais de livraison</h3>
+                            <p>Les frais de livraison sont calculés selon :</p>
+                            <ul>
+                                <li>La distance de livraison</li>
+                                <li>Le poids et volume du colis</li>
+                                <li>Le mode de livraison choisi</li>
+                                <li>Les promotions en cours</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Retours et remboursements -->
+                    <section id="retours-remboursements">
+                        <div class="section-header">
+                            <div class="section-number">7</div>
+                            <h2>Retours et remboursements</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>7.1 Droit de rétractation</h3>
+                            <p>Vous disposez d'un délai de <strong>14 jours</strong> à partir de la réception pour retourner un produit, sauf exceptions :</p>
+                            <ul>
+                                <li>Produits alimentaires périssables</li>
+                                <li>Produits personnalisés</li>
+                                <li>Produits d'hygiène déballés</li>
+                                <li>Produits numériques téléchargés</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>7.2 Conditions de retour</h3>
+                            <p>Pour être accepté, le retour doit respecter ces conditions :</p>
+                            <ul>
+                                <li>Produit dans son état d'origine</li>
+                                <li>Emballage d'origine conservé</li>
+                                <li>Accessoires et notice inclus</li>
+                                <li>Preuve d'achat fournie</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>7.3 Procédure de remboursement</h3>
+                            <p>Une fois le retour accepté :</p>
+                            <ol>
+                                <li>Nous confirmons la réception du produit</li>
+                                <li>Nous vérifions l'état du produit</li>
+                                <li>Nous procédons au remboursement sous 7-14 jours</li>
+                                <li>Le remboursement s'effectue sur le mode de paiement initial</li>
+                            </ol>
+                            
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-undo me-2"></i>Garantie de remboursement</h4>
+                                <p>Nous nous engageons à rembourser intégralement le prix du produit (hors frais de livraison) en cas de retour accepté.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Responsabilités -->
+                    <section id="responsabilites">
+                        <div class="section-header">
+                            <div class="section-number">8</div>
+                            <h2>Responsabilités</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>8.1 Responsabilité de DOUKA KM</h3>
+                            <p>En tant qu'intermédiaire technique, DOUKA KM :</p>
+                            <ul>
+                                <li>Facilite les transactions entre acheteurs et vendeurs</li>
+                                <li>Met en œuvre des mesures de sécurité raisonnables</li>
+                                <li>Modère le contenu de la plateforme</li>
+                                <li>Traite les litiges selon nos procédures</li>
+                            </ul>
+                            
+                            <div class="warning-box">
+                                <h4><i class="fas fa-exclamation-triangle me-2"></i>Limitation de responsabilité</h4>
+                                <p>DOUKA KM ne peut être tenu responsable des dommages indirects, perte de profits ou autres préjudices consécutifs à l'utilisation de la plateforme.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>8.2 Responsabilité des acheteurs</h3>
+                            <p>Les acheteurs s'engagent à :</p>
+                            <ul>
+                                <li>Fournir des informations exactes</li>
+                                <li>Effectuer les paiements dans les délais</li>
+                                <li>Être présents lors de la livraison</li>
+                                <li>Utiliser la plateforme de manière appropriée</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>8.3 Responsabilité des marchands</h3>
+                            <p>Les marchands s'engagent à :</p>
+                            <ul>
+                                <li>Proposer des produits conformes aux descriptions</li>
+                                <li>Respecter les délais de livraison annoncés</li>
+                                <li>Maintenir un niveau de service de qualité</li>
+                                <li>Gérer le service après-vente de leurs produits</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Propriété intellectuelle -->
+                    <section id="propriete-intellectuelle">
+                        <div class="section-header">
+                            <div class="section-number">9</div>
+                            <h2>Propriété intellectuelle</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>9.1 Droits de DOUKA KM</h3>
+                            <p>Tous les éléments de la plateforme sont protégés :</p>
+                            <ul>
+                                <li>Marques et logos DOUKA KM</li>
+                                <li>Design et interface utilisateur</li>
+                                <li>Algorithmes et fonctionnalités</li>
+                                <li>Contenus éditoriaux</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>9.2 Contenu utilisateur</h3>
+                            <p>En publiant du contenu sur la plateforme, vous :</p>
+                            <ul>
+                                <li>Conservez vos droits de propriété sur le contenu</li>
+                                <li>Accordez à DOUKA KM le droit de l'utiliser sur la plateforme</li>
+                                <li>Garantissez ne pas enfreindre les droits de tiers</li>
+                                <li>Vous engagez à respecter les droits d'auteur</li>
+                            </ul>
+                            
+                            <div class="warning-box">
+                                <h4><i class="fas fa-copyright me-2"></i>Respect des droits</h4>
+                                <p>Tout contenu enfreignant les droits de propriété intellectuelle sera supprimé et pourra entraîner la suspension du compte.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Suspension et résiliation -->
+                    <section id="suspension-resiliation">
+                        <div class="section-header">
+                            <div class="section-number">10</div>
+                            <h2>Suspension et résiliation</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>10.1 Motifs de suspension</h3>
+                            <p>Nous pouvons suspendre un compte en cas de :</p>
+                            <ul>
+                                <li>Non-respect des présentes conditions</li>
+                                <li>Activité frauduleuse suspectée</li>
+                                <li>Plaintes répétées d'autres utilisateurs</li>
+                                <li>Non-paiement de commandes</li>
+                                <li>Utilisation abusive de la plateforme</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>10.2 Procédure de suspension</h3>
+                            <p>En cas de suspension :</p>
+                            <ol>
+                                <li>Nous vous informons par email des motifs</li>
+                                <li>Vous disposez de 7 jours pour contester</li>
+                                <li>Une enquête est menée si nécessaire</li>
+                                <li>La décision finale vous est communiquée</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>10.3 Résiliation par l'utilisateur</h3>
+                            <p>Vous pouvez fermer votre compte à tout moment :</p>
+                            <ul>
+                                <li>Via les paramètres de votre compte</li>
+                                <li>En nous contactant directement</li>
+                                <li>Les commandes en cours seront honorées</li>
+                                <li>Vos données seront traitées selon notre politique de confidentialité</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Modification des conditions -->
+                    <section id="modification-conditions">
+                        <div class="section-header">
+                            <div class="section-number">11</div>
+                            <h2>Modification des conditions</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <p>Nous nous réservons le droit de modifier ces conditions d'utilisation à tout moment pour :</p>
+                            <ul>
+                                <li>Améliorer nos services</li>
+                                <li>Nous conformer aux évolutions légales</li>
+                                <li>Adapter nos pratiques commerciales</li>
+                                <li>Renforcer la sécurité de la plateforme</li>
+                            </ul>
+                            
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-bell me-2"></i>Notification des changements</h4>
+                                <p>Toute modification substantielle vous sera notifiée par email au moins 30 jours avant son entrée en vigueur.</p>
+                            </div>
+                            
+                            <p>L'utilisation continue de nos services après modification constitue votre acceptation des nouvelles conditions.</p>
+                        </div>
+                    </section>
+
+                    <!-- Droit applicable -->
+                    <section id="droit-applicable">
+                        <div class="section-header">
+                            <div class="section-number">12</div>
+                            <h2>Droit applicable et juridiction</h2>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>12.1 Droit applicable</h3>
+                            <p>Les présentes conditions d'utilisation sont régies par le droit comorien. En cas de conflit entre ces conditions et les lois locales, les dispositions légales prévaudront.</p>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>12.2 Résolution des litiges</h3>
+                            <p>En cas de litige, nous privilégions la résolution amiable :</p>
+                            <ol>
+                                <li><strong>Médiation interne :</strong> notre service client tente de résoudre le problème</li>
+                                <li><strong>Médiation externe :</strong> recours à un médiateur agréé si nécessaire</li>
+                                <li><strong>Action judiciaire :</strong> en dernier recours devant les tribunaux compétents des Comores</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="subsection">
+                            <h3>12.3 Juridiction compétente</h3>
+                            <p>En cas de procédure judiciaire, les tribunaux de Moroni (Union des Comores) seront seuls compétents, sauf dispositions légales contraires.</p>
+                        </div>
+                    </section>
+
+                    <!-- Contact -->
+                    <section id="contact">
+                        <div class="section-header">
+                            <div class="section-number">13</div>
+                            <h2>Nous contacter</h2>
+                        </div>
+                        
+                        <div class="contact-section">
+                            <h3><i class="fas fa-comments me-2"></i>Questions sur nos conditions ?</h3>
+                            <p>Notre équipe juridique et support client est disponible pour clarifier tous les points de nos conditions d'utilisation.</p>
+                            
+                            <div class="contact-buttons">
+                                <a href="{{ url_for('contact') }}" class="contact-btn contact-btn-primary">
+                                    <i class="fas fa-envelope"></i>
+                                    Nous contacter
+                                </a>
+                                <a href="mailto:legal@doukakm.com" class="contact-btn contact-btn-secondary">
+                                    <i class="fas fa-gavel"></i>
+                                    Service juridique
+                                </a>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Date de mise à jour -->
+                    <div class="last-updated">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong>Dernière mise à jour :</strong> 9 août 2025
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bouton retour en haut -->
+<button class="back-to-top" id="backToTop">
+    <i class="fas fa-chevron-up"></i>
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Navigation douce
+    const navLinks = document.querySelectorAll('.legal-nav a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                // Supprimer la classe active de tous les liens
+                navLinks.forEach(l => l.classList.remove('active'));
+                // Ajouter la classe active au lien cliqué
+                this.classList.add('active');
+                
+                // Scroll fluide vers la section
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Bouton retour en haut
+    const backToTop = document.getElementById('backToTop');
+    
+    window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 300) {
+            backToTop.style.display = 'flex';
+        } else {
+            backToTop.style.display = 'none';
+        }
+    });
+    
+    backToTop.addEventListener('click', function() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+    
+    // Mise en surbrillance de la section active
+    function highlightActiveSection() {
+        const sections = document.querySelectorAll('section[id]');
+        const scrollPos = window.pageYOffset + 100;
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.offsetHeight;
+            const sectionId = section.getAttribute('id');
+            const navLink = document.querySelector(`.legal-nav a[href="#${sectionId}"]`);
+            
+            if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                navLinks.forEach(l => l.classList.remove('active'));
+                if (navLink) {
+                    navLink.classList.add('active');
+                }
+            }
+        });
+    }
+    
+    // Écouter le scroll pour mettre en surbrillance la section active
+    window.addEventListener('scroll', highlightActiveSection);
+    
+    // Mettre en surbrillance la première section au chargement
+    highlightActiveSection();
+});
+</script>
+{% endblock %}

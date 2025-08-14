@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Ma liste d'envies | DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Menu latéral -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Mon compte</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user me-2"></i> Informations personnelles
+                    </a>
+                    <a href="{{ url_for('orders') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-box me-2"></i> Mes commandes
+                    </a>
+                    <a href="{{ url_for('addresses') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-map-marker-alt me-2"></i> Mes adresses
+                    </a>
+                    <a href="{{ url_for('wishlist') }}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-heart me-2"></i> Ma liste d'envies
+                    </a>
+                    <a href="{{ url_for('change_password') }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-lock me-2"></i> Changer de mot de passe
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h4 class="mb-0">Ma liste d'envies</h4>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    {% if wishlist_items %}
+                        <div class="row row-cols-1 row-cols-md-3 g-4">
+                            {% for item in wishlist_items %}
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="position-absolute top-0 end-0 p-2">
+                                            <form action="{{ url_for('remove_from_wishlist', product_id=item.id) }}" method="post">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <a href="{{ url_for('product_detail', product_id=item.id) }}">
+                                            {% if item.image %}
+                                                {% if item.image.startswith('http') %}
+                                                    <!-- Image via URL -->
+                                                    <img src="{{ item.image }}" 
+                                                         class="card-img-top" 
+                                                         alt="{{ item.name }}"
+                                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit';">
+                                                {% else %}
+                                                    <!-- Image locale -->
+                                                    <img src="{{ url_for('static', filename=item.image.replace('static/', '') if item.image.startswith('static/') else item.image) }}" 
+                                                         class="card-img-top" 
+                                                         alt="{{ item.name }}"
+                                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit';">
+                                                {% endif %}
+                                            {% else %}
+                                                <!-- Image placeholder -->
+                                                <img src="https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit" 
+                                                     class="card-img-top" 
+                                                     alt="Aucune image">
+                                            {% endif %}
+                                        </a>
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ item.name }}</h5>
+                                            <p class="card-text text-primary fw-bold">{{ item.price|format_number }} KMF</p>
+                                            <div class="d-grid">
+                                                <button type="button" class="btn btn-primary" onclick="addToCart({{ item.id }})">
+                                                    <i class="fas fa-cart-plus me-2"></i> Ajouter au panier
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="far fa-heart fa-4x text-muted mb-3"></i>
+                            <h5>Votre liste d'envies est vide</h5>
+                            <p class="text-muted">Ajoutez les produits que vous aimez pour les retrouver facilement plus tard</p>
+                            <a href="{{ url_for('products') }}" class="btn btn-primary mt-2">
+                                Explorer les produits
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,2233 @@
+from flask import Flask, render_template, request, session, send_from_directory, redirect, url_for, flash, jsonify
+import os
+import json
+import hashlib
+import functools
+from werkzeug.security import generate_password_hash, check_password_hash
+
+app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Needed for session management
+
+# Ajout du filtre format_number pour formater correctement les nombres dans les templates
+@app.template_filter('format_number')
+def format_number(value):
+    """Format un nombre pour l'affichage (ex: 1000 -> 1 000)"""
+    try:
+        return "{:,}".format(int(value)).replace(",", " ")
+    except (ValueError, TypeError):
+        return value
+
+# Base de données utilisateur simulée avec plus d'informations
+users_db = {
+    'user@example.com': {
+        'password_hash': generate_password_hash('password123'),
+        'first_name': 'Utilisateur',
+        'last_name': 'Test',
+        'phone': '0123456789',
+        'id': 1,
+        'address': '123 Rue Principale',
+        'city': 'Moroni',
+        'region': 'grande-comore'
+    },
+    'admin@example.com': {
+        'password_hash': generate_password_hash('adminpass'),
+        'first_name': 'Admin',
+        'last_name': 'User',
+        'phone': '9876543210',
+        'id': 2,
+        'address': '456 Avenue Centrale',
+        'city': 'Mutsamudu',
+        'region': 'anjouan'
+    }
+}
+
+# Base de données marchands simulée
+merchants_db = {
+    'merchant@example.com': {
+        'password_hash': generate_password_hash('merchant123'),
+        'first_name': 'Commerçant',
+        'last_name': 'Test',
+        'phone': '7654321098',
+        'id': 101,
+        'store_name': 'Boutique Test',
+        'store_description': 'Une boutique de test avec des produits variés.',
+        'store_address': '789 Avenue Commerciale',
+        'store_city': 'Moroni',
+        'store_region': 'grande-comore',
+        'store_logo': 'static/img/merchants/store_logo_default.png',
+        'store_banner': 'static/img/merchants/store_banner_default.jpg',
+        'store_verified': True,
+        'registration_date': '2023-01-15',
+        'products': [
+            {
+                'id': 1001,
+                'name': 'Produit de Marchand 1',
+                'description': 'Description détaillée du produit de marchand 1.',
+                'price': 12500,
+                'stock': 25,
+                'category_id': 1,
+                'subcategory_id': 101,
+                'image': 'static/img/merchants/product1.jpg',
+                'images': ['static/img/merchants/product1.jpg', 'static/img/merchants/product1_2.jpg'],
+                'status': 'active',
+                'created_at': '2023-02-01',
+                'updated_at': '2023-06-15',
+                'rating': 4.3,
+                'reviews_count': 12,
+                'options': {
+                    'colors': [
+                        {'name': 'Rouge', 'value': 'red', 'hex': '#ff0000', 'price_modifier': 0},
+                        {'name': 'Bleu', 'value': 'blue', 'hex': '#0000ff', 'price_modifier': 500}
+                    ],
+                    'sizes': [
+                        {'value': 'S', 'label': 'Small', 'price_modifier': 0},
+                        {'value': 'M', 'label': 'Medium', 'price_modifier': 0},
+                        {'value': 'L', 'label': 'Large', 'price_modifier': 1000}
+                    ]
+                }
+            },
+            {
+                'id': 1002,
+                'name': 'Produit de Marchand 2',
+                'description': 'Description détaillée du produit de marchand 2.',
+                'price': 8900,
+                'stock': 10,
+                'category_id': 2,
+                'subcategory_id': 204,
+                'image': 'static/img/merchants/product2.jpg',
+                'images': ['static/img/merchants/product2.jpg'],
+                'status': 'active',
+                'created_at': '2023-03-10',
+                'updated_at': '2023-06-20',
+                'rating': 4.7,
+                'reviews_count': 8
+            }
+        ],
+        'orders': [
+            {
+                'id': 2001,
+                'order_number': 'ORD-2023-2001',
+                'customer_name': 'Jean Dupont',
+                'products': [{'product_id': 1001, 'quantity': 2, 'price': 12500}],
+                'total': 25000,
+                'status': 'processing',
+                'created_at': '2023-06-22'
+            }
+        ],
+        'balance': 85000,
+        'bank_info': {
+            'bank_name': 'Banque des Comores',
+            'account_number': 'XXXXXX1234',
+            'account_holder': 'Commerçant Test'
+        }
+    }
+}
+
+# Base de données administrateurs simulée
+admins_db = {
+    'admin@doukakm.com': {
+        'password_hash': generate_password_hash('admin123'),
+        'first_name': 'Super',
+        'last_name': 'Admin',
+        'role': 'super_admin',
+        'id': 1,
+        'last_login': '2023-07-01'
+    }
+}
+
+# Décorateur pour les routes qui nécessitent une authentification
+def login_required(view):
+    @functools.wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Vous devez être connecté pour accéder à cette page.', 'warning')
+            # Sauvegarder l'URL actuelle pour y revenir après connexion
+            session['next_page'] = request.url
+            return redirect(url_for('login'))  # Rediriger vers login au lieu d'access_denied
+        return view(*args, **kwargs)
+    return wrapped_view
+
+# Décorateur pour les routes qui nécessitent une authentification de marchand
+def merchant_required(view):
+    @functools.wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if 'merchant_id' not in session:
+            flash('Vous devez être connecté en tant que marchand pour accéder à cette page.', 'warning')
+            # Sauvegarder l'URL actuelle pour y revenir après connexion
+            session['next_page'] = request.url
+            return redirect(url_for('merchant_login'))
+        return view(*args, **kwargs)
+    return wrapped_view
+
+# Décorateur pour les routes qui nécessitent une authentification administrateur
+def admin_required(view):
+    @functools.wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if 'admin_id' not in session:
+            print(f"Tentative d'accès non autorisé au dashboard admin")  # Log pour déboguer
+            flash('Vous devez être connecté en tant qu\'administrateur pour accéder à cette page.', 'warning')
+            return redirect(url_for('admin_login'))
+        print(f"Accès autorisé au dashboard admin pour {session.get('admin_email')}")  # Log pour déboguer
+        return view(*args, **kwargs)
+    return wrapped_view
+
+@app.route('/')
+def home():
+    # Sample featured products for homepage
+    featured_products = [
+        {
+            'id': 1,
+            'name': 'Phone Comoros Edition',
+            'price': 45000,
+            'image': 'static/img/product1.jpg',
+            'description': 'Special edition smartphone with Comoros themes'
+        },
+        {
+            'id': 2,
+            'name': 'Traditional Comorian Dress',
+            'price': 20000,
+            'image': 'static/img/product2.jpg',
+            'description': 'Beautiful handcrafted traditional dress'
+        },
+        {
+            'id': 3,
+            'name': 'Spice Set',
+            'price': 5000,
+            'image': 'static/img/product3.jpg',
+            'description': 'Authentic Comorian spice collection'
+        }
+    ]
+    
+    # Produits recommandés basés sur l'historique du client
+    recommended_products = []
+    
+    # Vérifier si l'utilisateur est authentifié et a un historique
+    user_id = session.get('user_id')
+    if user_id:
+        # Dans une application réelle, cela viendrait d'une base de données
+        # Ici, nous simulons des recommandations basées sur l'historique
+        viewed_products = session.get('viewed_products', [])
+        
+        if viewed_products:
+            # Simulation de recommandations basées sur les vues précédentes
+            recommended_products = [
+                {
+                    'id': 10,
+                    'name': 'Smartphone Premium',
+                    'price': 55000,
+                    'image': 'static/img/recommended1.jpg',
+                    'description': 'Recommandé basé sur votre historique de navigation'
+                },
+                {
+                    'id': 11,
+                    'name': 'Enceinte Bluetooth',
+                    'price': 15000,
+                    'image': 'static/img/recommended2.jpg',
+                    'description': 'Parfait pour accompagner votre nouveau smartphone'
+                },
+                {
+                    'id': 12,
+                    'name': 'Écouteurs sans fil',
+                    'price': 12000,
+                    'image': 'static/img/recommended3.jpg',
+                    'description': 'Compatible avec tous les smartphones'
+                },
+                {
+                    'id': 13,
+                    'name': 'Housse de protection',
+                    'price': 5000,
+                    'image': 'static/img/recommended4.jpg',
+                    'description': 'Protection élégante pour votre appareil'
+                }
+            ]
+        else:
+            # Recommandations générales pour les utilisateurs sans historique
+            recommended_products = [
+                {
+                    'id': 14,
+                    'name': 'Montre connectée',
+                    'price': 25000,
+                    'image': 'static/img/trending1.jpg',
+                    'description': 'Produit populaire chez nos clients'
+                },
+                {
+                    'id': 15,
+                    'name': 'Basket Running',
+                    'price': 18000,
+                    'image': 'static/img/trending2.jpg',
+                    'description': 'Notre produit le plus vendu ce mois-ci'
+                },
+                {
+                    'id': 16,
+                    'name': 'Enceinte Bluetooth Portable',
+                    'price': 8000,
+                    'image': 'static/img/trending3.jpg',
+                    'description': 'Idéal pour vos sorties entre amis'
+                },
+                {
+                    'id': 17,
+                    'name': 'Casque Audio',
+                    'price': 15000,
+                    'image': 'static/img/trending4.jpg',
+                    'description': 'Son haute qualité garanti'
+                }
+            ]
+    else:
+        # Pour les utilisateurs non connectés, afficher des produits tendances
+        recommended_products = [
+            {
+                'id': 14,
+                'name': 'Montre connectée',
+                'price': 25000,
+                'image': 'static/img/trending1.jpg',
+                'description': 'Produit populaire chez nos clients'
+            },
+            {
+                'id': 15,
+                'name': 'Basket Running',
+                'price': 18000,
+                'image': 'static/img/trending2.jpg',
+                'description': 'Notre produit le plus vendu ce mois-ci'
+            },
+            {
+                'id': 16,
+                'name': 'Enceinte Bluetooth Portable',
+                'price': 8000,
+                'image': 'static/img/trending3.jpg',
+                'description': 'Idéal pour vos sorties entre amis'
+            },
+            {
+                'id': 17,
+                'name': 'Casque Audio',
+                'price': 15000,
+                'image': 'static/img/trending4.jpg',
+                'description': 'Son haute qualité garanti'
+            }
+        ]
+    
+    return render_template('home.html', products=featured_products, recommended_products=recommended_products)
+
+@app.route('/products')
+def products():
+    # Étendre la liste des catégories pour inclure toutes les catégories disponibles
+    categories = [
+        {'id': 1, 'name': 'Électronique'},
+        {'id': 2, 'name': 'Vêtements'},
+        {'id': 3, 'name': 'Alimentation'},
+        {'id': 4, 'name': 'Artisanat local'},
+        {'id': 5, 'name': 'Maison & Déco'},
+        {'id': 6, 'name': 'Santé & Beauté'},
+    ]
+    
+    # Extended product list for products page
+    all_products = [
+        {
+            'id': 1,
+            'name': 'Phone Comoros Edition',
+            'price': 45000,
+            'image': 'static/img/product1.jpg',
+            'description': 'Special edition smartphone with Comoros themes',
+            'category_id': 1
+        },
+        {
+            'id': 2,
+            'name': 'Traditional Comorian Dress',
+            'price': 20000,
+            'image': 'static/img/product2.jpg',
+            'description': 'Beautiful handcrafted traditional dress',
+            'category_id': 2
+        },
+        {
+            'id': 3,
+            'name': 'Spice Set',
+            'price': 5000,
+            'image': 'static/img/product3.jpg',
+            'description': 'Authentic Comorian spice collection',
+            'category_id': 3
+        },
+        {
+            'id': 4,
+            'name': 'Tablette Android',
+            'price': 30000,
+            'image': 'static/img/product4.jpg',
+            'description': 'Tablette performante pour tous vos besoins numériques',
+            'category_id': 1
+        },
+        {
+            'id': 5,
+            'name': 'Robe de Mariage Comorienne',
+            'price': 35000,
+            'image': 'static/img/product5.jpg',
+            'description': 'Robe traditionnelle pour les mariages comoriens',
+            'category_id': 2
+        },
+        {
+            'id': 6,
+            'name': 'Panier de Fruits Locaux',
+            'price': 3500,
+            'image': 'static/img/product6.jpg',
+            'description': 'Sélection des meilleurs fruits frais des Comores',
+            'category_id': 3
+        },
+        {
+            'id': 7,
+            'name': 'Sculptures en Bois',
+            'price': 7500,
+            'image': 'static/img/product7.jpg',
+            'description': 'Artisanat local, sculptures en bois faites à la main',
+            'category_id': 4
+        },
+        {
+            'id': 8,
+            'name': 'Bijoux Traditionnels',
+            'price': 15000,
+            'image': 'static/img/product8.jpg',
+            'description': 'Bijoux inspirés de la culture comorienne',
+            'category_id': 4
+        }
+    ]
+    
+    # Récupérer les paramètres de filtrage
+    search_query = request.args.get('q', '').lower()
+    category_filters = request.args.getlist('category_filter')
+    min_price = request.args.get('min_price', '')
+    max_price = request.args.get('max_price', '')
+    in_stock = request.args.get('in_stock', '')
+    sort_option = request.args.get('sort', 'default')
+    
+    # Log pour déboguer
+    print(f"Sort option received: {sort_option}")
+    
+    # Convertir les paramètres numériques
+    try:
+        min_price = int(min_price) if min_price else None
+    except ValueError:
+        min_price = None
+        
+    try:
+        max_price = int(max_price) if max_price else None
+    except ValueError:
+        max_price = None
+    
+    # Filtrer les produits
+    filtered_products = all_products
+    
+    # Filtrer par recherche
+    if search_query:
+        filtered_products = [p for p in filtered_products if 
+                            search_query in p['name'].lower() or 
+                            search_query in p['description'].lower()]
+    
+    # Filtrer par catégorie
+    if category_filters:
+        category_ids = [int(cat_id) for cat_id in category_filters]
+        filtered_products = [p for p in filtered_products if p['category_id'] in category_ids]
+    # Filtrer par prix
+    if min_price is not None:
+        filtered_products = [p for p in filtered_products if p['price'] >= min_price]
+    if max_price is not None:
+        filtered_products = [p for p in filtered_products if p['price'] <= max_price]
+    
+    # Filtrer par disponibilité
+    if in_stock:
+        filtered_products = [p for p in filtered_products if p.get('in_stock', True)]
+    
+    # CORRECTION: Tri des produits - Vérifier le type et appliquer le tri
+    print(f"Applying sort: {sort_option}")
+    if sort_option == 'price_asc':
+        filtered_products = sorted(filtered_products, key=lambda p: p['price'])
+        print("Sorting by price ascending")
+    elif sort_option == 'price_desc':
+        filtered_products = sorted(filtered_products, key=lambda p: p['price'], reverse=True)
+        print("Sorting by price descending")
+    elif sort_option == 'name_asc':
+        filtered_products = sorted(filtered_products, key=lambda p: p['name'])
+        print("Sorting by name A-Z")
+    elif sort_option == 'name_desc':
+        filtered_products = sorted(filtered_products, key=lambda p: p['name'], reverse=True)
+        print("Sorting by name Z-A")
+    else:
+        print(f"Using default sort (no sorting applied)")
+    
+    # Ajouter des logs pour inspecter les produits triés
+    if filtered_products:
+        print(f"First few products after sorting:")
+        for i, p in enumerate(filtered_products[:3]):
+            print(f"{i+1}. {p['name']} - {p['price']} KMF")
+    
+    # S'assurer que sort_option est correctement passé au template
+    return render_template('products.html', 
+                          products=filtered_products, 
+                          categories=categories,
+                          search_query=search_query,
+                          sort_option=sort_option)  # Passer la variable sort_option
+
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    # In a real application, you would fetch this from a database
+    products = [
+        {
+            'id': 1,
+            'name': 'Phone Comoros Edition',
+            'price': 45000,
+            'image': 'static/img/product1.jpg',
+            'description': 'Special edition smartphone with Comoros themes',
+            'category': 'Électronique',
+            'specifications': {
+                'Écran': '6.5 pouces AMOLED',
+                'Processeur': 'Octa-core 2.4 GHz',
+                'RAM': '8 GB',
+                'Stockage': '128 GB',
+                'Batterie': '4500 mAh',
+                'Caméra': '48 MP + 12 MP + 5 MP'
+            },
+            'in_stock': True,
+            'rating': 4.5,
+            'reviews': 24,
+            # Nouvelles options de produit avec effet de prix
+            'colors': [
+                {'name': 'Noir', 'value': 'noir', 'hex': '#000000', 'price_modifier': 0},
+                {'name': 'Bleu', 'value': 'bleu', 'hex': '#1a237e', 'price_modifier': 1500},
+                {'name': 'Blanc', 'value': 'blanc', 'hex': '#ffffff', 'price_modifier': 0}
+            ],
+            'storage_options': [
+                {'value': '128', 'label': '128 GB', 'price_modifier': 0},
+                {'value': '256', 'label': '256 GB', 'price_modifier': 5000},
+                {'value': '512', 'label': '512 GB', 'price_modifier': 10000}
+            ]
+        },
+        {
+            'id': 2,
+            'name': 'Traditional Comorian Dress',
+            'price': 20000,
+            'image': 'static/img/product2.jpg',
+            'description': 'Beautiful handcrafted traditional dress with authentic Comorian patterns. Made from high-quality materials and perfect for special occasions.',
+            'category': 'Vêtements',
+            'specifications': {
+                'Matériau': 'Coton et soie',
+                'Tailles disponibles': 'S, M, L, XL',
+                'Couleurs': 'Bleu, Vert, Rouge',
+                'Origine': 'Artisanat de Grande Comore'
+            },
+            'in_stock': True,
+            'rating': 4.8,
+            'reviews': 36,
+            # Nouvelles options de produit avec effet de prix
+            'sizes': [
+                {'value': 'S', 'label': 'S', 'price_modifier': 0},
+                {'value': 'M', 'label': 'M', 'price_modifier': 0},
+                {'value': 'L', 'label': 'L', 'price_modifier': 1000},
+                {'value': 'XL', 'label': 'XL', 'price_modifier': 2000},
+                {'value': 'XXL', 'label': 'XXL', 'price_modifier': 3000}
+            ],
+            'colors': [
+                {'name': 'Bleu', 'value': 'bleu', 'hex': '#1a237e', 'price_modifier': 0},
+                {'name': 'Vert', 'value': 'vert', 'hex': '#004d40', 'price_modifier': 500},
+                {'name': 'Rouge', 'value': 'rouge', 'hex': '#b71c1c', 'price_modifier': 1000}
+            ]
+        },
+        # Add other products here...
+    ]
+    
+    # Find the requested product
+    product = next((p for p in products if p['id'] == product_id), None)
+    
+    if product:
+        # Vérifier si le produit est dans la liste d'envies de l'utilisateur
+        in_wishlist = False
+        if 'user_id' in session:
+            user_email = session.get('user_email')
+            user = users_db.get(user_email, {})
+            wishlist = user.get('wishlist', [])
+            in_wishlist = product_id in wishlist
+        
+        # Enregistrement du produit vu dans l'historique de l'utilisateur
+        if 'user_id' in session:
+            viewed_products = session.get('viewed_products', [])
+            
+            # Éviter les doublons en vérifiant si le produit est déjà dans l'historique
+            if product_id not in viewed_products:
+                viewed_products.append(product_id)
+                # Limiter la taille de l'historique (garder les 10 derniers produits vus)
+                if len(viewed_products) > 10:
+                    viewed_products = viewed_products[-10:]
+                
+                session['viewed_products'] = viewed_products
+        
+        # Get related products (in real app, this would be more sophisticated)
+        related_products = [p for p in products if p['id'] != product_id][:3]
+        return render_template('product_detail.html', product=product, related_products=related_products, in_wishlist=in_wishlist)
+    else:
+        # Handle product not found
+        return render_template('404.html'), 404
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+@app.route('/contact')
+def contact():
+    return render_template('contact.html')
+
+@app.route('/search')
+def search():
+    # Get search query and category
+    query = request.args.get('q', '')
+    category = request.args.get('category', '')
+    sort_option = request.args.get('sort', 'default')  # Récupérer l'option de tri
+    
+    # Sample categories (same as in products route)
+    categories = [
+        {'id': 1, 'name': 'Électronique'},
+        {'id': 2, 'name': 'Vêtements'},
+        {'id': 3, 'name': 'Alimentation'},
+        {'id': 4, 'name': 'Artisanat local'}
+    ]
+    
+    # All products (in real app, this would be from database)
+    all_products = [
+        {
+            'id': 1,
+            'name': 'Phone Comoros Edition',
+            'price': 45000,
+            'image': 'static/img/product1.jpg',
+            'description': 'Special edition smartphone with Comoros themes',
+            'price': 20000,
+            'image': 'static/img/product2.jpg',
+            'description': 'Beautiful handcrafted traditional dress',
+            'category_id': 2
+        },
+        {
+            'id': 3,
+            'name': 'Spice Set',
+            'price': 5000,
+            'image': 'static/img/product3.jpg',
+            'description': 'Authentic Comorian spice collection',
+            'category_id': 3
+        },
+        {
+            'id': 4,
+            'name': 'Tablette Android',
+            'price': 30000,
+            'image': 'static/img/product4.jpg',
+            'description': 'Tablette performante pour tous vos besoins numériques',
+            'category_id': 1
+        },
+        {
+            'id': 5,
+            'name': 'Robe de Mariage Comorienne',
+            'price': 35000,
+            'image': 'static/img/product5.jpg',
+            'description': 'Robe traditionnelle pour les mariages comoriens',
+            'category_id': 2
+        },
+        {
+            'id': 6,
+            'name': 'Panier de Fruits Locaux',
+            'price': 3500,
+            'image': 'static/img/product6.jpg',
+            'description': 'Sélection des meilleurs fruits frais des Comores',
+            'category_id': 3
+        },
+        {
+            'id': 7,
+            'name': 'Sculptures en Bois',
+            'price': 7500,
+            'image': 'static/img/product7.jpg',
+            'description': 'Artisanat local, sculptures en bois faites à la main',
+            'category_id': 4
+        },
+        {
+            'id': 8,
+            'name': 'Bijoux Traditionnels',
+            'price': 15000,
+            'image': 'static/img/product8.jpg',
+            'description': 'Bijoux inspirés de la culture comorienne',
+            'category_id': 4
+        }
+    ]
+    
+    # Filter products based on search query and category
+    filtered_products = []
+    for product in all_products:
+        # Check if product matches search query
+        name_match = query.lower() in product['name'].lower()
+        desc_match = query.lower() in product['description'].lower()
+        
+        # Check if product is in selected category
+        category_match = True
+        if category and category.isdigit():
+            category_match = product['category_id'] == int(category)
+        
+        # Add product if it matches search criteria
+        if (name_match or desc_match) and category_match:
+            filtered_products.append(product)
+    
+    # Appliquer le tri
+    if sort_option == 'price_asc':
+        filtered_products = sorted(filtered_products, key=lambda p: p['price'])
+    elif sort_option == 'price_desc':
+        filtered_products = sorted(filtered_products, key=lambda p: p['price'], reverse=True)
+    elif sort_option == 'name_asc':
+        filtered_products = sorted(filtered_products, key=lambda p: p['name'])
+    elif sort_option == 'name_desc':
+        filtered_products = sorted(filtered_products, key=lambda p: p['name'], reverse=True)
+    
+    return render_template('products.html', 
+                           products=filtered_products, 
+                           categories=categories, 
+                           search_query=query,
+                           selected_category=category,
+                           sort_option=sort_option)  # Passer l'option de tri au template
+
+@app.route('/category/<category_slug>')
+@app.route('/category/<category_slug>/<subcategory_slug>')
+def category(category_slug, subcategory_slug=None):
+    # Structure des catégories et sous-catégories
+    categories_structure = {
+        'electronics': {
+            'id': 1, 
+            'name': 'Électronique',
+            'subcategories': {
+                'smartphones': {'id': 101, 'name': 'Smartphones'},
+                'feature-phones': {'id': 102, 'name': 'Téléphones basiques'},
+                'accessories': {'id': 103, 'name': 'Accessoires'},
+                'laptops': {'id': 104, 'name': 'Ordinateurs portables'},
+                'desktops': {'id': 105, 'name': 'Ordinateurs de bureau'},
+                'tablets': {'id': 106, 'name': 'Tablettes'},
+                'tv': {'id': 107, 'name': 'Téléviseurs'},
+                'cameras': {'id': 108, 'name': 'Appareils photo'},
+                'audio': {'id': 109, 'name': 'Audio'}
+            }
+        },
+        'clothing': {
+            'id': 2, 
+            'name': 'Vêtements',
+            'subcategories': {
+                'men-shirts': {'id': 201, 'name': 'T-shirts & Chemises Homme'},
+                'men-pants': {'id': 202, 'name': 'Pantalons Homme'},
+                'men-traditional': {'id': 203, 'name': 'Tenues traditionnelles Homme'},
+                'women-dresses': {'id': 204, 'name': 'Robes'},
+                'women-tops': {'id': 205, 'name': 'Hauts Femme'},
+                'women-traditional': {'id': 206, 'name': 'Tenues traditionnelles Femme'},
+                'kids-boys': {'id': 207, 'name': 'Vêtements Garçon'},
+                'kids-girls': {'id': 208, 'name': 'Vêtements Fille'},
+                'kids-babies': {'id': 209, 'name': 'Vêtements Bébé'}
+            }
+        },
+        'food': {
+            'id': 3, 
+            'name': 'Alimentation',
+            'subcategories': {
+                'spices': {'id': 301, 'name': 'Épices'},
+                'fruits': {'id': 302, 'name': 'Fruits'},
+                'vegetables': {'id': 303, 'name': 'Légumes'},
+                'soft-drinks': {'id': 304, 'name': 'Boissons gazeuses'},
+                'juices': {'id': 305, 'name': 'Jus'},
+                'water': {'id': 306, 'name': 'Eau'},
+                'rice': {'id': 307, 'name': 'Riz'},
+                'pasta': {'id': 308, 'name': 'Pâtes'},
+                'canned': {'id': 309, 'name': 'Conserves'}
+            }
+        },
+        'crafts': {
+            'id': 4, 
+            'name': 'Artisanat local',
+            'subcategories': {
+                'paintings': {'id': 401, 'name': 'Peintures'},
+                'sculptures': {'id': 402, 'name': 'Sculptures'},
+                'jewelry': {'id': 403, 'name': 'Bijoux'},
+                'home-decor': {'id': 404, 'name': 'Décoration intérieure'},
+                'baskets': {'id': 405, 'name': 'Vannerie'},
+                'textiles': {'id': 406, 'name': 'Textiles'},
+                'keychains': {'id': 407, 'name': 'Porte-clés'},
+                'magnets': {'id': 408, 'name': 'Aimants'},
+                'postcards': {'id': 409, 'name': 'Cartes postales'}
+            }
+        },
+        'home': {
+            'id': 5, 
+            'name': 'Maison & Déco',
+            'slug': 'home',
+            'subcategories': {
+                'living-room': {'id': 501, 'name': 'Salon'},
+                'bedroom': {'id': 502, 'name': 'Chambre à coucher'},
+                'dining': {'id': 503, 'name': 'Salle à manger'},
+                'wall-decor': {'id': 504, 'name': 'Décoration murale'},
+                'lighting': {'id': 505, 'name': 'Éclairage'},
+                'textiles': {'id': 506, 'name': 'Textiles maison'},
+                'cookware': {'id': 507, 'name': 'Ustensiles de cuisine'},
+                'tableware': {'id': 508, 'name': 'Arts de la table'},
+                'appliances': {'id': 509, 'name': 'Petits électroménagers'}
+            }
+        },
+        'beauty': {
+            'id': 6,
+            'name': 'Santé & Beauté',
+            'slug': 'beauty',
+            'subcategories': {
+                'skin-care': {'id': 601, 'name': 'Soins de la peau'},
+                'hair-care': {'id': 602, 'name': 'Soins capillaires'},
+                'bath': {'id': 603, 'name': 'Bain & douche'},
+                'makeup': {'id': 604, 'name': 'Maquillage'},
+                'fragrances': {'id': 605, 'name': 'Parfums'},
+                'tools': {'id': 606, 'name': 'Accessoires beauté'},
+                'wellness': {'id': 607, 'name': 'Produits bien-être'},
+                'herbal': {'id': 608, 'name': 'Produits naturels'},
+                'traditional': {'id': 609, 'name': 'Remèdes traditionnels'}
+            }
+        }
+        # ...autres catégories principales...
+    }
+    
+    # Vérifier si la catégorie principale existe
+    if category_slug not in categories_structure:
+        return render_template('404.html'), 404
+    
+    current_category = categories_structure[category_slug]
+    current_subcategory = None
+    
+    # Vérifier si une sous-catégorie a été spécifiée et existe
+    if subcategory_slug:
+        if subcategory_slug not in current_category['subcategories']:
+            return render_template('404.html'), 404
+        current_subcategory = current_category['subcategories'][subcategory_slug]
+    
+    # Liste de toutes les catégories pour les menus
+    categories = []
+    for slug, cat in categories_structure.items():
+        categories.append({
+            'id': cat['id'], 
+            'name': cat['name'], 
+            'slug': slug
+        })
+    
+    # Simuler des produits pour la catégorie/sous-catégorie (dans une application réelle, vous les récupéreriez de la base de données)
+    all_products = [
+        # ...Simuler ici la liste complète des produits...
+    ]
+    
+    # Filtrer les produits selon la catégorie/sous-catégorie
+    if subcategory_slug:
+        filtered_products = [p for p in all_products if p.get('subcategory_id') == current_subcategory['id']]
+        page_title = f"{current_subcategory['name']} - {current_category['name']}"
+    else:
+        filtered_products = [p for p in all_products if p.get('category_id') == current_category['id']]
+        page_title = current_category['name']
+    
+    return render_template(
+        'products.html',
+        products=filtered_products,
+        categories=categories,
+        current_category=current_category,
+        current_subcategory=current_subcategory,
+        title=f"{page_title} - DOUKA KM"
+    )
+
+@app.route('/food-delivery')
+def food_delivery():
+    """Route for the food delivery page"""
+    return render_template('food_delivery.html')
+
+# Ajout d'une route pour le favicon.ico
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static', 'img'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+# Fonction utilitaire pour obtenir le panier actuel
+def get_cart():
+    if 'cart' not in session:
+        session['cart'] = []
+    return session['cart']
+
+# Route pour afficher le panier
+@app.route('/cart')
+def cart():
+    cart_items = get_cart()
+    total = 0
+    products = []
+    
+    # Récupération des informations sur les produits dans le panier
+    for item in cart_items:
+        # Récupérer les informations de base
+        product_id = item['product_id']
+        quantity = item['quantity']
+        is_food = item.get('is_food', False)
+        options = item.get('options', {})
+        
+        # Traiter différemment selon le type de produit
+        if is_food:
+            # Produits alimentaires
+            name = item.get('name', 'Produit alimentaire')
+            price = item.get('price', 0)
+            image = item.get('image', '')
+            
+            subtotal = price * quantity
+            total += subtotal
+            
+            products.append({
+                'id': product_id,  # Conserver l'ID avec préfixe
+                'name': name,
+                'image': image,
+                'price': price,
+                'quantity': quantity,
+                'subtotal': subtotal,
+                'is_food': True
+            })
+        else:
+            # Produits normaux
+            try:
+                # Tenter de récupérer le produit par ID
+                product = get_product_by_id(product_id)
+                
+                if product:
+                    # Utiliser le prix modifié s'il est stocké dans l'élément du panier
+                    if 'modified_price' in item:
+                        product_price = item['modified_price']
+                    else:
+                        # Sinon, recalculer le prix modifié en fonction des options
+                        product_price = product['price']
+                        price_modifier = 0
+                        
+                        # Calculer le modificateur de prix basé sur les options sélectionnées
+                        if 'color' in options and 'colors' in product:
+                            selected_color = next((c for c in product['colors'] if c['value'] == options['color']), None)
+                            if selected_color and 'price_modifier' in selected_color:
+                                price_modifier += selected_color['price_modifier']
+                        
+                        if 'size' in options and 'sizes' in product:
+                            selected_size = next((s for s in product['sizes'] if s['value'] == options['size']), None)
+                            if selected_size and 'price_modifier' in selected_size:
+                                price_modifier += selected_size['price_modifier']
+                        
+                        if 'storage' in options and 'storage_options' in product:
+                            selected_storage = next((s for s in product['storage_options'] if s['value'] == options['storage']), None)
+                            if selected_storage and 'price_modifier' in selected_storage:
+                                price_modifier += selected_storage['price_modifier']
+                        
+                        product_price += price_modifier
+                    
+                    subtotal = product_price * quantity
+                    total += subtotal
+                    
+                    # Enrichir les options avec des noms plus descriptifs si disponibles
+                    display_options = {}
+                    
+                    # Enrichir l'option "couleur" avec gestion sécurisée des attributs
+                    if 'color' in options and 'colors' in product:
+                        color_value = options['color']
+                        color_info = next((c for c in product['colors'] if c['value'] == color_value), None)
+                        if color_info:
+                            display_options['color'] = color_info['name']
+                            # Vérifier de façon sécurisée si price_modifier existe et est > 0
+                            price_mod = color_info.get('price_modifier', 0)
+                            if price_mod > 0:
+                                display_options['color'] += f" (+{price_mod:,} KMF)".replace(',', ' ')
+                    
+                    # Enrichir l'option "taille" avec gestion sécurisée des attributs
+                    if 'size' in options and 'sizes' in product:
+                        size_value = options['size']
+                        size_info = next((s for s in product['sizes'] if s.get('value') == size_value or s == size_value), None)
+                        if size_info:
+                            # Vérifier si size_info est un dictionnaire ou une simple valeur
+                            if isinstance(size_info, dict):
+                                display_options['size'] = size_info.get('label', size_value)
+                                # Vérifier de façon sécurisée si price_modifier existe et est > 0
+                                price_mod = size_info.get('price_modifier', 0)
+                                if price_mod > 0:
+                                    display_options['size'] += f" (+{price_mod:,} KMF)".replace(',', ' ')
+                            else:
+                                display_options['size'] = size_value
+                        else:
+                            display_options['size'] = size_value
+                    
+                    # Enrichir l'option "stockage" avec gestion sécurisée des attributs
+                    if 'storage' in options and 'storage_options' in product:
+                        storage_value = options['storage']
+                        storage_info = next((s for s in product['storage_options'] if s['value'] == storage_value), None)
+                        if storage_info:
+                            display_options['storage'] = storage_info['label']
+                            # Vérifier de façon sécurisée si price_modifier existe et est > 0
+                            price_mod = storage_info.get('price_modifier', 0)
+                            if price_mod > 0:
+                                display_options['storage'] += f" (+{price_mod:,} KMF)".replace(',', ' ')
+                    
+                    # Copier les autres options telles quelles
+                    for key, value in options.items():
+                        if key not in display_options:
+                            display_options[key] = value
+                    
+                    products.append({
+                        'id': product_id,
+                        'unique_id': item.get('unique_id', product_id),
+                        'name': product['name'],
+                        'image': product['image'],
+                        'price': product_price,  # Utiliser le prix modifié
+                        'base_price': product['price'],  # Conserver le prix de base
+                        'price_modifier': product_price - product['price'],  # Calculer la différence
+                        'quantity': quantity,
+                        'subtotal': subtotal,
+                        'is_food': False,
+                        'options': display_options  # Utiliser les options enrichies
+                    })
+            except Exception as e:
+                print(f"Erreur lors de la récupération du produit {product_id}: {e}")
+                # Ignorer les produits qui posent problème
+    
+    # Vérifier s'il y a des produits alimentaires dans le panier
+    has_food_items = any(item.get('is_food', False) for item in products)
+    has_regular_items = any(not item.get('is_food', False) for item in products)
+    
+    # Passer ces informations au template
+    return render_template('cart.html', 
+                          products=products, 
+                          total=total, 
+                          has_food_items=has_food_items, 
+                          has_regular_items=has_regular_items)
+
+# Fonction utilitaire pour récupérer les informations d'un produit par son ID
+def get_product_by_id(product_id):
+    # Dans une application réelle, cette fonction récupérerait les données depuis une base de données
+    all_products = [
+        {
+            'id': 1,
+            'name': 'Phone Comoros Edition',
+            'price': 45000,
+            'image': 'static/img/product1.jpg',
+            'description': 'Special edition smartphone with Comoros themes'
+        },
+        {
+            'id': 2,
+            'name': 'Traditional Comorian Dress',
+            'price': 20000,
+            'image': 'static/img/product2.jpg',
+            'description': 'Beautiful handcrafted traditional dress'
+        },
+        {
+            'id': 3,
+            'name': 'Spice Set',
+            'price': 5000,
+            'image': 'static/img/product3.jpg',
+            'description': 'Authentic Comorian spice collection'
+        },
+        {
+            'id': 4,
+            'name': 'Tablette Android',
+            'price': 30000,
+            'image': 'static/img/product4.jpg',
+            'description': 'Tablette performante pour tous vos besoins numériques'
+        },
+        {
+            'id': 5,
+            'name': 'Robe de Mariage Comorienne',
+            'price': 35000,
+            'image': 'static/img/product5.jpg',
+            'description': 'Robe traditionnelle pour les mariages comoriens'
+        },
+        # Ajoutez ici les produits recommandés et tendances
+        {
+            'id': 10,
+            'name': 'Smartphone Premium',
+            'price': 55000,
+            'image': 'static/img/recommended1.jpg',
+            'description': 'Recommandé basé sur votre historique de navigation'
+        },
+        {
+            'id': 11,
+            'name': 'Enceinte Bluetooth',
+            'price': 15000,
+            'image': 'static/img/recommended2.jpg',
+            'description': 'Parfait pour accompagner votre nouveau smartphone'
+        },
+        {
+            'id': 12,
+            'name': 'Écouteurs sans fil',
+            'price': 12000,
+            'image': 'static/img/recommended3.jpg',
+            'description': 'Compatible avec tous les smartphones'
+        },
+        {
+            'id': 13,
+            'name': 'Housse de protection',
+            'price': 5000,
+            'image': 'static/img/recommended4.jpg',
+            'description': 'Protection élégante pour votre appareil'
+        },
+        {
+            'id': 14,
+            'name': 'Montre connectée',
+            'price': 25000,
+            'image': 'static/img/trending1.jpg',
+            'description': 'Produit populaire chez nos clients'
+        },
+        {
+            'id': 15,
+            'name': 'Basket Running',
+            'price': 18000,
+            'image': 'static/img/trending2.jpg',
+            'description': 'Notre produit le plus vendu ce mois-ci'
+        },
+        {
+            'id': 16,
+            'name': 'Enceinte Bluetooth Portable',
+            'price': 8000,
+            'image': 'static/img/trending3.jpg',
+            'description': 'Idéal pour vos sorties entre amis'
+        },
+        {
+            'id': 17,
+            'name': 'Casque Audio',
+            'price': 15000,
+            'image': 'static/img/trending4.jpg',
+            'description': 'Son haute qualité garanti'
+        }
+    ]
+    
+    # Rechercher le produit avec l'ID correspondant
+    for product in all_products:
+        if product['id'] == product_id:
+            return product
+    
+    # Si aucun produit n'a été trouvé, le product_id pourrait être un produit alimentaire
+    return None
+
+# Route pour ajouter un produit au panier
+@app.route('/add-to-cart/<product_id>', methods=['POST', 'GET'])
+def add_to_cart(product_id):
+    quantity = int(request.form.get('quantity', 1))
+    # Option pour gérer la redirection
+    should_redirect = request.form.get('redirect', 'false') == 'true'
+    
+    # Récupération des options du produit (couleur, taille, etc.)
+    options = {}
+    try:
+        options_str = request.form.get('options', '{}')
+        options = json.loads(options_str)
+    except:
+        # En cas d'erreur, ignorer les options
+        pass
+    
+    # Récupération du prix modifié par les options
+    price_modifier = 0
+    modified_price = None
+    
+    # Tenter de récupérer le prix de base et calculer le prix modifié
+    try:
+        product = get_product_by_id(int(product_id))
+        if product:
+            base_price = product['price']
+            price_modifier = int(request.form.get('price_modifier', 0))
+            modified_price = base_price + price_modifier
+    except:
+        pass
+    
+    # Vérifier si nous avons affaire à un produit alimentaire
+    is_food = request.form.get('is_food') == 'true'
+    
+    # Obtenir le panier actuel
+    cart = get_cart()
+    
+    # Générer un ID unique pour ce produit avec ses options
+    unique_product_id = product_id
+    if options:
+        # Créer un hash des options pour différencier les mêmes produits avec des options différentes
+        options_hash = hashlib.md5(json.dumps(options, sort_keys=True).encode()).hexdigest()[:8]
+        unique_product_id = f"{product_id}_{options_hash}"
+    
+    # Si c'est un produit alimentaire
+    if is_food:
+        product_name = request.form.get('product_name', 'Produit alimentaire')
+        price = int(request.form.get('price', 0))
+        image = request.form.get('image', '')
+        
+        # Pour les produits alimentaires, nous utilisons un préfixe 'f_'
+        food_product_id = f'f_{product_id}'
+        
+        # Vérifier si le produit alimentaire est déjà dans le panier
+        product_in_cart = False
+        for item in cart:
+            if str(item['product_id']) == food_product_id:
+                item['quantity'] += quantity
+                product_in_cart = True
+                break
+        
+        # Si le produit n'est pas dans le panier, l'ajouter
+        if not product_in_cart:
+            cart.append({
+                'product_id': food_product_id,
+                'quantity': quantity,
+                'is_food': True,
+                'name': product_name,
+                'price': price,
+                'image': image
+            })
+            
+        # Nom du produit pour la notification
+        product_name = product_name
+    else:
+        # Gérer comme un produit normal
+        try:
+            product_id_int = int(product_id)
+            
+            # Vérifier si le produit avec les mêmes options est déjà dans le panier
+            product_in_cart = False
+            for item in cart:
+                # Vérifier si le produit a le même ID unique (produit + options)
+                if str(item.get('unique_id', item['product_id'])) == str(unique_product_id):
+                    item['quantity'] += quantity
+                    product_in_cart = True
+                    break
+            
+            # Si le produit n'est pas dans le panier, l'ajouter
+            if not product_in_cart:
+                new_item = {
+                    'product_id': product_id_int,
+                    'unique_id': unique_product_id,
+                    'quantity': quantity,
+                    'is_food': False,
+                    'options': options
+                }
+                
+                # Ajouter le prix modifié si disponible
+                if modified_price is not None:
+                    new_item['modified_price'] = modified_price
+                    new_item['price_modifier'] = price_modifier
+                
+                cart.append(new_item)
+                
+            # Obtenir le nom du produit
+            product = get_product_by_id(product_id_int)
+            product_name = product['name'] if product else "Produit"
+        except ValueError:
+            # Si l'ID n'est pas un entier valide, c'est peut-être un produit spécial
+            # Conserver l'ID tel quel
+            product_in_cart = False
+            for item in cart:
+                if str(item['product_id']) == str(product_id):
+                    item['quantity'] += quantity
+                    product_in_cart = True
+                    break
+            
+            if not product_in_cart:
+                cart.append({
+                    'product_id': product_id,
+                    'quantity': quantity
+                })
+            
+            product_name = "Produit"
+    
+    # Mettre à jour le panier dans la session
+    session['cart'] = cart
+    
+    # Si la requête est AJAX, retourner JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Calculer le nombre d'articles distincts (types de produits) dans le panier
+        cart_count = len(cart)
+        
+        return jsonify({
+            'success': True, 
+            'message': f"{product_name} ajouté au panier",
+            'product_name': product_name,
+            'cart_count': cart_count,
+            'redirect': url_for('cart') if should_redirect else None
+        })
+    
+    # Pour les requêtes non AJAX, toujours rediriger vers le panier
+    flash('Produit ajouté au panier avec succès!', 'success')
+    return redirect(url_for('cart'))
+
+# Modifier la route pour supprimer un produit du panier
+@app.route('/remove-from-cart/<product_id>', methods=['POST'])
+def remove_from_cart(product_id):
+    # Obtenir le panier actuel
+    cart = get_cart()
+    
+    # Supprimer le produit du panier (qu'il s'agisse d'un produit normal ou alimentaire)
+    for item in cart:
+        if str(item['product_id']) == str(product_id):
+            cart.remove(item)
+            break
+    
+    # Mettre à jour le panier dans la session
+    session['cart'] = cart
+    
+    # Retourner JSON pour les requêtes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Calculer le nombre de types d'articles différents
+        cart_count = len(cart)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Produit supprimé du panier',
+            'cart_count': cart_count
+        })
+    
+    # Sinon, rediriger vers le panier
+    flash('Produit supprimé du panier!', 'success')
+    return redirect(url_for('cart'))
+
+# Modifier la route pour mettre à jour la quantité d'un produit
+@app.route('/update-cart/<product_id>', methods=['POST'])
+def update_cart(product_id):
+    quantity = int(request.form.get('quantity', 1))
+    
+    # Obtenir le panier actuel
+    cart = get_cart()
+    
+    # Mettre à jour la quantité du produit (qu'il s'agisse d'un produit normal ou alimentaire)
+    for item in cart:
+        if str(item['product_id']) == str(product_id):
+            if quantity > 0:
+                item['quantity'] = quantity
+            else:
+                # Si la quantité est 0, supprimer le produit du panier
+                cart.remove(item)
+            break
+    
+    # Mettre à jour le panier dans la session
+    session['cart'] = cart
+    
+    # Retourner JSON pour les requêtes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # Calculer le nombre de types d'articles différents
+        cart_count = len(cart)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Panier mis à jour',
+            'cart_count': cart_count
+        })
+    
+    # Sinon, rediriger vers le panier
+    flash('Panier mis à jour avec succès!', 'success')
+    return redirect(url_for('cart'))
+
+# Route pour vider le panier
+@app.route('/clear-cart', methods=['POST'])
+def clear_cart():
+    # Vider le panier
+    session['cart'] = []
+    
+    # Retourner JSON pour les requêtes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True, 
+            'message': 'Panier vidé',
+            'cart_count': 0
+        })
+    
+    # Sinon, rediriger vers le panier
+    flash('Panier vidé avec succès!', 'success')
+    return redirect(url_for('cart'))
+
+# Route pour passer à la caisse
+@app.route('/checkout', methods=['GET'])
+@login_required  # Exiger que l'utilisateur soit connecté
+def checkout():
+    # Vérifier si nous avons un panier filtré pour le checkout
+    checkout_cart = session.get('checkout_cart', [])
+    checkout_type = session.get('checkout_type', '')
+    
+    # Si nous avons un panier filtré pour les produits alimentaires, rediriger vers food_checkout
+    if checkout_type == 'food':
+        return redirect(url_for('food_checkout'))
+    
+    # Utiliser soit le panier filtré, soit le panier complet
+    cart_items = checkout_cart if checkout_cart else get_cart()
+    
+    # Filtrer pour ne garder que les produits non alimentaires
+    cart_items = [item for item in cart_items if not item.get('is_food', False)]
+    
+    if not cart_items:
+        flash('Votre panier est vide!', 'warning')
+        return redirect(url_for('cart'))
+    
+    # Vérifier s'il y a des produits alimentaires dans le panier complet
+    full_cart = get_cart()
+    has_food_items = any(item.get('is_food', False) for item in full_cart)
+    has_regular_items = any(not item.get('is_food', False) for item in full_cart)
+    
+    # Si le panier contient uniquement des produits alimentaires et n'a pas été filtré
+    if has_food_items and not has_regular_items and not checkout_type:
+        return redirect(url_for('food_checkout'))
+    
+    # Si le panier contient à la fois des produits alimentaires et réguliers et n'a pas été filtré
+    if has_food_items and has_regular_items and not checkout_type:
+        flash('Les produits alimentaires doivent être commandés séparément des autres produits. Veuillez choisir le type de produits à commander.', 'warning')
+        return redirect(url_for('cart'))
+    
+    # Calculer le total et récupérer les détails des produits (produits réguliers uniquement)
+    total = 0
+    products = []
+    
+    for item in cart_items:
+        product_id = item['product_id']
+        quantity = item['quantity']
+        
+        product = get_product_by_id(product_id)
+        
+        if product:
+            # Utiliser le prix modifié s'il est stocké dans l'élément du panier
+            if 'modified_price' in item:
+                product_price = item['modified_price']
+            else:
+                product_price = product['price']
+                
+            subtotal = product_price * quantity
+            total += subtotal
+            
+            products.append({
+                'id': product_id,
+                'name': product['name'],
+                'image': product['image'],
+                'price': product_price,
+                'quantity': quantity,
+                'subtotal': subtotal,
+                'options': item.get('options', {}),
+                'is_food': False
+            })
+    
+    # Options de livraison fictives pour les produits réguliers
+    shipping_options = [
+        {'id': 1, 'name': 'Standard (3-5 jours)', 'price': 1000},
+        {'id': 2, 'name': 'Express (1-2 jours)', 'price': 2000}
+    ]
+    
+    return render_template('checkout.html', 
+                          products=products, 
+                          total=total,
+                          shipping_options=shipping_options,
+                          is_food_delivery=False)
+
+@app.route('/food-checkout', methods=['GET'])
+@login_required  # Exiger que l'utilisateur soit connecté
+def food_checkout():
+    # Vérifier si nous avons un panier filtré pour le checkout
+    checkout_cart = session.get('checkout_cart', [])
+    checkout_type = session.get('checkout_type', '')
+    
+    # Si nous avons un panier filtré pour les produits non alimentaires, rediriger vers checkout
+    if checkout_type == 'regular':
+        return redirect(url_for('checkout'))
+    
+    # Utiliser soit le panier filtré, soit le panier complet
+    cart_items = checkout_cart if checkout_cart else get_cart()
+    
+    # Filtrer pour ne garder que les produits alimentaires
+    cart_items = [item for item in cart_items if item.get('is_food', False)]
+    
+    if not cart_items:
+        flash('Votre panier de repas est vide!', 'warning')
+        return redirect(url_for('cart'))
+    
+    # Calculer le total et récupérer les détails des produits (produits alimentaires uniquement)
+    total = 0
+    products = []
+    
+    for item in cart_items:
+        product_id = item['product_id']
+        quantity = item['quantity']
+        name = item.get('name', 'Produit alimentaire')
+        price = item.get('price', 0)
+        image = item.get('image', '')
+        
+        subtotal = price * quantity
+        total += subtotal
+        
+        products.append({
+            'id': product_id,
+            'name': name,
+            'image': image,
+            'price': price,
+            'quantity': quantity,
+            'subtotal': subtotal,
+            'is_food': True
+        })
+    
+    # Options de livraison spécifiques aux produits alimentaires
+    food_shipping_options = [
+        {'id': 1, 'name': 'Livraison rapide (30-60 min)', 'price': 1500},
+        {'id': 2, 'name': 'Livraison programmée (choisir l\'heure)', 'price': 1000}
+    ]
+    
+    # Préparer la date du jour pour le sélecteur de date
+    import datetime
+    today_date = datetime.date.today().isoformat()
+    
+    return render_template('food_checkout.html', 
+                          products=products, 
+                          total=total,
+                          shipping_options=food_shipping_options,
+                          is_food_delivery=True,
+                          today_date=today_date)
+
+# Modifier la route pour finaliser la commande
+@app.route('/complete-order', methods=['POST'])
+@login_required  # Exiger que l'utilisateur soit connecté
+def complete_order():
+    """Finalise une commande et retire les produits commandés du panier"""
+    checkout_type = session.get('checkout_type', '')
+    checkout_cart = session.get('checkout_cart', [])
+    
+    # Si aucun type de checkout n'est spécifié, utiliser tout le panier
+    if not checkout_type:
+        checkout_cart = get_cart()
+    
+    # Vérifier si le panier est vide
+    if not checkout_cart:
+        return jsonify({
+            'success': False,
+            'message': 'Votre panier est vide',
+            'redirect': url_for('cart')
+        })
+    
+    # Récupérer les informations sur la livraison et le paiement
+    shipping_method = request.form.get('shipping_method', 'Standard')
+    payment_method = request.form.get('payment_method', 'Paiement à la livraison')
+    address_id = request.form.get('address_id')
+    
+    # Récupérer les informations de l'utilisateur
+    user_email = session.get('user_email')
+    user = users_db.get(user_email, {})
+    
+    # Récupérer l'adresse de livraison sélectionnée
+    shipping_address = None
+    if user and 'addresses' in user:
+        for addr in user['addresses']:
+            if str(addr['id']) == str(address_id):
+                shipping_address = addr
+                break
+    
+    if not shipping_address and user:
+        # Utiliser les informations de base de l'utilisateur si aucune adresse n'est sélectionnée
+        shipping_address = {
+            'full_name': f"{user.get('first_name', '')} {user.get('last_name', '')}",
+            'street': user.get('address', ''),
+            'city': user.get('city', ''),
+            'region': user.get('region', ''),
+            'phone': user.get('phone', '')
+        }
+    # Calculer le total et récupérer les détails des produits
+    total = 0
+    products_list = []
+    
+    # Traiter les produits du panier
+    for item in checkout_cart:
+        # Récupérer les informations de base
+        product_id = item['product_id']
+        quantity = item['quantity']
+        is_food = item.get('is_food', False)
+        options = item.get('options', {})
+        
+        # Traiter différemment selon le type de produit
+        if is_food:
+            # Produits alimentaires
+            name = item.get('name', 'Produit alimentaire')
+            price = item.get('price', 0)
+            image = item.get('image', '')
+            
+            subtotal = price * quantity
+            total += subtotal
+            
+            products_list.append({
+                'id': product_id,
+                'name': name,
+                'price': price,
+                'quantity': quantity,
+                'subtotal': subtotal,
+                'image': image,
+                'is_food': True
+            })
+        else:
+            # Produits normaux
+            product = get_product_by_id(int(product_id) if isinstance(product_id, str) and product_id.isdigit() else product_id)
+            
+            if product:
+                # Utiliser le prix modifié s'il est stocké dans l'élément du panier
+                if 'modified_price' in item:
+                    product_price = item['modified_price']
+                else:
+                    product_price = product['price']
+                
+                subtotal = product_price * quantity
+                total += subtotal
+                
+                products_list.append({
+                    'id': product_id,
+                    'name': product['name'],
+                    'price': product_price,
+                    'quantity': quantity,
+                    'subtotal': subtotal,
+                    'image': product['image'],
+                    'options': options,
+                    'is_food': False
+                })
+    
+    # Déterminer les frais de livraison
+    shipping_fee = 1000 if total < 20000 else 0
+    total_with_shipping = total + shipping_fee
+    
+    # Créer un numéro de commande unique
+    import datetime
+    import random
+    now = datetime.datetime.now()
+    order_number = f"CMD-{now.strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+    
+    # Créer l'objet commande
+    new_order = {
+        'id': random.randint(10000, 99999),
+        'order_number': order_number,
+        'user_id': user.get('id'),
+        'user_email': user_email,
+        'date': now.strftime('%d/%m/%Y'),
+        'items': products_list,
+        'subtotal': total,
+        'shipping_fee': shipping_fee,
+        'discount': 0,
+        'total': total_with_shipping,
+        'status': 'processing',
+        'status_text': 'En cours de préparation',
+        'status_color': 'primary',
+        'shipping_address': shipping_address,
+        'shipping_method': shipping_method,
+        'payment_method': payment_method,
+        'processing_date': now.strftime('%d/%m/%Y'),
+        'payment_status': 'pending'
+    }
+    
+    # Sauvegarder la commande dans les données de l'utilisateur
+    if 'orders' not in user:
+        user['orders'] = []
+    
+    user['orders'].insert(0, new_order)  # Ajouter au début pour avoir les plus récentes en premier
+    users_db[user_email] = user  # Mettre à jour les données utilisateur
+    
+    # Mettre à jour le panier après la commande
+    if not checkout_type:
+        # Vider complètement le panier
+        session['cart'] = []
+    else:
+        # Ne retirer du panier que les produits commandés
+        full_cart = get_cart()
+        
+        if checkout_type == 'food':
+            # Garder uniquement les produits non alimentaires
+            session['cart'] = [item for item in full_cart if not item.get('is_food', False)]
+        else:
+            # Garder uniquement les produits alimentaires
+            session['cart'] = [item for item in full_cart if item.get('is_food', False)]
+    
+    # Réinitialiser le panier de checkout
+    session.pop('checkout_cart', None)
+    session.pop('checkout_type', None)
+    
+    # Enregistrer l'ID de la commande pour la page de confirmation
+    session['last_order_id'] = new_order['id']
+    session['last_order_number'] = order_number
+    
+    return jsonify({
+        'success': True,
+        'message': 'Commande complétée avec succès',
+        'redirect': url_for('order_confirmation')
+    })
+
+# Ajouter une route pour la page de confirmation de commande
+@app.route('/order-confirmation')
+def order_confirmation():
+    """Affiche la page de confirmation après une commande réussie"""
+    # Récupérer les données de la dernière commande
+    last_order_id = session.get('last_order_id')
+    order_number = session.get('last_order_number')
+    
+    return render_template('order_confirmation.html', order_id=last_order_id, order_number=order_number)
+
+@app.route('/orders')
+@login_required
+def orders():
+    """Affiche la page des commandes de l'utilisateur"""
+    # Récupérer l'email de l'utilisateur à partir de la session
+    user_email = session.get('user_email')
+    
+    # Récupérer les données utilisateur
+    user = users_db.get(user_email, {})
+    
+    # Récupérer les commandes de l'utilisateur (ou une liste vide si aucune)
+    user_orders = user.get('orders', [])
+    
+    # S'assurer que les commandes sont des dictionnaires normaux et non des objets
+    # Cela aide à éviter les problèmes d'accès avec les dictionnaires vs objets
+    # (order.items vs order["items"])
+    for order in user_orders:
+        # S'assurer que les clés sont accessibles avec la notation par crochets
+        if 'items' not in order or not isinstance(order['items'], list):
+            order['items'] = []  # S'assurer que items est toujours une liste même vide
+    
+    # Détecter si nous venons de compléter une commande pour ouvrir automatiquement l'accordéon
+    new_order = request.args.get('new_order') == 'true'
+    
+    return render_template('orders.html', orders=user_orders, new_order=new_order)
+
+@app.route('/addresses')
+@login_required
+def addresses():
+    """Affiche la page des adresses de l'utilisateur"""
+    user_email = session.get('user_email')
+    
+    # Récupérer les adresses de l'utilisateur
+    user = users_db.get(user_email, {})
+    user_addresses = user.get('addresses', [])
+    
+    if not user_addresses:
+        # Créer une liste d'adresses par défaut si elle n'existe pas
+        user_addresses = []
+        if user.get('address'):  # Si l'utilisateur a une adresse principale dans son profil
+            user_addresses.append({
+                'id': 1,
+                'name': 'Domicile',
+                'full_name': f"{user.get('first_name', '')} {user.get('last_name', '')}",
+                'street': user.get('address', ''),
+                'city': user.get('city', ''),
+                'region': user.get('region', ''),
+                'phone': user.get('phone', ''),
+                'is_default': True
+            })
+            # Sauvegarder cette adresse dans le profil utilisateur
+            users_db[user_email]['addresses'] = user_addresses
+    
+    return render_template('addresses.html', addresses=user_addresses)
+
+@app.route('/add-address', methods=['POST'])
+@login_required
+def add_address():
+    user_email = session.get('user_email')
+    user = users_db.get(user_email)
+    
+    if not user:
+        flash('Utilisateur non trouvé.', 'danger')
+        return redirect(url_for('addresses'))
+    
+    # Récupérer les données du formulaire
+    name = request.form.get('name', '')
+    full_name = request.form.get('full_name', '')
+    street = request.form.get('street', '')
+    city = request.form.get('city', '')
+    region = request.form.get('region', '')
+    phone = request.form.get('phone', '')
+    is_default = 'is_default' in request.form
+    
+    # Valider les données du formulaire
+    if not all([name, full_name, street, city, region, phone]):
+        flash('Tous les champs sont requis.', 'danger')
+        return redirect(url_for('addresses'))
+    
+    # Récupérer ou initialiser la liste d'adresses de l'utilisateur
+    if 'addresses' not in user:
+        user['addresses'] = []
+    
+    # Générer un ID pour la nouvelle adresse
+    new_id = 1
+    if user['addresses']:
+        new_id = max(addr['id'] for addr in user['addresses']) + 1
+    
+    # Créer la nouvelle adresse
+    new_address = {
+        'id': new_id,
+        'name': name,
+        'full_name': full_name,
+        'street': street,
+        'city': city,
+        'region': region,
+        'phone': phone,
+        'is_default': is_default
+    }
+    
+    # Si cette adresse est définie par défaut, mettre à jour les autres adresses
+    if is_default:
+        for addr in user['addresses']:
+            addr['is_default'] = False
+    
+    # Ajouter la nouvelle adresse à la liste
+    user['addresses'].append(new_address)
+    
+    flash('Adresse ajoutée avec succès.', 'success')
+    return redirect(url_for('addresses'))
+
+@app.route('/set-default-address/<int:address_id>', methods=['POST'])
+@login_required
+def set_default_address(address_id):
+    user_email = session.get('user_email')
+    user = users_db.get(user_email)
+    
+    if not user or 'addresses' not in user:
+        flash('Utilisateur ou adresses non trouvés.', 'danger')
+        return redirect(url_for('addresses'))
+    
+    # Mettre à jour les statuts par défaut pour toutes les adresses
+    address_found = False
+    for addr in user['addresses']:
+        if addr['id'] == address_id:
+            addr['is_default'] = True
+            address_found = True
+        else:
+            addr['is_default'] = False
+    
+    if not address_found:
+        flash('Adresse non trouvée.', 'danger')
+    else:
+        flash('Adresse définie comme adresse par défaut.', 'success')
+    
+    return redirect(url_for('addresses'))
+
+@app.route('/delete-address/<int:address_id>', methods=['POST'])
+@login_required
+def delete_address(address_id):
+    user_email = session.get('user_email')
+    user = users_db.get(user_email)
+    
+    if not user or 'addresses' not in user:
+        flash('Utilisateur ou adresses non trouvés.', 'danger')
+        return redirect(url_for('addresses'))
+    
+    # Rechercher et supprimer l'adresse
+    address_to_delete = None
+    for addr in user['addresses']:
+        if addr['id'] == address_id:
+            address_to_delete = addr
+            break
+    
+    if address_to_delete:
+        # Vérifier si l'adresse à supprimer est l'adresse par défaut
+        is_default = address_to_delete.get('is_default', False)
+        # Supprimer l'adresse
+        user['addresses'].remove(address_to_delete)
+        
+        # Si l'adresse supprimée était l'adresse par défaut et qu'il reste des adresses,
+        # définir la première adresse restante comme adresse par défaut
+        if is_default and user['addresses']:
+            user['addresses'][0]['is_default'] = True
+        
+        flash('Adresse supprimée avec succès.', 'success')
+    else:
+        flash('Adresse non trouvée.', 'danger')
+    
+    return redirect(url_for('addresses'))
+
+@app.route('/wishlist')
+@login_required
+def wishlist():
+    """Affiche la liste d'envies de l'utilisateur"""
+    # Récupérer l'email de l'utilisateur connecté
+    user_email = session.get('user_email')
+    user = users_db.get(user_email, {})
+    
+    # Récupérer la liste d'envies de l'utilisateur ou initialiser une liste vide
+    if 'wishlist' not in user:
+        user['wishlist'] = []
+        users_db[user_email] = user
+    
+    wishlist_items = []
+    # Récupérer les détails de chaque produit dans la liste d'envies
+    for product_id in user['wishlist']:
+        product = get_product_by_id(product_id)
+        if product:
+            wishlist_items.append(product)
+    
+    return render_template('wishlist.html', wishlist_items=wishlist_items)
+
+@app.route('/add-to-wishlist/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def add_to_wishlist(product_id):
+    """Ajoute un produit à la liste d'envies de l'utilisateur"""
+    user_email = session.get('user_email')
+    user = users_db.get(user_email, {})
+    
+    # Initialiser la liste d'envies si elle n'existe pas
+    if 'wishlist' not in user:
+        user['wishlist'] = []
+    
+    # Éviter les doublons
+    if product_id not in user['wishlist']:
+        user['wishlist'].append(product_id)
+        users_db[user_email] = user
+        flash('Produit ajouté à votre liste d\'envies!', 'success')
+    else:
+        flash('Ce produit est déjà dans votre liste d\'envies.', 'info')
+    
+    # Si la requête vient d'AJAX, retourner JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': 'Produit ajouté à votre liste d\'envies',
+            'wishlist_count': len(user['wishlist'])
+        })
+    
+    # Rediriger vers la page précédente ou la page du produit
+    referer = request.referrer
+    if referer and referer != request.url:
+        return redirect(referer)
+    return redirect(url_for('product_detail', product_id=product_id))
+
+@app.route('/remove-from-wishlist/<int:product_id>', methods=['POST'])
+@login_required
+def remove_from_wishlist(product_id):
+    """Retire un produit de la liste d'envies de l'utilisateur"""
+    user_email = session.get('user_email')
+    user = users_db.get(user_email, {})
+    
+    # Vérifier si la liste d'envies existe
+    if 'wishlist' in user and product_id:
+        # Supprimer le produit de la liste d'envies
+        user['wishlist'].remove(product_id)
+        flash('Produit retiré de votre liste d\'envies.', 'success')
+    else:
+        flash('Produit non trouvé dans votre liste d\'envies.', 'danger')
+    
+    # Retourner JSON pour les requêtes AJAX
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': 'Produit retiré de votre liste d\'envies',
+            'wishlist_count': len(user.get('wishlist', []))
+        })
+    
+    # Rediriger vers la page précédente
+    referer = request.referrer
+    if referer and referer != request.url:
+        return redirect(referer)
+    return redirect(url_for('wishlist'))
+
+# Page 404 personnalisée
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+# Page 500 personnalisée
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
+
+# Route pour le tableau de bord du marchand
+@app.route('/merchant/dashboard')
+@merchant_required
+def merchant_dashboard():
+    # Récupérer les informations du marchand connecté
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    # Vérifier si le marchand existe
+    if not merchant:
+        flash('Marchand non trouvé.', 'danger')
+        return redirect(url_for('merchant_login'))
+    
+    return render_template('merchant/dashboard.html', merchant=merchant)
+
+# Route pour le profil du marchand
+@app.route('/merchant/profile')
+@merchant_required
+def merchant_profile():
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    if not merchant:
+        flash('Marchand non trouvé.', 'danger')
+        return redirect(url_for('merchant_login'))
+    
+    return render_template('merchant/profile.html', merchant=merchant)
+
+# Route pour les paramètres du marchand
+@app.route('/merchant/settings')
+@merchant_required
+def merchant_settings():
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    if not merchant:
+        flash('Marchand non trouvé.', 'danger')
+        return redirect(url_for('merchant_login'))
+    
+    return render_template('merchant/settings.html', merchant=merchant)
+
+# Route pour la déconnexion du marchand
+@app.route('/merchant/logout')
+@merchant_required
+def merchant_logout():
+    # Détruire la session du marchand
+    session.pop('merchant_id', None)
+    session.pop('merchant_email', None)
+    flash('Déconnexion réussie.', 'success')
+    return redirect(url_for('merchant_login'))
+
+# Route pour la connexion du marchand
+@app.route('/merchant/login', methods=['GET', 'POST'])
+def merchant_login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        # Vérifier les identifiants (dans une vraie application, vérifier dans la base de données)
+        if email == 'merchant@example.com' and password == 'merchant123':
+            # Authentification réussie, créer une session
+            session['merchant_id'] = 101
+            session['merchant_email'] = email
+            
+            flash('Connexion réussie.', 'success')
+            # Rediriger vers le tableau de bord du marchand
+            return redirect(url_for('merchant_dashboard'))
+        else:
+            flash('Identifiants invalides. Veuillez réessayer.', 'danger')
+    
+    return render_template('merchant/login.html')
+
+# Route pour l'inscription du marchand
+@app.route('/merchant/register', methods=['GET', 'POST'])
+def merchant_register():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        store_name = request.form.get('store_name')
+        # Autres champs...
+        
+        # Enregistrer le marchand (dans une vraie application, insérer dans la base de données)
+        merchants_db[email] = {
+            'password_hash': generate_password_hash(password),
+            'first_name': '',
+            'last_name': '',
+            'phone': '',
+            'id': len(merchants_db) + 101,
+            'store_name': store_name,
+            'store_description': '',
+            'store_address': '',
+            'store_city': '',
+            'store_region': '',
+            'store_logo': 'static/img/merchants/store_logo_default.png',
+            'store_banner': 'static/img/merchants/store_banner_default.jpg',
+            'store_verified': False,
+            'registration_date': '2023-01-15',
+            'products': [],
+            'orders': [],
+            'balance': 0,
+            'bank_info': {}
+        }
+        
+        flash('Inscription réussie. Vous pouvez maintenant vous connecter.', 'success')
+        return redirect(url_for('merchant_login'))
+    
+    return render_template('merchant/register.html')
+
+# Route pour gérer les produits du marchand
+@app.route('/merchant/products')
+@merchant_required
+def merchant_products():
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    if not merchant:
+        flash('Marchand non trouvé.', 'danger')
+        return redirect(url_for('merchant_login'))
+    
+    products = merchant.get('products', [])
+    
+    return render_template('merchant/products.html', merchant=merchant, products=products)
+
+# Route pour ajouter un produit (page)
+@app.route('/merchant/products/add', methods=['GET', 'POST'])
+@merchant_required
+def add_product():
+    if request.method == 'POST':
+        # Récupérer les données du formulaire
+        name = request.form.get('name')
+        description = request.form.get('description')
+        price = request.form.get('price')
+        stock = request.form.get('stock')
+        category_id = request.form.get('category_id')
+        subcategory_id = request.form.get('subcategory_id')
+        # Autres champs...
+        
+        # Ajouter le produit à la base de données (ici, à la liste des produits du marchand)
+        product_id = len(merchants_db['merchant@example.com']['products']) + 1
+        new_product = {
+            'id': product_id,
+            'name': name,
+            'description': description,
+            'price': int(price),
+            'stock': int(stock),
+            'category_id': int(category_id),
+            'subcategory_id': int(subcategory_id),
+            'image': 'static/img/merchants/product_default.jpg',
+            'images': ['static/img/merchants/product_default.jpg'],
+            'status': 'active',
+            'created_at': '2023-07-01',
+            'updated_at': '2023-07-01',
+            'rating': 0,
+            'reviews_count': 0,
+            'options': {}
+        }
+        
+        # Mettre à jour la liste des produits du marchand
+        merchant = merchants_db.get('merchant@example.com')
+        if merchant:
+            merchant['products'].append(new_product)
+            flash('Produit ajouté avec succès.', 'success')
+        else:
+            flash('Erreur: Marchand non trouvé.', 'danger')
+        
+        return redirect(url_for('merchant_products'))
+    
+    return render_template('merchant/add_product.html')
+
+# Route pour modifier un produit (page)
+@app.route('/merchant/products/edit/<int:product_id>', methods=['GET', 'POST'])
+@merchant_required
+def edit_product(product_id):
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    product = next((p for p in merchant.get('products', []) if p['id'] == product_id), None)
+    
+    if request.method == 'POST':
+        # Récupérer les données du formulaire
+        product_name = request.form.get('name')
+        description = request.form.get('description')
+        price = request.form.get('price')
+        stock = request.form.get('stock')
+        category_id = request.form.get('category_id')
+        subcategory_id = request.form.get('subcategory_id')
+        # Autres champs...
+        
+        # Mettre à jour les informations du produit
+        if product:
+            product['name'] = product_name
+            product['description'] = description
+            product['price'] = int(price)
+            product['stock'] = int(stock)
+            product['category_id'] = int(category_id)
+            product['subcategory_id'] = int(subcategory_id)
+            product['updated_at'] = '2023-07-01'
+            
+            flash('Produit mis à jour avec succès.', 'success')
+        else:
+            flash('Erreur: Produit non trouvé.', 'danger')
+        
+        return redirect(url_for('merchant_products'))
+    
+    return render_template('merchant/edit_product.html', product=product)
+
+# Route pour supprimer un produit
+@app.route('/merchant/products/delete/<int:product_id>', methods=['POST'])
+@merchant_required
+def delete_product(product_id):
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    # Supprimer le produit de la liste des produits du marchand
+    if merchant:
+        merchant['products'] = [p for p in merchant.get('products', []) if p['id'] != product_id]
+        flash('Produit supprimé avec succès.', 'success')
+    else:
+        flash('Erreur: Marchand non trouvé.', 'danger')
+    
+    return redirect(url_for('merchant_products'))
+
+# Route pour afficher les commandes du marchand
+@app.route('/merchant/orders')
+@merchant_required
+def merchant_orders():
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    if not merchant:
+        flash('Marchand non trouvé.', 'danger')
+        return redirect(url_for('merchant_login'))
+    
+    orders = merchant.get('orders', [])
+    
+    return render_template('merchant/orders.html', merchant=merchant, orders=orders)
+
+# Route pour afficher les détails d'une commande
+@app.route('/merchant/orders/<int:order_id>')
+@merchant_required
+def order_details(order_id):
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    order = next((o for o in merchant.get('orders', []) if o['id'] == order_id), None)
+    
+    if not order:
+        flash('Commande non trouvée.', 'danger')
+        return redirect(url_for('merchant_orders'))
+    
+    return render_template('merchant/order_details.html', order=order)
+
+# Route pour changer le statut d'une commande
+@app.route('/merchant/orders/update-status/<int:order_id>', methods=['POST'])
+@merchant_required
+def update_order_status(order_id):
+    merchant_id = session.get('merchant_id')
+    merchant = merchants_db.get('merchant@example.com')  # Remplacer par la récupération dynamique
+    
+    order = next((o for o in merchant.get('orders', []) if o['id'] == order_id), None)
+    
+    if order:
+        new_status = request.form.get('status')
+        order['status'] = new_status
+        
+        flash('Statut de la commande mis à jour.', 'success')
+    else:
+        flash('Erreur: Commande non trouvée.', 'danger')
+    
+    return redirect(url_for('order_details', order_id=order_id))
+
+# Route pour afficher le profil du super administrateur
+@app.route('/admin/profile')
+@admin_required
+def admin_profile():
+    admin_id = session.get('admin_id')
+    admin = admins_db.get('admin@doukakm.com')  # Remplacer par la récupération dynamique
+    
+    return render_template('admin/profile.html', admin=admin)
+
+# Route pour afficher le tableau de bord administrateur
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    # Exemple de données pour le tableau de bord
+    total_users = len(users_db)
+    total_merchants = len(merchants_db)
+    total_orders = sum(len(merchant.get('orders', [])) for merchant in merchants_db.values())
+    total_products = sum(len(merchant.get('products', [])) for merchant in merchants_db.values())
+    
+    # Dernières commandes (exemple: les 5 dernières commandes de tous les marchands)
+    latest_orders = []
+    for merchant in merchants_db.values():
+        latest_orders.extend(merchant.get('orders', []))
+    latest_orders = sorted(latest_orders, key=lambda o: o['id'], reverse=True)[:5]
+    
+    return render_template('admin/dashboard.html', 
+                           total_users=total_users, 
+                           total_merchants=total_merchants, 
+                           total_orders=total_orders, 
+                           total_products=total_products,
+                           latest_orders=latest_orders)
+
+# Route pour afficher les utilisateurs
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    return render_template('admin/users.html', users=users_db)
+
+# Route pour afficher les marchands
+@app.route('/admin/merchants')
+@admin_required
+def admin_merchants():
+    return render_template('admin/merchants.html', merchants=merchants_db)
+
+# Route pour afficher les commandes (toutes les commandes de tous les marchands)
+@app.route('/admin/orders')
+@admin_required
+def admin_orders():
+    all_orders = []
+    for merchant in merchants_db.values():
+        all_orders.extend(merchant.get('orders', []))
+    
+    return render_template('admin/orders.html', orders=all_orders)
