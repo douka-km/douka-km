@@ -7271,13 +7271,37 @@ def admin_login():
         admin = admins_db.get(email)
         employee = employees_db.get(email)
         
+        # DATABASE-FIRST: Vérifier aussi dans la base de données Admin
+        db_admin = Admin.query.filter_by(email=email, status='active').first()
+        
         # DATABASE-FIRST: Vérifier aussi dans la base de données Employee
         db_employee = Employee.query.filter_by(email=email, status='active').first()
         
         user_found = False
         
-        # Vérifier si c'est un administrateur
-        if admin and check_password_hash(admin['password_hash'], password):
+        # Vérifier si c'est un administrateur (base de données d'abord)
+        if db_admin and db_admin.check_password(password):
+            # Connexion admin DB réussie
+            session['admin_id'] = f"ADMIN_DB_{db_admin.id}"  # Préfixe ADMIN_DB_ pour différencier
+            session['admin_email'] = email
+            session['admin_name'] = f"{db_admin.first_name} {db_admin.last_name}"
+            session['admin_role'] = db_admin.role
+            session['user_type'] = 'admin'
+            user_found = True
+            
+            # Mise à jour de la date de dernière connexion dans la base de données
+            try:
+                db_admin.last_login = datetime.utcnow()
+                db.session.commit()
+                print(f"✅ Connexion admin DB mise à jour pour {email}")
+            except Exception as e:
+                print(f"❌ Erreur mise à jour admin last_login: {e}")
+                db.session.rollback()
+            
+            print(f"✅ Connexion administrateur DB réussie: {email} (ID: ADMIN_DB_{db_admin.id}, Rôle: {db_admin.role})")
+            
+        # Vérifier si c'est un administrateur (ancien système)
+        elif admin and check_password_hash(admin['password_hash'], password):
             # Connexion admin réussie
             session['admin_id'] = f"ADMIN_{admin['id']}"  # Préfixe ADMIN_ pour différencier
             session['admin_email'] = email
@@ -7289,7 +7313,7 @@ def admin_login():
             # Mise à jour de la date de dernière connexion
             admins_db[email]['last_login'] = datetime.now().strftime('%Y-%m-%d')
             
-            print(f"✅ Connexion administrateur réussie: {email} (ID: ADMIN_{admin['id']})")
+            print(f"✅ Connexion administrateur legacy réussie: {email} (ID: ADMIN_{admin['id']})")
             
         # Vérifier si c'est un employé (base de données d'abord)
         elif db_employee and db_employee.check_password(password):
@@ -15800,21 +15824,27 @@ def initialize_production_db():
                 if not existing_admin:
                     print(f"🔄 Création du compte administrateur: {admin_email}")
                     
+                    # Séparer le nom complet en prénom et nom de famille
+                    name_parts = admin_name.split(' ', 1)
+                    first_name = name_parts[0] if len(name_parts) > 0 else 'Admin'
+                    last_name = name_parts[1] if len(name_parts) > 1 else 'DOUKA KM'
+                    
                     # Créer le nouvel administrateur
                     new_admin = Admin(
                         email=admin_email,
-                        name=admin_name,
+                        first_name=first_name,
+                        last_name=last_name,
                         password_hash=generate_password_hash(admin_password),
                         role='super_admin',
-                        permissions=['all'],  # Toutes les permissions
-                        is_active=True,
-                        email_verified=True
+                        status='active'
                     )
                     
                     try:
                         db.session.add(new_admin)
                         db.session.commit()
                         print(f"✅ Compte administrateur créé avec succès: {admin_email}")
+                        print(f"   Nom: {first_name} {last_name}")
+                        print(f"   Rôle: super_admin")
                     except Exception as e:
                         db.session.rollback()
                         print(f"❌ Erreur lors de la création de l'administrateur: {e}")
