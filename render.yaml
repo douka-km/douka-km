@@ -4,10 +4,10 @@ services:
     env: python
     plan: free
     buildCommand: |
-      pip install -r requirements.txt
+      chmod +x build.sh && ./build.sh
     startCommand: |
       export RENDER=1
-      python init_render.py && gunicorn app_final_with_db:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --preload
+      python init_render.py && gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --preload
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
