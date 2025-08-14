@@ -399,16 +399,6 @@ app.secret_key = 'your_secret_key'  # Needed for session management
 # Configuration pour les sessions permanentes ("Se souvenir de moi")
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)  # 31 jours
 
-# Configuration pour la vérification email
-EMAIL_CONFIG = {
-    'SMTP_SERVER': 'localhost',
-    'SMTP_PORT': 587,
-    'SMTP_USERNAME': 'doukakm@example.com',
-    'SMTP_PASSWORD': 'password',
-    'FROM_EMAIL': 'noreply@doukakm.com',
-    'VERIFICATION_URL_BASE': 'http://localhost:5002'
-}
-
 # Base de données pour les tokens de vérification email
 verification_tokens_db = {}
 
@@ -422,6 +412,11 @@ def generate_verification_token():
 
 def send_verification_email(email, token):
     """Envoie un email de vérification réel"""
+    # Debug: vérifier la configuration URL
+    print(f"🔧 DEBUG: RENDER env = {os.environ.get('RENDER')}")
+    print(f"🔧 DEBUG: VERIFICATION_URL_BASE env = {os.environ.get('VERIFICATION_URL_BASE')}")
+    print(f"🔧 DEBUG: CURRENT_EMAIL_CONFIG URL = {CURRENT_EMAIL_CONFIG['VERIFICATION_URL_BASE']}")
+    
     verification_url = f"{CURRENT_EMAIL_CONFIG['VERIFICATION_URL_BASE']}/verify-email?token={token}"
     
     # Rendu du template HTML

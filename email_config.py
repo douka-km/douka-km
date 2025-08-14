@@ -35,8 +35,14 @@ CURRENT_EMAIL_CONFIG = {
     'FROM_NAME': 'DOUKA-KM',
     'USERNAME': 'ledouka.km@gmail.com',
     'PASSWORD': 'eiwk xhhy qhhf vmjp',  # Votre mot de passe d'application
-    'VERIFICATION_URL_BASE': os.environ.get('VERIFICATION_URL_BASE', 'https://douka-km.onrender.com' if os.environ.get('RENDER') else 'http://localhost:5002')
+    'VERIFICATION_URL_BASE': os.environ.get('VERIFICATION_URL_BASE') or ('https://douka-km.onrender.com' if os.environ.get('RENDER') else 'http://localhost:5002')
 }
+
+# Debug: afficher la configuration au chargement
+print(f"🔧 EMAIL_CONFIG DEBUG:")
+print(f"   - RENDER env: {os.environ.get('RENDER')}")
+print(f"   - VERIFICATION_URL_BASE env: {os.environ.get('VERIFICATION_URL_BASE')}")
+print(f"   - Final URL: {CURRENT_EMAIL_CONFIG['VERIFICATION_URL_BASE']}")
 
 def send_email(to_email, subject, html_content, text_content=None):
     """
