@@ -7254,6 +7254,39 @@ def resend_verification():
     return redirect(url_for('email_verification_required'))
 
 # Routes pour la partie administration
+@app.route('/admin/test-connection')
+def admin_test_connection():
+    """Route de test pour vérifier la connexion admin en production"""
+    try:
+        admin_count = Admin.query.count()
+        admins = Admin.query.all()
+        
+        result = {
+            'status': 'success',
+            'admin_count': admin_count,
+            'admins': []
+        }
+        
+        for admin in admins:
+            result['admins'].append({
+                'id': admin.id,
+                'email': admin.email,
+                'first_name': admin.first_name,
+                'last_name': admin.last_name,
+                'role': admin.role,
+                'status': admin.status,
+                'created_at': str(admin.created_at),
+                'last_login': str(admin.last_login) if admin.last_login else None
+            })
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'error_type': type(e).__name__
+        }), 500
+
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     # Vérifier si l'admin est déjà connecté
@@ -15818,15 +15851,29 @@ def initialize_production_db():
             
             # Créer toutes les tables
             db.create_all()
+            print("✅ Tables de base de données créées")
             
-            # Créer le compte administrateur initial si les variables d'environnement sont définies
+            # **AMÉLIORATION: Debugging des variables d'environnement**
+            print("🔍 Vérification des variables d'environnement admin...")
             admin_email = os.environ.get('ADMIN_EMAIL')
             admin_password = os.environ.get('ADMIN_PASSWORD') 
             admin_name = os.environ.get('ADMIN_NAME')
             
+            print(f"   ADMIN_EMAIL: {'✅ Défini' if admin_email else '❌ Manquant'}")
+            print(f"   ADMIN_PASSWORD: {'✅ Défini' if admin_password else '❌ Manquant'}")
+            print(f"   ADMIN_NAME: {'✅ Défini' if admin_name else '❌ Manquant'}")
+            
             if admin_email and admin_password and admin_name:
+                print(f"🔄 Création/vérification du compte administrateur: {admin_email}")
+                
                 # Vérifier si l'admin existe déjà
-                existing_admin = Admin.query.filter_by(email=admin_email).first()
+                try:
+                    existing_admin = Admin.query.filter_by(email=admin_email).first()
+                    print(f"🔍 Recherche admin existant: {'Trouvé' if existing_admin else 'Non trouvé'}")
+                except Exception as e:
+                    print(f"⚠️ Erreur recherche admin: {e}")
+                    existing_admin = None
+                
                 if not existing_admin:
                     print(f"🔄 Création du compte administrateur: {admin_email}")
                     
@@ -15835,29 +15882,85 @@ def initialize_production_db():
                     first_name = name_parts[0] if len(name_parts) > 0 else 'Admin'
                     last_name = name_parts[1] if len(name_parts) > 1 else 'DOUKA KM'
                     
-                    # Créer le nouvel administrateur
-                    new_admin = Admin(
-                        email=admin_email,
-                        first_name=first_name,
-                        last_name=last_name,
-                        password_hash=generate_password_hash(admin_password),
-                        role='super_admin',
-                        status='active'
-                    )
+                    print(f"   Prénom: {first_name}")
+                    print(f"   Nom: {last_name}")
                     
+                    # Créer le nouvel administrateur avec debug
                     try:
+                        password_hash = generate_password_hash(admin_password)
+                        print(f"   Hash mot de passe généré: {password_hash[:30]}...")
+                        
+                        new_admin = Admin(
+                            email=admin_email,
+                            first_name=first_name,
+                            last_name=last_name,
+                            password_hash=password_hash,
+                            role='super_admin',
+                            status='active'
+                        )
+                        
+                        print("   Ajout de l'admin à la session...")
                         db.session.add(new_admin)
+                        
+                        print("   Commit en base de données...")
                         db.session.commit()
-                        print(f"✅ Compte administrateur créé avec succès: {admin_email}")
-                        print(f"   Nom: {first_name} {last_name}")
+                        
+                        print(f"✅ Compte administrateur créé avec succès!")
+                        print(f"   Email: {admin_email}")
+                        print(f"   Nom complet: {first_name} {last_name}")
                         print(f"   Rôle: super_admin")
+                        print(f"   Mot de passe: {admin_password}")
+                        
+                        # Vérification finale
+                        verify_admin = Admin.query.filter_by(email=admin_email).first()
+                        if verify_admin:
+                            print("✅ Vérification: Admin trouvé dans la base de données")
+                            print(f"   ID: {verify_admin.id}")
+                            print(f"   Statut: {verify_admin.status}")
+                        else:
+                            print("❌ Vérification: Admin NON trouvé après création!")
+                            
                     except Exception as e:
                         db.session.rollback()
                         print(f"❌ Erreur lors de la création de l'administrateur: {e}")
+                        print(f"   Type d'erreur: {type(e).__name__}")
+                        import traceback
+                        print(f"   Traceback: {traceback.format_exc()}")
                 else:
                     print(f"ℹ️ Compte administrateur existe déjà: {admin_email}")
+                    print(f"   ID: {existing_admin.id}")
+                    print(f"   Statut: {existing_admin.status}")
+                    print(f"   Rôle: {existing_admin.role}")
             else:
-                print("⚠️ Variables d'environnement administrateur manquantes (ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME)")
+                print("⚠️ Variables d'environnement administrateur manquantes!")
+                print(f"   ADMIN_EMAIL: {repr(admin_email)}")
+                print(f"   ADMIN_PASSWORD: {'[DÉFINI]' if admin_password else '[MANQUANT]'}")
+                print(f"   ADMIN_NAME: {repr(admin_name)}")
+                
+                # **FALLBACK: Créer l'admin avec des valeurs par défaut**
+                print("🔄 Création d'un admin par défaut...")
+                fallback_email = 'admin@doukakm.com'
+                fallback_password = 'admin123!'
+                fallback_name = 'Super Admin DOUKA KM'
+                
+                existing_admin = Admin.query.filter_by(email=fallback_email).first()
+                if not existing_admin:
+                    try:
+                        new_admin = Admin(
+                            email=fallback_email,
+                            first_name='Super',
+                            last_name='Admin DOUKA KM',
+                            password_hash=generate_password_hash(fallback_password),
+                            role='super_admin',
+                            status='active'
+                        )
+                        db.session.add(new_admin)
+                        db.session.commit()
+                        print(f"✅ Admin par défaut créé: {fallback_email}")
+                        print(f"   Mot de passe: {fallback_password}")
+                    except Exception as e:
+                        db.session.rollback()
+                        print(f"❌ Erreur création admin par défaut: {e}")
             
             # Initialiser les proxies de base de données
             initialize_db_proxies()
