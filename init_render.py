@@ -26,6 +26,19 @@ try:
     print("🔄 Initialisation de la base de données...")
     initialize_production_db()
     
+    # Corriger la base de données (colonnes manquantes)
+    print("🔧 Correction de la base de données...")
+    try:
+        from fix_render_db import fix_render_database, create_sample_categories
+        if fix_render_database():
+            create_sample_categories()
+            print("✅ Base de données corrigée")
+        else:
+            print("⚠️ Échec de la correction - l'application continuera")
+    except Exception as fix_error:
+        print(f"⚠️ Erreur lors de la correction DB: {fix_error}")
+        print("🔄 L'application continuera malgré l'erreur")
+    
     print("✅ Application initialisée avec succès!")
     
 except Exception as e:
