@@ -4674,31 +4674,107 @@ def get_product_by_id(product_id):
     return product_dict
 
 def get_active_categories():
-    """Récupère uniquement les catégories actives pour l'affichage public"""
-    return {cat_id: cat for cat_id, cat in admin_categories_db.items() if cat.get('active', True)}
+    """Récupère uniquement les catégories actives pour l'affichage public - Version DATABASE-FIRST"""
+    try:
+        # **DATABASE-FIRST: Priorité à la base de données**
+        categories = Category.query.filter_by(active=True).order_by(Category.name).all()
+        
+        if categories:
+            # Convertir en dictionnaire avec ID comme clé pour compatibilité
+            categories_dict = {}
+            for cat in categories:
+                cat_dict = cat.to_dict()
+                categories_dict[cat.id] = cat_dict
+                # Mettre à jour le dictionnaire en mémoire pour compatibilité
+                admin_categories_db[cat.id] = cat_dict
+            
+            return categories_dict
+        else:
+            # Fallback vers le dictionnaire en mémoire
+            return {cat_id: cat for cat_id, cat in admin_categories_db.items() if cat.get('active', True)}
+            
+    except Exception as e:
+        print(f"⚠️ Erreur lors du chargement des catégories actives depuis la DB: {e}")
+        # Fallback vers le dictionnaire en mémoire
+        return {cat_id: cat for cat_id, cat in admin_categories_db.items() if cat.get('active', True)}
 
 def get_categories_with_subcategories():
-    """Prépare les catégories avec leurs sous-catégories pour les templates"""
+    """Prépare les catégories avec leurs sous-catégories pour les templates - Version DATABASE-FIRST"""
     categories_list = []
-    for cat_id, cat in admin_categories_db.items():
-        if cat.get('active', True):  # Seulement les catégories actives
-            category_data = {
-                'id': cat_id,
-                'name': cat['name'],
-                'subcategories': []
-            }
-            
-            # Ajouter les sous-catégories actives de cette catégorie
-            for sub_id, sub in admin_subcategories_db.items():
-                if sub.get('category_id') == cat_id and sub.get('active', True):
+    try:
+        # **DATABASE-FIRST: Priorité à la base de données**
+        categories = Category.query.filter_by(active=True).order_by(Category.name).all()
+        
+        if categories:
+            for cat in categories:
+                category_data = {
+                    'id': cat.id,
+                    'name': cat.name,
+                    'description': cat.description,
+                    'icon': cat.icon,
+                    'subcategories': []
+                }
+                
+                # Récupérer les sous-catégories actives de cette catégorie depuis la DB
+                subcategories = Subcategory.query.filter_by(
+                    category_id=cat.id, 
+                    active=True
+                ).order_by(Subcategory.name).all()
+                
+                for sub in subcategories:
                     category_data['subcategories'].append({
-                        'id': sub_id,
-                        'name': sub['name']
+                        'id': sub.id,
+                        'name': sub.name,
+                        'description': sub.description
                     })
+                
+                categories_list.append(category_data)
             
-            categories_list.append(category_data)
-    
-    return categories_list
+            return categories_list
+        else:
+            # Fallback vers le dictionnaire en mémoire
+            for cat_id, cat in admin_categories_db.items():
+                if cat.get('active', True):  # Seulement les catégories actives
+                    category_data = {
+                        'id': cat_id,
+                        'name': cat['name'],
+                        'subcategories': []
+                    }
+                    
+                    # Ajouter les sous-catégories actives de cette catégorie
+                    for sub_id, sub in admin_subcategories_db.items():
+                        if sub.get('category_id') == cat_id and sub.get('active', True):
+                            category_data['subcategories'].append({
+                                'id': sub_id,
+                                'name': sub['name']
+                            })
+                    
+                    categories_list.append(category_data)
+            
+            return categories_list
+            
+    except Exception as e:
+        print(f"⚠️ Erreur lors du chargement des catégories avec sous-catégories depuis la DB: {e}")
+        # Fallback vers le dictionnaire en mémoire
+        for cat_id, cat in admin_categories_db.items():
+            if cat.get('active', True):  # Seulement les catégories actives
+                category_data = {
+                    'id': cat_id,
+                    'name': cat['name'],
+                    'subcategories': []
+                }
+                
+                # Ajouter les sous-catégories actives de cette catégorie
+                for sub_id, sub in admin_subcategories_db.items():
+                    if sub.get('category_id') == cat_id and sub.get('active', True):
+                        category_data['subcategories'].append({
+                            'id': sub_id,
+                            'name': sub['name']
+                        })
+                
+                categories_list.append(category_data)
+        
+        return categories_list
 
 def is_product_public(product):
     """Vérifie si un produit est accessible au public (actif et dans une catégorie active)"""
