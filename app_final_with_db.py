@@ -293,6 +293,13 @@ def initialize_db_proxies():
         except Exception as e:
             print(f"⚠️ Erreur lors du chargement des demandes de retrait: {e}")
 
+        # **NOUVEAU: Nettoyer les anciens tokens de vérification expirés**
+        try:
+            expired_count = cleanup_expired_verification_tokens()
+            if expired_count > 0:
+                print(f"🧹 {expired_count} tokens de vérification expirés nettoyés au démarrage")
+        except Exception as e:
+            print(f"⚠️ Erreur lors du nettoyage des tokens expirés: {e}")
         
     except Exception as e:
         print(f"⚠️ Attention: Erreur lors de l'initialisation des proxies DB: {e}")
@@ -452,6 +459,25 @@ L'équipe DOUKA KM
     print(f"URL de vérification: {verification_url}")
     print(f"Token de vérification: {token}")
     return success
+
+def cleanup_expired_verification_tokens():
+    """Nettoie les tokens de vérification expirés de la base de données"""
+    try:
+        expired_count = EmailVerificationToken.query.filter(
+            EmailVerificationToken.expires_at < datetime.now()
+        ).delete()
+        
+        db.session.commit()
+        
+        if expired_count > 0:
+            print(f"🧹 {expired_count} tokens de vérification expirés supprimés de la base")
+        
+        return expired_count
+        
+    except Exception as e:
+        print(f"⚠️ Erreur lors du nettoyage des tokens expirés: {e}")
+        db.session.rollback()
+        return 0
 
 def send_order_status_email(customer_email, order_data, old_status, new_status):
     """Envoie un email de notification de changement de statut de commande"""
@@ -680,10 +706,32 @@ L'équipe DOUKA KM
         return False
 
 def create_verification_token(email):
-    """Crée un token de vérification pour un email"""
+    """Crée un token de vérification pour un email - Version DATABASE-FIRST"""
     token = generate_verification_token()
     expires_at = datetime.now() + timedelta(hours=24)
     
+    try:
+        # **NOUVEAU: Sauvegarder dans la base de données d'abord**
+        # Supprimer les anciens tokens pour cet email
+        EmailVerificationToken.query.filter_by(email=email).delete()
+        
+        # Créer le nouveau token en base
+        verification_token = EmailVerificationToken(
+            token=token,
+            email=email,
+            expires_at=expires_at,
+            used=False
+        )
+        db.session.add(verification_token)
+        db.session.commit()
+        
+        print(f"✅ Token de vérification sauvegardé en base pour {email}")
+        
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la sauvegarde du token en base pour {email}: {e}")
+        db.session.rollback()
+    
+    # **COMPATIBILITÉ: Sauvegarder aussi dans le dictionnaire**
     verification_tokens_db[token] = {
         'email': email,
         'expires_at': expires_at.strftime('%Y-%m-%d %H:%M:%S')
@@ -692,8 +740,41 @@ def create_verification_token(email):
     return token
 
 def verify_email_token(token):
-    """Vérifie un token de vérification email"""
+    """Vérifie un token de vérification email - Version DATABASE-FIRST"""
+    try:
+        # **NOUVEAU: Priorité à la base de données**
+        db_token = EmailVerificationToken.query.filter_by(token=token, used=False).first()
+        
+        if db_token:
+            # Vérifier l'expiration
+            if datetime.now() > db_token.expires_at:
+                # Token expiré - le supprimer
+                db.session.delete(db_token)
+                db.session.commit()
+                print(f"🗑️ Token expiré supprimé de la base: {token[:8]}...")
+                return None, "Token expiré"
+            
+            # Token valide - le marquer comme utilisé
+            email = db_token.email
+            db_token.used = True
+            db.session.commit()
+            
+            # Supprimer aussi du dictionnaire si présent
+            if token in verification_tokens_db:
+                del verification_tokens_db[token]
+            
+            print(f"✅ Token vérifié avec succès depuis la base: {email}")
+            return email, None
+        
+        print(f"🔍 Token non trouvé en base, vérification dans le dictionnaire: {token[:8]}...")
+        
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la vérification du token en base: {e}")
+        db.session.rollback()
+    
+    # **FALLBACK: Vérification dans le dictionnaire en mémoire**
     if token not in verification_tokens_db:
+        print(f"❌ Token introuvable partout: {token[:8]}...")
         return None, "Token invalide"
     
     token_data = verification_tokens_db[token]
@@ -702,11 +783,13 @@ def verify_email_token(token):
     expires_at = datetime.strptime(token_data['expires_at'], '%Y-%m-%d %H:%M:%S')
     if datetime.now() > expires_at:
         del verification_tokens_db[token]
+        print(f"🗑️ Token expiré supprimé du dictionnaire: {token[:8]}...")
         return None, "Token expiré"
     
     email = token_data['email']
     del verification_tokens_db[token]
     
+    print(f"✅ Token vérifié depuis le dictionnaire: {email}")
     return email, None
 
 # Fonctions pour la récupération de mot de passe
@@ -7154,25 +7237,35 @@ def email_verification_required():
 
 @app.route('/verify-email')
 def verify_email():
-    """Vérifier un token de vérification email"""
+    """Vérifier un token de vérification email - VERSION DEBUG AMÉLIORÉE"""
     token = request.args.get('token')
     
+    print(f"🔍 DEBUG verify_email: Token reçu = {token[:8] if token else 'None'}...")
+    
     if not token:
+        print("❌ Token manquant dans la requête")
         flash('Token de vérification manquant.', 'danger')
         return redirect(url_for('email_verification_required'))
+    
+    print(f"🔍 Recherche du token dans la base de données...")
     
     # Vérifier le token
     email, error = verify_email_token(token)
     
     if error:
+        print(f"❌ Erreur de vérification: {error}")
         flash(f'Erreur de vérification: {error}', 'danger')
         return redirect(url_for('email_verification_required'))
+    
+    print(f"✅ Token valide pour l'email: {email}")
     
     # **DATABASE-FIRST: Marquer l'email comme vérifié dans la base de données d'abord**
     from db_helpers import get_user_by_email, update_user_email_verification
     
     user_record = get_user_by_email(email)
     if user_record:
+        print(f"✅ Utilisateur trouvé en base: {email}")
+        
         # Mise à jour dans la base de données
         success = update_user_email_verification(email, True)
         if success:
@@ -7191,9 +7284,11 @@ def verify_email():
         session['user_email'] = email
         session['user_first_name'] = user.get('first_name', '')
         
+        print(f"🔐 Utilisateur connecté automatiquement: {email}")
         flash('Votre email a été vérifié avec succès! Vous êtes maintenant connecté.', 'success')
         return redirect(url_for('email_verification_success'))
     else:
+        print(f"⚠️ Utilisateur non trouvé en base, vérification dictionnaire...")
         # Fallback: vérification dans l'ancien dictionnaire seulement
         if email in users_db:
             users_db[email]['email_verified'] = True
