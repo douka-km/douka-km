@@ -314,42 +314,23 @@
 <section class="categories mb-5">
     <h2 class="text-center mb-4">Nos catégories</h2>
     <div class="row">
+        {% for category in display_categories %}
         <div class="col-md-3 mb-4">
-            <div class="card">
-                <img src="{{ url_for('static', filename='img/category1.jpg') }}" class="card-img-top" alt="Électronique">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Électronique</h5>
-                    <a href="/category/electronics" class="btn btn-outline-primary">Voir produits</a>
+            <div class="card category-card h-100">
+                <img src="{{ url_for('static', filename=category.image) }}" 
+                     class="card-img-top" 
+                     alt="{{ category.name }}"
+                     style="height: 200px; object-fit: cover;">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">
+                        <i class="{{ category.icon }} me-2"></i>{{ category.name }}
+                    </h5>
+                    <p class="card-text flex-grow-1">{{ category.description }}</p>
+                    <a href="{{ category.url }}" class="btn btn-outline-primary">Voir produits</a>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <img src="{{ url_for('static', filename='img/category2.jpg') }}" class="card-img-top" alt="Vêtements">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Vêtements</h5>
-                    <a href="/category/clothing" class="btn btn-outline-primary">Voir produits</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <img src="{{ url_for('static', filename='img/category3.jpg') }}" class="card-img-top" alt="Alimentation">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Alimentation</h5>
-                    <a href="/products?category_filter=3" class="btn btn-outline-primary">Voir produits</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <img src="{{ url_for('static', filename='img/category4.jpg') }}" class="card-img-top" alt="Artisanat local">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Artisanat local</h5>
-                    <a href="/category/crafts" class="btn btn-outline-primary">Voir produits</a>
-                </div>
-            </div>
-        </div>
+        {% endfor %}
     </div>
 </section>
 {% endblock %}
@@ -722,6 +703,52 @@
         to {
             opacity: 1;
             transform: translate(-50%, -50%) scale(1);
+        }
+    }
+    
+    /* Styles pour les catégories dynamiques */
+    .category-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .category-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    .category-card .card-img-top {
+        transition: transform 0.3s ease;
+    }
+    
+    .category-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+    
+    .category-card .card-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    .category-card .card-text {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .category-card .btn {
+        border-radius: 20px;
+        padding: 8px 20px;
+        font-weight: 500;
+    }
+    
+    @media (max-width: 768px) {
+        .category-card {
+            margin-bottom: 1rem;
+        }
+        
+        .category-card .card-img-top {
+            height: 150px !important;
         }
     }
 </style>

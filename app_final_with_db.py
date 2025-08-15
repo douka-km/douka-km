@@ -3493,6 +3493,152 @@ def get_payment_method_info(payment_method):
         'color': 'secondary'
     })
 
+def get_categories_for_display():
+    """Récupère les catégories actives pour l'affichage sur la page d'accueil"""
+    try:
+        # Récupérer les catégories actives depuis la base de données
+        categories = Category.query.filter_by(active=True).order_by(Category.name).all()
+        
+        categories_list = []
+        for category in categories:
+            # Générer une image par défaut basée sur le nom de la catégorie
+            category_image = generate_category_image(category.name, category.id)
+            
+            categories_list.append({
+                'id': category.id,
+                'name': category.name,
+                'description': category.description or f'Découvrez nos produits {category.name.lower()}',
+                'image': category_image,
+                'icon': category.icon or 'fas fa-folder',
+                'url': f'/products?category_filter={category.id}'
+            })
+        
+        return categories_list
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération des catégories pour affichage: {e}")
+        # Retourner des catégories par défaut en cas d'erreur
+        return get_default_categories()
+
+def generate_category_image(category_name, category_id):
+    """Génère le chemin de l'image pour une catégorie avec intelligence artificielle"""
+    import os
+    
+    # Mappage intelligent des noms de catégories vers des images
+    category_mappings = {
+        # Électronique et technologie
+        'électronique': 'img/category1.jpg',
+        'electronique': 'img/category1.jpg',
+        'electronics': 'img/category1.jpg',
+        'technologie': 'img/category1.jpg',
+        'informatique': 'img/category1.jpg',
+        'téléphones': 'img/category1.jpg',
+        'ordinateurs': 'img/category1.jpg',
+        'appareils': 'img/category1.jpg',
+        
+        # Mode et vêtements
+        'vêtements': 'img/category2.jpg',
+        'vetements': 'img/category2.jpg',
+        'clothing': 'img/category2.jpg',
+        'mode': 'img/category2.jpg',
+        'fashion': 'img/category2.jpg',
+        'chaussures': 'img/category2.jpg',
+        'accessoires': 'img/category2.jpg',
+        'textile': 'img/category2.jpg',
+        
+        # Alimentation et produits frais
+        'alimentation': 'img/category3.jpg',
+        'food': 'img/category3.jpg',
+        'nourriture': 'img/category3.jpg',
+        'cuisine': 'img/category3.jpg',
+        'épicerie': 'img/category3.jpg',
+        'boissons': 'img/category3.jpg',
+        'fruits': 'img/category3.jpg',
+        'légumes': 'img/category3.jpg',
+        'bio': 'img/category3.jpg',
+        
+        # Artisanat et culture locale
+        'artisanat': 'img/category4.jpg',
+        'artisanat local': 'img/category4.jpg',
+        'crafts': 'img/category4.jpg',
+        'fait main': 'img/category4.jpg',
+        'traditionnel': 'img/category4.jpg',
+        'local': 'img/category4.jpg',
+        'culture': 'img/category4.jpg',
+        'art': 'img/category4.jpg'
+    }
+    
+    # Normaliser le nom de la catégorie
+    category_name_clean = category_name.lower().strip()
+    
+    # Recherche exacte
+    if category_name_clean in category_mappings:
+        return category_mappings[category_name_clean]
+    
+    # Recherche par mots-clés
+    for keyword, image in category_mappings.items():
+        if keyword in category_name_clean or category_name_clean in keyword:
+            return category_mappings[keyword]
+    
+    # Vérifier si des images personnalisées existent pour cette catégorie
+    custom_image_path = f'img/categories/category_{category_id}.jpg'
+    full_path = os.path.join('static', custom_image_path)
+    
+    if os.path.exists(full_path):
+        return custom_image_path
+    
+    # Images par défaut avec rotation intelligente
+    default_images = [
+        'img/category1.jpg',  # Électronique (bleu)
+        'img/category2.jpg',  # Mode (rose/violet) 
+        'img/category3.jpg',  # Alimentation (vert)
+        'img/category4.jpg'   # Artisanat (orange/marron)
+    ]
+    
+    # Utiliser le hash du nom de catégorie pour une distribution plus équitable
+    import hashlib
+    category_hash = hashlib.md5(category_name_clean.encode()).hexdigest()
+    image_index = int(category_hash[:2], 16) % len(default_images)
+    
+    return default_images[image_index]
+
+def get_default_categories():
+    """Retourne des catégories par défaut en cas d'erreur"""
+    return [
+        {
+            'id': 1,
+            'name': 'Électronique',
+            'description': 'Découvrez nos produits électroniques',
+            'image': 'img/category1.jpg',
+            'icon': 'fas fa-laptop',
+            'url': '/products?category_filter=1'
+        },
+        {
+            'id': 2,
+            'name': 'Vêtements',
+            'description': 'Mode et vêtements pour tous',
+            'image': 'img/category2.jpg',
+            'icon': 'fas fa-tshirt',
+            'url': '/products?category_filter=2'
+        },
+        {
+            'id': 3,
+            'name': 'Alimentation',
+            'description': 'Produits alimentaires frais',
+            'image': 'img/category3.jpg',
+            'icon': 'fas fa-apple-alt',
+            'url': '/products?category_filter=3'
+        },
+        {
+            'id': 4,
+            'name': 'Artisanat local',
+            'description': 'Artisanat traditionnel comorien',
+            'image': 'img/category4.jpg',
+            'icon': 'fas fa-palette',
+            'url': '/products?category_filter=4'
+        }
+    ]
+
 @app.route('/')
 def home():
     # Get all products from active categories for public display
@@ -3564,7 +3710,13 @@ def home():
         recommendations = recent_admin_products + recent_merchant_products + other_trending
         recommended_products = recommendations[:4]
     
-    return render_template('home.html', products=featured_products, recommended_products=recommended_products)
+    # Récupérer les catégories actives pour la section "Nos catégories"
+    categories_for_display = get_categories_for_display()
+    
+    return render_template('home.html', 
+                         products=featured_products, 
+                         recommended_products=recommended_products,
+                         display_categories=categories_for_display)
 
 @app.route('/api/search-suggestions')
 def search_suggestions():
