@@ -371,8 +371,27 @@ def get_all_site_settings():
                 'default_shipping_fee': 2000,
                 'free_shipping_threshold': 50000,
                 'logo_url': '/static/img/logo.png',
-                'logo_alt_text': 'DOUKA KM Logo'
+                'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
             }
+        
+        # Ajouter les valeurs manquantes importantes
+        defaults = {
+            'site_name': 'DOUKA KM',
+            'site_description': "La première plateforme de commerce électronique des Comores.",
+            'contact_email': 'ledouka.km@gmail.com',
+            'contact_phone': '+269 342 40 19',
+            'commission_rate': 15.0,
+            'shipping_fee': 2000,
+            'default_shipping_fee': 2000,
+            'free_shipping_threshold': 50000,
+            'logo_url': '/static/img/logo.png',
+            'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
+        }
+        
+        # Ajouter les valeurs par défaut pour les clés manquantes
+        for key, default_value in defaults.items():
+            if key not in site_settings or site_settings[key] is None or site_settings[key] == '':
+                site_settings[key] = default_value
         
         return site_settings
         
@@ -389,7 +408,7 @@ def get_all_site_settings():
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
             'logo_url': '/static/img/logo.png',
-            'logo_alt_text': 'DOUKA KM Logo'
+            'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
 
 def update_site_setting(key, value, description=None):
@@ -16000,94 +16019,6 @@ if os.environ.get('RENDER'):
     initialize_production_db()
 
 # =============================================
-# ROUTE TEMPORAIRE POUR CORRIGER LE LOGO
-# =============================================
-
-@app.route('/admin/fix-logo-urgent', methods=['GET'])
-def fix_logo_urgent():
-    """Route temporaire pour corriger le logo manquant sur render.com"""
-    try:
-        # Vérifier si le paramètre logo_url existe déjà
-        existing_logo = SiteSettings.query.filter_by(key='logo_url').first()
-        
-        if existing_logo:
-            return f"""
-            <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #28a745;">✅ Logo Settings - Déjà Configuré</h2>
-                <p><strong>Logo URL:</strong> {existing_logo.value}</p>
-                <p><strong>Description:</strong> {existing_logo.description or 'N/A'}</p>
-                <p><strong>Status:</strong> Le paramètre logo_url existe déjà dans la base</p>
-                <br>
-                <p style="background: #f8f9fa; padding: 15px; border-left: 4px solid #007bff;">
-                    <strong>💡 Si le logo n'apparaît toujours pas:</strong><br>
-                    1. Vérifiez que le fichier /static/img/logo.png existe<br>
-                    2. Vérifiez la console du navigateur pour les erreurs<br>
-                    3. Videz le cache du navigateur
-                </p>
-                <a href="/" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">← Retour à l'accueil</a>
-            </div>
-            """
-        
-        # Créer le paramètre logo_url par défaut
-        logo_setting = SiteSettings(
-            key='logo_url',
-            value='/static/img/logo.png',
-            description='URL du logo principal du site - Ajouté automatiquement'
-        )
-        
-        db.session.add(logo_setting)
-        
-        # Ajouter également le logo_alt_text s'il n'existe pas
-        existing_alt = SiteSettings.query.filter_by(key='logo_alt_text').first()
-        if not existing_alt:
-            logo_alt_setting = SiteSettings(
-                key='logo_alt_text',
-                value='DOUKA KM Logo',
-                description='Texte alternatif pour le logo'
-            )
-            db.session.add(logo_alt_setting)
-        
-        db.session.commit()
-        
-        return """
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #28a745;">✅ Logo Settings - Corrigé avec Succès!</h2>
-            <p><strong>Logo URL ajouté:</strong> /static/img/logo.png</p>
-            <p><strong>Logo Alt Text:</strong> DOUKA KM Logo</p>
-            <br>
-            <p style="background: #d4edda; padding: 15px; border: 1px solid #c3e6cb; border-radius: 5px;">
-                🔄 <strong>Le logo devrait maintenant apparaître sur le site.</strong><br>
-                Si ce n'est pas le cas, actualisez la page (Ctrl+F5 ou Cmd+Shift+R).
-            </p>
-            <br>
-            <p style="background: #fff3cd; padding: 15px; border: 1px solid #ffeaa7; border-radius: 5px;">
-                ⚠️ <strong>Important:</strong> Supprimez cette route après utilisation en commentant 
-                la section "Route temporaire pour corriger le logo" dans app_final_with_db.py
-            </p>
-            <br>
-            <a href="/" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">← Retour à l'accueil</a>
-            <script>
-                setTimeout(function() {
-                    window.location.href = '/';
-                }, 8000);
-            </script>
-        </div>
-        """
-        
-    except Exception as e:
-        db.session.rollback()
-        return f"""
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #dc3545;">❌ Erreur lors de la correction</h2>
-            <p><strong>Erreur:</strong> {str(e)}</p>
-            <br>
-            <p>Contactez l'administrateur technique avec cette information d'erreur.</p>
-            <br>
-            <a href="/" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">← Retour à l'accueil</a>
-        </div>
-        """
-
-# =============================================
 # GESTION D'ERREURS
 # =============================================
 
@@ -16099,6 +16030,107 @@ def not_found_error(error):
 def internal_error(error):
     db.session.rollback()
     return render_template('500.html'), 500
+
+# =============================================
+# ROUTES DE MAINTENANCE ET DEBUG
+# =============================================
+
+@app.route('/admin/fix-logo-urgent')
+def fix_logo_urgent():
+    """Route d'urgence pour corriger les paramètres du logo manquant en production"""
+    try:
+        # Vérifier si logo_url existe
+        logo_url_setting = SiteSettings.query.filter_by(key='logo_url').first()
+        if not logo_url_setting:
+            logo_url_setting = SiteSettings(
+                key='logo_url',
+                value='/static/img/logo.png',
+                description='URL du logo du site'
+            )
+            db.session.add(logo_url_setting)
+        elif not logo_url_setting.value or logo_url_setting.value.strip() == '':
+            logo_url_setting.value = '/static/img/logo.png'
+        
+        # Vérifier si logo_alt_text existe
+        logo_alt_setting = SiteSettings.query.filter_by(key='logo_alt_text').first()
+        if not logo_alt_setting:
+            logo_alt_setting = SiteSettings(
+                key='logo_alt_text',
+                value='DOUKA KM - Marketplace des Comores',
+                description='Texte alternatif pour le logo'
+            )
+            db.session.add(logo_alt_setting)
+        elif not logo_alt_setting.value or logo_alt_setting.value.strip() == '':
+            logo_alt_setting.value = 'DOUKA KM - Marketplace des Comores'
+        
+        db.session.commit()
+        
+        # Vérifier le résultat
+        updated_settings = get_all_site_settings()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Logo corrigé avec succès!',
+            'logo_url': updated_settings.get('logo_url'),
+            'logo_alt_text': updated_settings.get('logo_alt_text'),
+            'all_settings': {k: v for k, v in updated_settings.items() if 'logo' in k.lower()}
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Échec de la correction du logo'
+        }), 500
+
+@app.route('/debug/site-settings')
+def debug_site_settings():
+    """Route de debug pour vérifier les paramètres du site"""
+    try:
+        # Récupérer tous les paramètres de la base
+        db_settings = {}
+        settings_records = SiteSettings.query.all()
+        for setting in settings_records:
+            db_settings[setting.key] = setting.value
+        
+        # Récupérer les paramètres via la fonction
+        computed_settings = get_all_site_settings()
+        
+        return jsonify({
+            'database_settings': db_settings,
+            'computed_settings': computed_settings,
+            'logo_info': {
+                'logo_url_in_db': db_settings.get('logo_url'),
+                'logo_url_computed': computed_settings.get('logo_url'),
+                'logo_alt_computed': computed_settings.get('logo_alt_text'),
+                'static_path_exists': os.path.exists(os.path.join(app.static_folder, 'img', 'logo.png'))
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'message': 'Erreur lors du debug des paramètres'
+        }), 500
+
+@app.route('/static/img/<filename>')
+def serve_static_image(filename):
+    """Route explicite pour servir les images statiques sur Render.com"""
+    try:
+        # Chemin vers le dossier static/img
+        img_folder = os.path.join(app.static_folder, 'img')
+        
+        # Vérifier si le fichier existe
+        file_path = os.path.join(img_folder, filename)
+        if os.path.exists(file_path):
+            return send_from_directory(img_folder, filename)
+        else:
+            # Si le fichier n'existe pas, retourner une image par défaut ou 404
+            return "Image not found", 404
+            
+    except Exception as e:
+        print(f"Erreur lors du service de l'image {filename}: {e}")
+        return "Error serving image", 500
 
 # =============================================
 # LANCEMENT DE L'APPLICATION
