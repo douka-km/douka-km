@@ -204,6 +204,7 @@ class Category(db.Model):
     active = db.Column(db.Boolean, default=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = db.Column(db.String(120), nullable=True)
     
     # Relations
@@ -218,6 +219,7 @@ class Category(db.Model):
             'icon': self.icon,
             'active': self.active,
             'created_at': self.created_at.strftime('%Y-%m-%d') if self.created_at else None,
+            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M:%S') if self.updated_at else None,
             'created_by': self.created_by
         }
 
@@ -232,6 +234,7 @@ class Subcategory(db.Model):
     active = db.Column(db.Boolean, default=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = db.Column(db.String(120), nullable=True)
     
     # Relations
@@ -245,6 +248,7 @@ class Subcategory(db.Model):
             'category_id': self.category_id,
             'active': self.active,
             'created_at': self.created_at.strftime('%Y-%m-%d') if self.created_at else None,
+            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M:%S') if self.updated_at else None,
             'created_by': self.created_by
         }
 
