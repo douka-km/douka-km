@@ -363,7 +363,7 @@ def get_all_site_settings():
         if not site_settings:
             return {
                 'site_name': 'DOUKA KM',
-                'site_description': "La première plateforme de commerce électronique des Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
+                'site_description': "La première plateforme de commerce aux Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
                 'contact_email': 'ledouka.km@gmail.com',
                 'contact_phone': '+269 342 40 19',
                 'commission_rate': 15.0,
@@ -377,7 +377,7 @@ def get_all_site_settings():
         # Ajouter les valeurs manquantes importantes
         defaults = {
             'site_name': 'DOUKA KM',
-            'site_description': "La première plateforme de commerce électronique des Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
+            'site_description': "La première plateforme de commerce aux Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
             'contact_email': 'ledouka.km@gmail.com',
             'contact_phone': '+269 342 40 19',
             'commission_rate': 15.0,
@@ -400,7 +400,7 @@ def get_all_site_settings():
         # Retourner des paramètres par défaut
         return {
             'site_name': 'DOUKA KM',
-            'site_description': "La première plateforme de commerce électronique des Comores. Connectant acheteurs et vendeurs à travers l'archipel",
+            'site_description': "La première plateforme de commerce aux Comores. Connectant acheteurs et vendeurs à travers l'archipel",
             'contact_email': 'ledouka.km@gmail.com',
             'contact_phone': '+269 342 40 19',
             'commission_rate': 15.0,
@@ -2321,7 +2321,7 @@ def get_site_settings():
     """
     default_settings = {
         'site_name': 'DOUKA KM',
-        'site_description': "La première plateforme de commerce électronique des Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
+        'site_description': "La première plateforme de commerce aux Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
         'contact_email': 'ledouka.km@gmail.com',
         'contact_phone': '+269 342 40 19',
         'commission_rate': 15.0,  # Pourcentage
