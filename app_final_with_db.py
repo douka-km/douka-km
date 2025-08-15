@@ -27,7 +27,7 @@ from email_config import send_email, CURRENT_EMAIL_CONFIG
 from models import db, User, Merchant, Product, Category, Subcategory, Order, OrderItem, Cart, CartItem, WishlistItem
 
 # Imports pour la base de données
-from models import db, User, Merchant, Admin, Product, Order, OrderItem, Review, Category, Subcategory, PromoCode, WithdrawalRequest, WishlistItem, EmailVerificationToken, PasswordResetToken, SiteSettings, Employee
+from models import db, User, Merchant, Admin, Product, Order, OrderItem, Review, Category, Subcategory, PromoCode, WithdrawalRequest, WishlistItem, EmailVerificationToken, PasswordResetToken, SiteSettings, Employee, Address
 from db_helpers import *
 
 app = Flask(__name__)
@@ -5944,34 +5944,67 @@ def orders():
 @app.route('/addresses')
 @login_required
 def addresses():
-    """Affiche la page des adresses de l'utilisateur - Version migrée"""
+    """Affiche la page des adresses de l'utilisateur - Version multi-adresses"""
     user_email = session.get('user_email')
     
-    # Récupérer l'utilisateur depuis la base de données d'abord
+    # Récupérer l'utilisateur depuis la base de données
     user_record = User.query.filter_by(email=user_email).first()
     
     if user_record:
-        # Utiliser les adresses stockées dans les champs de la base de données
+        # Utiliser les nouvelles adresses de la table Address
         user_addresses = []
         
-        # Si l'utilisateur a une adresse principale dans son profil
-        if user_record.address:
+        # Récupérer toutes les adresses de l'utilisateur
+        db_addresses = Address.query.filter_by(user_id=user_record.id).order_by(Address.is_default.desc(), Address.created_at.asc()).all()
+        
+        for addr in db_addresses:
             user_addresses.append({
-                'id': 1,
-                'name': 'Adresse principale',
-                'full_name': f"{user_record.first_name or ''} {user_record.last_name or ''}".strip(),
-                'street': user_record.address,
-                'city': user_record.city or '',
-                'region': user_record.region or '',
-                'phone': user_record.phone or '',
-                'is_default': True
+                'id': addr.id,
+                'name': addr.name,
+                'full_name': addr.full_name,
+                'street': addr.street,
+                'city': addr.city,
+                'region': addr.region,
+                'phone': addr.phone,
+                'is_default': addr.is_default
             })
         
-        # Vérifier s'il y a des adresses supplémentaires en JSON (pour extension future)
-        # Pour l'instant, on utilise seulement l'adresse principale du profil
+        # Si aucune adresse dans la nouvelle table, fallback vers l'ancienne adresse du profil
+        if not user_addresses and user_record.address:
+            # Migration automatique de l'adresse du profil
+            try:
+                new_address = Address(
+                    user_id=user_record.id,
+                    name='Adresse principale',
+                    full_name=f"{user_record.first_name} {user_record.last_name}",
+                    street=user_record.address,
+                    city=user_record.city or 'N/A',
+                    region=user_record.region or 'N/A',
+                    phone=user_record.phone or 'N/A',
+                    is_default=True
+                )
+                
+                db.session.add(new_address)
+                db.session.commit()
+                
+                # Ajouter à la liste pour l'affichage
+                user_addresses.append({
+                    'id': new_address.id,
+                    'name': new_address.name,
+                    'full_name': new_address.full_name,
+                    'street': new_address.street,
+                    'city': new_address.city,
+                    'region': new_address.region,
+                    'phone': new_address.phone,
+                    'is_default': new_address.is_default
+                })
+                
+            except Exception as e:
+                print(f"Erreur migration automatique: {e}")
+                db.session.rollback()
         
     else:
-        # Fallback: utiliser l'ancien système
+        # Fallback: utiliser l'ancien système (pour compatibilité)
         user = users_db.get(user_email, {})
         user_addresses = user.get('addresses', [])
         
@@ -5986,19 +6019,21 @@ def addresses():
                 'phone': user.get('phone', ''),
                 'is_default': True
             }]
-            # Sauvegarder cette adresse dans le profil utilisateur
-            users_db[user_email]['addresses'] = user_addresses
     
     return render_template('addresses.html', addresses=user_addresses)
 
 @app.route('/add-address', methods=['POST'])
 @login_required
 def add_address():
-    """Ajouter une nouvelle adresse - Version migrée"""
+    """Ajouter une nouvelle adresse - Version multi-adresses complète"""
     user_email = session.get('user_email')
     
-    # Récupérer l'utilisateur depuis la base de données d'abord
+    # Récupérer l'utilisateur depuis la base de données
     user_record = User.query.filter_by(email=user_email).first()
+    
+    if not user_record:
+        flash('Utilisateur non trouvé.', 'danger')
+        return redirect(url_for('addresses'))
     
     # Récupérer les données du formulaire
     name = request.form.get('name', '').strip()
@@ -6014,178 +6049,122 @@ def add_address():
         flash('Tous les champs sont requis.', 'danger')
         return redirect(url_for('addresses'))
     
-    if user_record:
-        # Pour l'instant, on ne supporte qu'une seule adresse (adresse principale du profil)
-        # Mise à jour de l'adresse principale dans la base de données
-        try:
-            user_record.address = street
-            user_record.city = city
-            user_record.region = region
-            user_record.phone = phone
-            user_record.updated_at = datetime.utcnow()
-            
-            db.session.commit()
-            
-            # Synchroniser avec le dictionnaire en mémoire pour compatibilité
-            if user_email in users_db:
-                users_db[user_email].update({
-                    'address': street,
-                    'city': city,
-                    'region': region,
-                    'phone': phone
-                })
-            
-            flash('Adresse mise à jour avec succès.', 'success')
-            return redirect(url_for('addresses'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash('Erreur lors de la mise à jour de l\'adresse.', 'error')
-            print(f"Erreur mise à jour adresse: {e}")
-            return redirect(url_for('addresses'))
-    else:
-        # Fallback: utiliser l'ancien système
-        user = users_db.get(user_email, {})
-        if not user:
-            flash('Utilisateur non trouvé.', 'danger')
-            return redirect(url_for('addresses'))
-        
-        # Récupérer ou initialiser la liste d'adresses de l'utilisateur
-        if 'addresses' not in user:
-            user['addresses'] = []
-        
-        # Générer un ID pour la nouvelle adresse
-        new_id = 1
-        if user['addresses']:
-            new_id = max(addr['id'] for addr in user['addresses']) + 1
+    try:
+        # Si cette adresse doit être par défaut, retirer le statut des autres
+        if is_default:
+            existing_default = Address.query.filter_by(user_id=user_record.id, is_default=True).all()
+            for addr in existing_default:
+                addr.is_default = False
         
         # Créer la nouvelle adresse
-        new_address = {
-            'id': new_id,
-            'name': name,
-            'full_name': full_name,
-            'street': street,
-            'city': city,
-            'region': region,
-            'phone': phone,
-            'is_default': is_default
-        }
+        new_address = Address(
+            user_id=user_record.id,
+            name=name,
+            full_name=full_name,
+            street=street,
+            city=city,
+            region=region,
+            phone=phone,
+            is_default=is_default
+        )
         
-        # Si cette adresse est définie par défaut, mettre à jour les autres adresses
-        if is_default:
-            for addr in user['addresses']:
-                addr['is_default'] = False
-        
-        # Ajouter la nouvelle adresse à la liste
-        user['addresses'].append(new_address)
+        db.session.add(new_address)
+        db.session.commit()
         
         flash('Adresse ajoutée avec succès.', 'success')
-        return redirect(url_for('addresses'))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de l'ajout d'adresse: {e}")
+        flash('Erreur lors de l\'ajout de l\'adresse.', 'danger')
+    
+    return redirect(url_for('addresses'))
 
 @app.route('/set-default-address/<int:address_id>', methods=['POST'])
 @login_required
 def set_default_address(address_id):
+    """Définir une adresse comme adresse par défaut - Version multi-adresses"""
     user_email = session.get('user_email')
     
-    # **DATABASE-FIRST: Récupérer l'utilisateur depuis la base de données d'abord**
+    # Récupérer l'utilisateur depuis la base de données
     user_record = User.query.filter_by(email=user_email).first()
     
-    if user_record:
-        # Pour l'instant, avec une seule adresse (adresse principale), 
-        # cette fonction est principalement pour compatibilité
-        flash('Adresse définie comme adresse par défaut.', 'success')
-        print(f"✅ Adresse par défaut définie pour utilisateur DB: {user_email}")
+    if not user_record:
+        flash('Utilisateur non trouvé.', 'danger')
         return redirect(url_for('addresses'))
-    else:
-        # Fallback: utiliser l'ancien système
-        user = users_db.get(user_email)
+    
+    try:
+        # Récupérer l'adresse à définir par défaut
+        target_address = Address.query.filter_by(id=address_id, user_id=user_record.id).first()
         
-        if not user or 'addresses' not in user:
-            flash('Utilisateur ou adresses non trouvés.', 'danger')
+        if not target_address:
+            flash('Adresse non trouvée.', 'danger')
             return redirect(url_for('addresses'))
         
-        # Mettre à jour les statuts par défaut pour toutes les adresses
-        address_found = False
-        for addr in user['addresses']:
-            if addr['id'] == address_id:
-                addr['is_default'] = True
-                address_found = True
-            else:
-                addr['is_default'] = False
+        # Retirer le statut par défaut de toutes les autres adresses
+        other_addresses = Address.query.filter_by(user_id=user_record.id, is_default=True).all()
+        for addr in other_addresses:
+            addr.is_default = False
         
-        if not address_found:
-            flash('Adresse non trouvée.', 'danger')
-        else:
-            flash('Adresse définie comme adresse par défaut.', 'success')
-            print(f"🔄 Adresse par défaut définie pour utilisateur dictionnaire: {user_email}")
+        # Définir la nouvelle adresse par défaut
+        target_address.is_default = True
         
-        return redirect(url_for('addresses'))
+        db.session.commit()
+        flash('Adresse définie comme adresse par défaut.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de la définition de l'adresse par défaut: {e}")
+        flash('Erreur lors de la mise à jour.', 'danger')
+    
+    return redirect(url_for('addresses'))
 
 @app.route('/delete-address/<int:address_id>', methods=['POST'])
 @login_required
 def delete_address(address_id):
+    """Supprimer une adresse - Version multi-adresses"""
     user_email = session.get('user_email')
     
-    # **DATABASE-FIRST: Récupérer l'utilisateur depuis la base de données d'abord**
+    # Récupérer l'utilisateur depuis la base de données
     user_record = User.query.filter_by(email=user_email).first()
     
-    if user_record:
-        # Pour l'instant, avec une seule adresse (adresse principale),
-        # supprimer signifie vider l'adresse principale
-        try:
-            user_record.address = None
-            user_record.city = None
-            user_record.region = None
-            user_record.updated_at = datetime.utcnow()
-            
-            db.session.commit()
-            
-            # Synchroniser avec le dictionnaire si présent
-            if user_email in users_db and 'addresses' in users_db[user_email]:
-                users_db[user_email]['addresses'] = []
-                print(f"🔄 Adresse supprimée synchronisée avec dictionnaire: {user_email}")
-            
-            flash('Adresse supprimée avec succès.', 'success')
-            print(f"✅ Adresse supprimée pour utilisateur DB: {user_email}")
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"❌ Erreur lors de la suppression d'adresse DB: {str(e)}")
-            flash('Erreur lors de la suppression de l\'adresse.', 'danger')
-            
+    if not user_record:
+        flash('Utilisateur non trouvé.', 'danger')
         return redirect(url_for('addresses'))
-    else:
-        # Fallback: utiliser l'ancien système
-        user = users_db.get(user_email)
+    
+    try:
+        # Récupérer l'adresse à supprimer
+        address_to_delete = Address.query.filter_by(id=address_id, user_id=user_record.id).first()
         
-        if not user or 'addresses' not in user:
-            flash('Utilisateur ou adresses non trouvés.', 'danger')
+        if not address_to_delete:
+            flash('Adresse non trouvée.', 'danger')
             return redirect(url_for('addresses'))
         
-        # Rechercher et supprimer l'adresse
-        address_to_delete = None
-        for addr in user['addresses']:
-            if addr['id'] == address_id:
-                address_to_delete = addr
-                break
+        # Vérifier qu'il reste au moins une autre adresse si celle-ci est par défaut
+        remaining_addresses = Address.query.filter_by(user_id=user_record.id).count()
         
-        if address_to_delete:
-            # Vérifier si l'adresse à supprimer est l'adresse par défaut
-            is_default = address_to_delete.get('is_default', False)
-            # Supprimer l'adresse
-            user['addresses'].remove(address_to_delete)
-            
-            # Si l'adresse supprimée était l'adresse par défaut et qu'il reste des adresses,
-            # définir la première adresse restante comme adresse par défaut
-            if is_default and user['addresses']:
-                user['addresses'][0]['is_default'] = True
-            
-            flash('Adresse supprimée avec succès.', 'success')
-            print(f"🔄 Adresse supprimée pour utilisateur dictionnaire: {user_email}")
-        else:
-            flash('Adresse non trouvée.', 'danger')
+        if remaining_addresses <= 1:
+            flash('Vous ne pouvez pas supprimer votre dernière adresse.', 'warning')
+            return redirect(url_for('addresses'))
         
-        return redirect(url_for('addresses'))
+        was_default = address_to_delete.is_default
+        
+        # Supprimer l'adresse
+        db.session.delete(address_to_delete)
+        
+        # Si l'adresse supprimée était par défaut, définir une autre comme par défaut
+        if was_default:
+            next_address = Address.query.filter_by(user_id=user_record.id).first()
+            if next_address:
+                next_address.is_default = True
+        
+        db.session.commit()
+        flash('Adresse supprimée avec succès.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de la suppression d'adresse: {e}")
+        flash('Erreur lors de la suppression.', 'danger')
     
     return redirect(url_for('addresses'))
 
@@ -7984,27 +7963,39 @@ def admin_update_withdrawal(request_id):
                 
                 db.session.commit()
                 print(f"✅ Demande de retrait {request_id} mise à jour en base de données")
+                
+                # Créer un objet compatible pour les notifications
+                withdrawal_request = {
+                    'id': withdrawal_db.request_id,
+                    'amount': withdrawal_db.amount,
+                    'method': withdrawal_db.method,
+                    'status': new_status,
+                    'notes': withdrawal_db.notes or '',
+                    'admin_notes': admin_notes,
+                    'reference': reference,
+                    'requested_at': withdrawal_db.requested_at.strftime('%Y-%m-%d %H:%M:%S') if withdrawal_db.requested_at else None,
+                    'processed_at': withdrawal_db.processed_at.strftime('%Y-%m-%d %H:%M:%S') if withdrawal_db.processed_at else None
+                }
+                
             except Exception as e:
                 db.session.rollback()
                 print(f"❌ Erreur mise à jour BDD: {str(e)}")
                 return jsonify({'success': False, 'message': f'Erreur de base de données: {str(e)}'})
         
-        # METTRE À JOUR AUSSI LE DICTIONNAIRE EN MÉMOIRE pour compatibilité
-        if withdrawal_request:
-            # Sauvegarder l'ancien statut pour la notification
-            old_status = withdrawal_request['status']
-        
-        # Mettre à jour la demande
-        withdrawal_request['status'] = new_status
-        withdrawal_request['admin_notes'] = admin_notes
-        withdrawal_request['reference'] = reference
-        
-        if new_status in ['completed', 'rejected']:
-            withdrawal_request['processed_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # METTRE À JOUR AUSSI LE DICTIONNAIRE EN MÉMOIRE pour compatibilité (si existe)
+        elif withdrawal_request:
+            # Mettre à jour la demande dans le dictionnaire
+            withdrawal_request['status'] = new_status
+            withdrawal_request['admin_notes'] = admin_notes
+            withdrawal_request['reference'] = reference
+            
+            if new_status in ['completed', 'rejected']:
+                withdrawal_request['processed_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         # Envoyer une notification email au marchand si le statut a changé
-        if old_status != new_status and merchant_email:
+        if old_status != new_status and merchant_email and withdrawal_request:
             try:
+                print(f"🔄 Envoi notification: {merchant_email}, statut {old_status} → {new_status}")
                 
                 send_merchant_withdrawal_status_notification(
                     merchant_email, 
@@ -8024,8 +8015,10 @@ def admin_update_withdrawal(request_id):
         })
         
     except Exception as e:
-        print(f"Erreur lors de la mise à jour du retrait: {e}")
-        return jsonify({'success': False, 'message': 'Une erreur est survenue'})
+        print(f"❌ ERREUR DÉTAILLÉE lors de la mise à jour du retrait: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'Erreur: {str(e)}'})
 
 @app.route('/admin/withdrawal/<request_id>/details')
 @admin_required
@@ -11867,8 +11860,15 @@ def admin_promo_codes():
     search = request.args.get('search', '', type=str)
     status_filter = request.args.get('status', 'all', type=str)
     
-    # Récupérer tous les codes promo
-    all_codes = list(promo_codes_db.values())
+    # **MIGRATION: Récupérer tous les codes promo depuis la base de données**
+    db_codes = PromoCode.query.all()
+    all_codes = [promo.to_dict() for promo in db_codes]
+    
+    # **COMPATIBILITÉ: Synchroniser avec le dictionnaire en mémoire pour les anciens codes**
+    for code_data in all_codes:
+        code = code_data['code']
+        if code not in promo_codes_db:
+            promo_codes_db[code] = code_data
     
     # Filtrer par recherche si un terme est fourni
     if search:
@@ -11922,14 +11922,18 @@ def admin_promo_codes():
         'next_num': page + 1 if page < total_pages else None
     }
     
-    # Calculer les statistiques
+    # **MIGRATION: Calculer les statistiques depuis la base de données**
+    total_codes_db = PromoCode.query.count()
+    active_codes_db = PromoCode.query.filter_by(active=True).count()
+    expired_codes_db = PromoCode.query.filter(PromoCode.end_date < today).count()
+    total_usage_db = db.session.query(db.func.sum(PromoCode.used_count)).scalar() or 0
+    
     stats = {
-        'total_codes': len(promo_codes_db),
-        'active_codes': len([c for c in promo_codes_db.values() if c.get('active', False)]),
-        'expired_codes': len([c for c in promo_codes_db.values() 
-                             if c.get('end_date') and c.get('end_date') < today]),
-        'total_usage': sum(c.get('used_count', 0) for c in promo_codes_db.values()),
-        'avg_usage': sum(c.get('used_count', 0) for c in promo_codes_db.values()) / len(promo_codes_db) if promo_codes_db else 0
+        'total_codes': total_codes_db,
+        'active_codes': active_codes_db,
+        'expired_codes': expired_codes_db,
+        'total_usage': total_usage_db,
+        'avg_usage': total_usage_db / total_codes_db if total_codes_db > 0 else 0
     }
     
     from datetime import date
@@ -11975,7 +11979,9 @@ def admin_add_promo_code():
                 flash('Le code promo est obligatoire.', 'danger')
                 return redirect(request.url)
             
-            if code in promo_codes_db:
+            # **MIGRATION: Vérifier dans la base de données d'abord**
+            existing_promo = PromoCode.query.filter_by(code=code).first()
+            if existing_promo or code in promo_codes_db:
                 flash('Ce code promo existe déjà.', 'danger')
                 return redirect(request.url)
             
@@ -12006,40 +12012,94 @@ def admin_add_promo_code():
                     flash('Veuillez sélectionner au moins un marchand.', 'danger')
                     return redirect(request.url)
             
-            # Générer un ID unique
-            new_id = max([c.get('id', 0) for c in promo_codes_db.values()], default=0) + 1
-            
-            # Créer le nouveau code promo
-            new_promo = {
-                'id': new_id,
-                'code': code,
-                'name': name,
-                'description': description,
-                'type': type_discount,
-                'value': value,
-                'min_amount': min_amount,
-                'max_discount': float(max_discount) if max_discount else None,
-                'usage_limit': int(usage_limit) if usage_limit else None,
-                'used_count': 0,
-                'user_limit': int(user_limit) if user_limit else None,
-                'start_date': start_date if start_date else None,
-                'end_date': end_date if end_date else None,
-                'active': active,
-                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'created_by': session.get('admin_email', 'admin'),
-                'applicable_to': applicable_to,
-                'applicable_categories': [int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()],
-                'applicable_subcategories': [int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()],
-                'applicable_products': [int(prod_id) for prod_id in applicable_products if prod_id.isdigit()],
-                'applicable_merchants': applicable_merchants,
-                'used_by': {}
-            }
-            
-            # Ajouter à la base de données
-            promo_codes_db[code] = new_promo
-            
-            flash(f'Code promo "{code}" créé avec succès.', 'success')
-            return redirect(url_for('admin_promo_codes'))
+            # **NOUVELLE VERSION: Créer le code promo en base de données**
+            try:
+                import json
+                
+                # Convertir les listes en chaînes JSON pour la base de données
+                applicable_categories_json = json.dumps([int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()])
+                applicable_subcategories_json = json.dumps([int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()])
+                applicable_products_json = json.dumps([int(prod_id) for prod_id in applicable_products if prod_id.isdigit()])
+                applicable_merchants_json = json.dumps(applicable_merchants)
+                
+                new_promo = PromoCode(
+                    code=code,
+                    name=name,
+                    description=description,
+                    type=type_discount,
+                    value=value,
+                    min_amount=min_amount,
+                    max_discount=float(max_discount) if max_discount else None,
+                    usage_limit=int(usage_limit) if usage_limit else None,
+                    used_count=0,
+                    user_limit=int(user_limit) if user_limit else None,
+                    start_date=datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None,
+                    end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None,
+                    active=active,
+                    public_display=True,  # Par défaut, les codes sont publics
+                    display_priority=0,
+                    applicable_to=applicable_to,
+                    applicable_categories=applicable_categories_json,
+                    applicable_subcategories=applicable_subcategories_json,
+                    applicable_products=applicable_products_json,
+                    applicable_merchants=applicable_merchants_json,
+                    used_by='{}',  # JSON vide pour les utilisations
+                    created_at=datetime.utcnow(),
+                    created_by=session.get('admin_email', 'admin')
+                )
+                
+                db.session.add(new_promo)
+                db.session.commit()
+                
+                # **COMPATIBILITÉ: Synchroniser avec le dictionnaire en mémoire**
+                promo_dict = new_promo.to_dict()
+                promo_codes_db[code] = promo_dict
+                
+                flash(f'Code promo "{code}" créé avec succès.', 'success')
+                print(f"✅ Code promo {code} sauvegardé en base de données et en mémoire")
+                return redirect(url_for('admin_promo_codes'))
+                
+            except Exception as db_error:
+                db.session.rollback()
+                print(f"❌ Erreur DB lors de création du code promo: {str(db_error)}")
+                
+                # **FALLBACK: Utiliser l'ancien système en cas d'erreur**
+                # Générer un ID unique
+                new_id = max([c.get('id', 0) for c in promo_codes_db.values()], default=0) + 1
+                
+                # Créer le nouveau code promo
+                new_promo = {
+                    'id': new_id,
+                    'code': code,
+                    'name': name,
+                    'description': description,
+                    'type': type_discount,
+                    'value': value,
+                    'min_amount': min_amount,
+                    'max_discount': float(max_discount) if max_discount else None,
+                    'usage_limit': int(usage_limit) if usage_limit else None,
+                    'used_count': 0,
+                    'user_limit': int(user_limit) if user_limit else None,
+                    'start_date': start_date if start_date else None,
+                    'end_date': end_date if end_date else None,
+                    'active': active,
+                    'public_display': True,
+                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'created_by': session.get('admin_email', 'admin'),
+                    'applicable_to': applicable_to,
+                    'applicable_categories': [int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()],
+                    'applicable_subcategories': [int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()],
+                    'applicable_products': [int(prod_id) for prod_id in applicable_products if prod_id.isdigit()],
+                    'applicable_merchants': applicable_merchants,
+                    'used_by': {}
+                }
+                
+                # Ajouter au dictionnaire en mémoire (fallback)
+                promo_codes_db[code] = new_promo
+                print(f"⚠️ Code promo {code} créé en mémoire (fallback)")
+                
+                flash(f'Code promo "{code}" créé avec succès.', 'success')
+                return redirect(url_for('admin_promo_codes'))
             
         except ValueError:
             flash('Erreur dans les valeurs numériques. Veuillez vérifier vos saisies.', 'danger')
@@ -12187,21 +12247,32 @@ def admin_edit_promo_code(code):
 def admin_delete_promo_code(code):
     """Supprimer un code promo"""
     
-    if code not in promo_codes_db:
+    # **MIGRATION: Vérifier dans la base de données d'abord**
+    promo_record = PromoCode.query.filter_by(code=code).first()
+    promo_in_memory = code in promo_codes_db
+    
+    if not promo_record and not promo_in_memory:
         return jsonify({'success': False, 'message': 'Code promo non trouvé'})
     
     try:
-        promo_name = promo_codes_db[code].get('name', code)
+        # Obtenir le nom pour le message
+        if promo_record:
+            promo_name = promo_record.name
+        elif promo_in_memory:
+            promo_name = promo_codes_db[code].get('name', code)
+        else:
+            promo_name = code
         
-        # Supprimer de la base de données SQLite
-        promo_record = PromoCode.query.filter_by(code=code).first()
+        # **NOUVEAU: Supprimer de la base de données en priorité**
         if promo_record:
             db.session.delete(promo_record)
             db.session.commit()
             print(f"✅ Code promo {code} supprimé de la base de données")
         
-        # Supprimer du dictionnaire en mémoire
-        del promo_codes_db[code]
+        # **COMPATIBILITÉ: Supprimer du dictionnaire en mémoire si présent**
+        if promo_in_memory:
+            del promo_codes_db[code]
+            print(f"✅ Code promo {code} supprimé du dictionnaire en mémoire")
         
         return jsonify({
             'success': True,
@@ -13736,8 +13807,13 @@ def add_withdrawal_request(merchant_email, amount, method='bank_transfer', notes
             print(f"❌ Marchand non trouvé: {merchant_email}")
             return None
         
+        # Générer un ID de demande unique
+        import uuid
+        request_id = f"WR{datetime.now().strftime('%Y%m%d')}{str(uuid.uuid4())[:8].upper()}"
+        
         # Créer la demande de retrait dans la base de données
         withdrawal_request = WithdrawalRequest(
+            request_id=request_id,
             merchant_id=merchant_record.id,
             amount=float(amount),
             method=method,
@@ -13757,7 +13833,7 @@ def add_withdrawal_request(merchant_email, amount, method='bank_transfer', notes
             withdrawal_requests_db[merchant_email] = []
         withdrawal_requests_db[merchant_email].append(withdrawal_dict)
         
-        print(f"✅ Demande de retrait créée en base: ID {withdrawal_request.id} pour {merchant_email}")
+        print(f"✅ Demande de retrait créée en base: ID {withdrawal_request.request_id} pour {merchant_email}")
         return withdrawal_dict
         
     except Exception as e:
@@ -13821,7 +13897,8 @@ def merchant_payments():
         withdrawal_requests = []
         for db_withdrawal in db_withdrawals:
             withdrawal_requests.append({
-                'id': db_withdrawal.request_id,  # ← Utiliser request_id au lieu de id
+                'id': db_withdrawal.request_id,  # Utiliser request_id pour l'affichage
+                'db_id': db_withdrawal.id,  # Garder l'ID de base pour les opérations
                 'requested_at': db_withdrawal.requested_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'amount': db_withdrawal.amount,
                 'method': db_withdrawal.method,
@@ -14799,10 +14876,12 @@ def merchant_register():
             store_banner=store_banner if store_banner else 'static/img/merchants/store_banner_default.jpg',
             store_verified=False,
             balance=0,
-            bank_info=bank_info_json,
             latitude=lat_value,
             longitude=lon_value
         )
+        
+        # Sérialiser les informations bancaires en JSON
+        new_merchant.set_bank_info(bank_info_json)
         
         try:
             db.session.add(new_merchant)

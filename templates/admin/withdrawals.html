@@ -262,19 +262,24 @@ document.addEventListener('DOMContentLoaded', function() {
 function viewWithdrawal(requestId) {
     // Charger les détails de la demande
     fetch(`/admin/withdrawal/${requestId}/details`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 document.getElementById('withdrawalDetails').innerHTML = data.html;
             } else {
                 document.getElementById('withdrawalDetails').innerHTML = 
-                    '<div class="alert alert-danger">Erreur lors du chargement des détails.</div>';
+                    `<div class="alert alert-danger">Erreur: ${data.message || 'Erreur lors du chargement des détails'}</div>`;
             }
         })
         .catch(error => {
             console.error('Erreur:', error);
             document.getElementById('withdrawalDetails').innerHTML = 
-                '<div class="alert alert-danger">Erreur lors du chargement des détails.</div>';
+                `<div class="alert alert-danger">Erreur de connexion: ${error.message}</div>`;
         });
 }
 
@@ -302,17 +307,23 @@ function updateStatus(requestId, newStatus) {
                 admin_notes: prompt('Notes de l\'administrateur (optionnel):') || ''
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
+                alert('Statut mis à jour avec succès !');
                 location.reload(); // Recharger la page pour voir les changements
             } else {
-                alert('Erreur: ' + data.message);
+                alert('Erreur: ' + (data.message || 'Une erreur est survenue'));
             }
         })
         .catch(error => {
-            console.error('Erreur:', error);
-            alert('Erreur lors de la mise à jour');
+            console.error('Erreur détaillée:', error);
+            alert('Erreur lors de la mise à jour: ' + error.message);
         });
         
         // Fermer le modal
