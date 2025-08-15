@@ -50,6 +50,15 @@ try:
     except Exception as cat_error:
         print(f"⚠️ Erreur lors de la création des catégories: {cat_error}")
     
+    # Recharger les catégories dans les variables globales
+    try:
+        from app_final_with_db import reload_categories_and_subcategories
+        with app.app_context():
+            reload_categories_and_subcategories()
+        print("✅ Catégories rechargées dans les variables globales")
+    except Exception as reload_error:
+        print(f"⚠️ Erreur lors du rechargement des catégories: {reload_error}")
+    
     print("✅ Application initialisée avec succès!")
     
 except Exception as e:

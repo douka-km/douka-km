@@ -318,11 +318,32 @@ def create_sample_categories():
     except Exception as e:
         print(f"❌ Erreur lors de la création des catégories d'exemple: {e}")
 
+def fix_render_database_from_init():
+    """Version de fix_render_database() qui peut être appelée depuis init_render.py"""
+    print("🔧 Correction de la base de données depuis init_render...")
+    
+    success = fix_render_database()
+    if success:
+        create_sample_categories()
+        print("✅ Base de données corrigée depuis init_render")
+    else:
+        print("❌ Échec de la correction depuis init_render")
+    
+    return success
+
 if __name__ == "__main__":
     print("🚀 Démarrage de la correction de la base de données Render...")
     
     if fix_render_database():
         create_sample_categories()
+        
+        # Recharger les catégories si possible
+        try:
+            from app_final_with_db import reload_categories_and_subcategories
+            reload_categories_and_subcategories()
+        except ImportError:
+            print("💡 Function reload_categories_and_subcategories non disponible")
+        
         print("🎉 Correction terminée avec succès!")
         sys.exit(0)
     else:

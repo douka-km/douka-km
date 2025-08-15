@@ -214,15 +214,23 @@ def initialize_db_proxies():
         
         # Simulation de admin_categories_db
         admin_categories_db = {}
-        categories = Category.query.all()
-        for category in categories:
-            admin_categories_db[category.id] = category.to_dict()
+        try:
+            categories = Category.query.all()
+            for category in categories:
+                admin_categories_db[category.id] = category.to_dict()
+        except Exception as e:
+            print(f"⚠️ Erreur lors du chargement des catégories (colonnes manquantes?) : {e}")
+            print("💡 Les catégories seront chargées après la correction de la base de données")
 
         # Simulation de admin_subcategories_db
         admin_subcategories_db = {}
-        subcategories = Subcategory.query.all()
-        for subcat in subcategories:
-            admin_subcategories_db[subcat.id] = subcat.to_dict()
+        try:
+            subcategories = Subcategory.query.all()
+            for subcat in subcategories:
+                admin_subcategories_db[subcat.id] = subcat.to_dict()
+        except Exception as e:
+            print(f"⚠️ Erreur lors du chargement des sous-catégories (colonnes manquantes?) : {e}")
+            print("💡 Les sous-catégories seront chargées après la correction de la base de données")
         
         # Simulation de promo_codes_db
         promo_codes_db = {}
@@ -305,6 +313,28 @@ def initialize_db_proxies():
         print(f"⚠️ Attention: Erreur lors de l'initialisation des proxies DB: {e}")
         print(f"📍 Traceback complet: {traceback.format_exc()}")
         print("💡 L'application utilisera des dictionnaires vides temporairement")
+
+def reload_categories_and_subcategories():
+    """Recharge les catégories et sous-catégories après correction de la base de données"""
+    global admin_categories_db, admin_subcategories_db
+    
+    try:
+        # Recharger les catégories
+        admin_categories_db = {}
+        categories = Category.query.all()
+        for category in categories:
+            admin_categories_db[category.id] = category.to_dict()
+        print(f"✅ {len(categories)} catégories rechargées avec succès")
+        
+        # Recharger les sous-catégories
+        admin_subcategories_db = {}
+        subcategories = Subcategory.query.all()
+        for subcat in subcategories:
+            admin_subcategories_db[subcat.id] = subcat.to_dict()
+        print(f"✅ {len(subcategories)} sous-catégories rechargées avec succès")
+        
+    except Exception as e:
+        print(f"❌ Erreur lors du rechargement des catégories: {e}")
 
 def get_all_site_settings():
     """Récupère tous les paramètres du site depuis la base de données"""
