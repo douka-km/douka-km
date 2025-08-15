@@ -222,303 +222,115 @@
             </div>
         </div>
         
-        <!-- Barre de catégories optimisée pour l'affichage horizontal et les sous-menus -->
+        <!-- Barre de catégories dynamique optimisée pour l'affichage horizontal et les sous-menus -->
         <div class="category-nav py-2 bg-light border-bottom">
             <div class="container position-relative">
                 <div class="category-wrapper">
                     <ul class="category-list">
-                        <li class="category-item">
-                            <a href="/category/electronics" class="category-link">
-                                <i class="fas fa-mobile-alt"></i> Électronique
-                            </a>
-                            <div class="subcategory-menu">
-                                <div class="subcategory-header">
-                                    <h5>Électronique</h5>
-                                    <p>Découvrez nos produits électroniques de qualité</p>
-                                </div>
-                                <div class="subcategory-content">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-mobile"></i> Téléphones</h6>
-                                                <ul>
-                                                    <li><a href="/category/electronics/smartphones">Smartphones</a></li>
-                                                    <li><a href="/category/electronics/feature-phones">Téléphones basiques</a></li>
-                                                    <li><a href="/category/electronics/accessories">Accessoires</a></li>
-                                                </ul>
+                        {% if categories_with_subcategories %}
+                            {% for category in categories_with_subcategories %}
+                                <li class="category-item">
+                                    <a href="/products?category_filter={{ category.id }}" class="category-link">
+                                        {% if category.icon %}
+                                            <i class="{{ category.icon }}"></i>
+                                        {% else %}
+                                            <!-- Icônes par défaut selon le nom de la catégorie -->
+                                            {% if 'électronique' in category.name.lower() or 'electronique' in category.name.lower() or 'tech' in category.name.lower() %}
+                                                <i class="fas fa-mobile-alt"></i>
+                                            {% elif 'vêtement' in category.name.lower() or 'vetement' in category.name.lower() or 'mode' in category.name.lower() %}
+                                                <i class="fas fa-tshirt"></i>
+                                            {% elif 'alimentation' in category.name.lower() or 'nourriture' in category.name.lower() or 'food' in category.name.lower() %}
+                                                <i class="fas fa-utensils"></i>
+                                            {% elif 'artisanat' in category.name.lower() or 'art' in category.name.lower() %}
+                                                <i class="fas fa-paint-brush"></i>
+                                            {% elif 'maison' in category.name.lower() or 'déco' in category.name.lower() or 'deco' in category.name.lower() %}
+                                                <i class="fas fa-home"></i>
+                                            {% elif 'santé' in category.name.lower() or 'sante' in category.name.lower() or 'beauté' in category.name.lower() or 'beaute' in category.name.lower() %}
+                                                <i class="fas fa-spa"></i>
+                                            {% elif 'livre' in category.name.lower() or 'éducation' in category.name.lower() or 'education' in category.name.lower() %}
+                                                <i class="fas fa-book"></i>
+                                            {% elif 'sport' in category.name.lower() or 'fitness' in category.name.lower() %}
+                                                <i class="fas fa-dumbbell"></i>
+                                            {% elif 'auto' in category.name.lower() or 'voiture' in category.name.lower() %}
+                                                <i class="fas fa-car"></i>
+                                            {% elif 'enfant' in category.name.lower() or 'bébé' in category.name.lower() or 'bebe' in category.name.lower() or 'jouet' in category.name.lower() %}
+                                                <i class="fas fa-baby"></i>
+                                            {% else %}
+                                                <i class="fas fa-tag"></i>
+                                            {% endif %}
+                                        {% endif %}
+                                        {{ category.name }}
+                                    </a>
+                                    
+                                    {% if category.subcategories %}
+                                        <div class="subcategory-menu">
+                                            <div class="subcategory-header">
+                                                <h5>{{ category.name }}</h5>
+                                                {% if category.description %}
+                                                    <p>{{ category.description }}</p>
+                                                {% else %}
+                                                    <p>Découvrez notre sélection {{ category.name.lower() }}</p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="subcategory-content">
+                                                <div class="row">
+                                                    {% set subcategories_per_column = ((category.subcategories|length) / 3)|round(0, 'ceil')|int %}
+                                                    {% for chunk in category.subcategories|batch(subcategories_per_column) %}
+                                                        <div class="col-md-4">
+                                                            <div class="subcategory-group">
+                                                                <h6>
+                                                                    {% if category.icon %}
+                                                                        <i class="{{ category.icon }}"></i>
+                                                                    {% else %}
+                                                                        <i class="fas fa-list"></i>
+                                                                    {% endif %}
+                                                                    Sous-catégories
+                                                                </h6>
+                                                                <ul>
+                                                                    {% for subcategory in chunk %}
+                                                                        <li>
+                                                                            <a href="/products?category_filter={{ category.id }}&subcategory_filter={{ subcategory.id }}">
+                                                                                {{ subcategory.name }}
+                                                                            </a>
+                                                                        </li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                    
+                                                    <!-- Si moins de 3 colonnes, remplir avec des suggestions -->
+                                                    {% if category.subcategories|length < 6 %}
+                                                        <div class="col-md-4">
+                                                            <div class="subcategory-group">
+                                                                <h6><i class="fas fa-star"></i> Populaires</h6>
+                                                                <ul>
+                                                                    <li><a href="/products?category_filter={{ category.id }}&sort=popular">Produits populaires</a></li>
+                                                                    <li><a href="/products?category_filter={{ category.id }}&sort=recent">Nouveautés</a></li>
+                                                                    <li><a href="/products?category_filter={{ category.id }}&sort=price_asc">Prix croissant</a></li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="subcategory-footer">
+                                                    <a href="/products?category_filter={{ category.id }}" class="btn btn-sm btn-primary">
+                                                        Voir tous les produits {{ category.name.lower() }}
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-laptop"></i> Ordinateurs</h6>
-                                                <ul>
-                                                    <li><a href="/category/electronics/laptops">Portables</a></li>
-                                                    <li><a href="/category/electronics/desktops">Ordinateurs de bureau</a></li>
-                                                    <li><a href="/category/electronics/tablets">Tablettes</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-tv"></i> Autres</h6>
-                                                <ul>
-                                                    <li><a href="/category/electronics/tv">Téléviseurs</a></li>
-                                                    <li><a href="/category/electronics/cameras">Appareils photo</a></li>
-                                                    <li><a href="/category/electronics/audio">Audio</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="subcategory-footer">
-                                        <a href="/category/electronics" class="btn btn-sm btn-primary">Voir tous les produits électroniques</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="category-item">
-                            <a href="/category/clothing" class="category-link">
-                                <i class="fas fa-tshirt"></i> Vêtements
-                            </a>
-                            <div class="subcategory-menu">
-                                <div class="subcategory-header">
-                                    <h5>Vêtements</h5>
-                                    <p>Trouvez des vêtements tendance pour toute la famille</p>
-                                </div>
-                                <div class="subcategory-content">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-male"></i> Homme</h6>
-                                                <ul>
-                                                    <li><a href="/category/clothing/men-shirts">T-shirts & Chemises</a></li>
-                                                    <li><a href="/category/clothing/men-pants">Pantalons</a></li>
-                                                    <li><a href="/category/clothing/men-traditional">Tenues traditionnelles</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-female"></i> Femme</h6>
-                                                <ul>
-                                                    <li><a href="/category/clothing/women-dresses">Robes</a></li>
-                                                    <li><a href="/category/clothing/women-tops">Hauts</a></li>
-                                                    <li><a href="/category/clothing/women-traditional">Tenues traditionnelles</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-child"></i> Enfant</h6>
-                                                <ul>
-                                                    <li><a href="/category/clothing/kids-boys">Garçons</a></li>
-                                                    <li><a href="/category/clothing/kids-girls">Filles</a></li>
-                                                    <li><a href="/category/clothing/kids-babies">Bébés</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="subcategory-footer">
-                                        <a href="/category/clothing" class="btn btn-sm btn-primary">Voir tous les vêtements</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="category-item">
-                            <a href="/products?category_filter=3" class="category-link">
-                                <i class="fas fa-utensils"></i> Alimentation
-                            </a>
-                            <div class="subcategory-menu">
-                                <div class="subcategory-header">
-                                    <h5>Alimentation</h5>
-                                    <p>Découvrez nos produits alimentaires frais et locaux</p>
-                                </div>
-                                <div class="subcategory-content">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-carrot"></i> Produits locaux</h6>
-                                                <ul>
-                                                    <li><a href="/products?category_filter=3&search=épices">Épices</a></li>
-                                                    <li><a href="/products?category_filter=3&search=fruits">Fruits</a></li>
-                                                    <li><a href="/products?category_filter=3&search=légumes">Légumes</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-glass-whiskey"></i> Boissons</h6>
-                                                <ul>
-                                                    <li><a href="/products?category_filter=3&search=boissons">Boissons gazeuses</a></li>
-                                                    <li><a href="/products?category_filter=3&search=jus">Jus</a></li>
-                                                    <li><a href="/products?category_filter=3&search=eau">Eau</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-basket"></i> Épicerie</h6>
-                                                <ul>
-                                                    <li><a href="/products?category_filter=3&search=riz">Riz</a></li>
-                                                    <li><a href="/products?category_filter=3&search=pâtes">Pâtes</a></li>
-                                                    <li><a href="/products?category_filter=3&search=conserves">Conserves</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="subcategory-footer">
-                                        <a href="/products?category_filter=3" class="btn btn-sm btn-primary">Voir tous les produits alimentaires</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="category-item">
-                            <a href="/category/crafts" class="category-link">
-                                <i class="fas fa-paint-brush"></i> Artisanat
-                            </a>
-                            <div class="subcategory-menu">
-                                <div class="subcategory-header">
-                                    <h5>Artisanat</h5>
-                                    <p>Explorez notre collection d'artisanat local</p>
-                                </div>
-                                <div class="subcategory-content">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-paint-brush"></i> Art</h6>
-                                                <ul>
-                                                    <li><a href="/category/crafts/paintings">Peintures</a></li>
-                                                    <li><a href="/category/crafts/sculptures">Sculptures</a></li>
-                                                    <li><a href="/category/crafts/jewelry">Bijoux</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-home"></i> Décoration</h6>
-                                                <ul>
-                                                    <li><a href="/category/crafts/home-decor">Décoration intérieure</a></li>
-                                                    <li><a href="/category/crafts/baskets">Vannerie</a></li>
-                                                    <li><a href="/category/crafts/textiles">Textiles</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-gift"></i> Souvenirs</h6>
-                                                <ul>
-                                                    <li><a href="/category/crafts/keychains">Porte-clés</a></li>
-                                                    <li><a href="/category/crafts/magnets">Aimants</a></li>
-                                                    <li><a href="/category/crafts/postcards">Cartes postales</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="subcategory-footer">
-                                        <a href="/category/crafts" class="btn btn-sm btn-primary">Voir tous les artisanats</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        <!-- Nouvelle catégorie: Maison & Déco -->
-                        <li class="category-item">
-                            <a href="/category/home" class="category-link">
-                                <i class="fas fa-home"></i> Maison & Déco
-                            </a>
-                            <div class="subcategory-menu">
-                                <div class="subcategory-header">
-                                    <h5>Maison & Décoration</h5>
-                                    <p>Embellissez votre intérieur avec notre sélection</p>
-                                </div>
-                                <div class="subcategory-content">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-couch"></i> Mobilier</h6>
-                                                <ul>
-                                                    <li><a href="/category/home/living-room">Salon</a></li>
-                                                    <li><a href="/category/home/bedroom">Chambre à coucher</a></li>
-                                                    <li><a href="/category/home/dining">Salle à manger</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-lightbulb"></i> Décoration</h6>
-                                                <ul>
-                                                    <li><a href="/category/home/wall-decor">Décoration murale</a></li>
-                                                    <li><a href="/category/home/lighting">Éclairage</a></li>
-                                                    <li><a href="/category/home/textiles">Textiles maison</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-utensils"></i> Cuisine</h6>
-                                                <ul>
-                                                    <li><a href="/category/home/cookware">Ustensiles de cuisine</a></li>
-                                                    <li><a href="/category/home/tableware">Arts de la table</a></li>
-                                                    <li><a href="/category/home/appliances">Petits électroménagers</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="subcategory-footer">
-                                        <a href="/category/home" class="btn btn-sm btn-primary">Voir tous les articles maison</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        
-                        <!-- Nouvelle catégorie: Santé & Beauté -->
-                        <li class="category-item">
-                            <a href="/category/beauty" class="category-link">
-                                <i class="fas fa-spa"></i> Santé & Beauté
-                            </a>
-                            <div class="subcategory-menu">
-                                <div class="subcategory-header">
-                                    <h5>Santé & Beauté</h5>
-                                    <p>Produits de bien-être et de soins personnels</p>
-                                </div>
-                                <div class="subcategory-content">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-pump-soap"></i> Soins du corps</h6>
-                                                <ul>
-                                                    <li><a href="/category/beauty/skin-care">Soins de la peau</a></li>
-                                                    <li><a href="/category/beauty/hair-care">Soins capillaires</a></li>
-                                                    <li><a href="/category/beauty/bath">Bain & douche</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-magic"></i> Cosmétiques</h6>
-                                                <ul>
-                                                    <li><a href="/category/beauty/makeup">Maquillage</a></li>
-                                                    <li><a href="/category/beauty/fragrances">Parfums</a></li>
-                                                    <li><a href="/category/beauty/tools">Accessoires beauté</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="subcategory-group">
-                                                <h6><i class="fas fa-heartbeat"></i> Bien-être</h6>
-                                                <ul>
-                                                    <li><a href="/category/beauty/wellness">Produits bien-être</a></li>
-                                                    <li><a href="/category/beauty/herbal">Produits naturels</a></li>
-                                                    <li><a href="/category/beauty/traditional">Remèdes traditionnels</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="subcategory-footer">
-                                        <a href="/category/beauty" class="btn btn-sm btn-primary">Voir tous les produits beauté</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        <!-- ...autres catégories... -->
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Fallback si aucune catégorie dynamique n'est disponible -->
+                            <li class="category-item">
+                                <a href="/products" class="category-link">
+                                    <i class="fas fa-th-large"></i> Tous les produits
+                                </a>
+                            </li>
+                        {% endif %}
                     </ul>
                 </div>
             </div>
