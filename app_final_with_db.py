@@ -3494,10 +3494,10 @@ def get_payment_method_info(payment_method):
     })
 
 def get_categories_for_display():
-    """Récupère les catégories actives pour l'affichage sur la page d'accueil"""
+    """Récupère les catégories actives pour l'affichage sur la page d'accueil (maximum 4)"""
     try:
-        # Récupérer les catégories actives depuis la base de données
-        categories = Category.query.filter_by(active=True).order_by(Category.name).all()
+        # Récupérer les catégories actives depuis la base de données, limitées à 4
+        categories = Category.query.filter_by(active=True).order_by(Category.name).limit(4).all()
         
         categories_list = []
         for category in categories:
