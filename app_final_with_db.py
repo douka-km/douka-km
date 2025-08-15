@@ -9599,97 +9599,82 @@ def admin_order_detail(order_id):
 @app.route('/admin/orders/<order_id>/update-status', methods=['POST'])
 @admin_required
 def admin_update_order_status(order_id):
-    """Met à jour le statut d'une commande depuis l'admin"""
+    """Met à jour le statut d'une commande depuis l'admin - VERSION SIMPLIFIÉE"""
     try:
         status = request.form.get('status')
         notes = request.form.get('notes', '')
         
-        
-        # Convertir order_id en string pour la comparaison
-        order_id_str = str(order_id)
-        
         if not status:
             return jsonify({'success': False, 'message': 'Le statut est requis'})
         
-        # Définir les mappings de statut au niveau global de la fonction
-        status_colors = {
-            'processing': 'primary',
-            'shipped': 'info',
-            'delivered': 'success',
-            'cancelled': 'danger'
-        }
-        status_texts = {
-            'processing': 'En cours de préparation',
-            'shipped': 'Expédiée',
-            'delivered': 'Livrée',
-            'cancelled': 'Annulée'
-        }
-        payment_status_mapping = {
-            'delivered': 'completed',
-            'cancelled': 'cancelled',
-            'processing': 'pending',
-            'shipped': 'pending'
-        }
+        print(f"🔄 Admin met à jour commande {order_id} -> {status}")
         
-        # **NOUVELLE VERSION: Rechercher et mettre à jour la commande via la base de données**
+        # **ÉTAPE 1: Chercher la commande dans la base de données d'abord (DATABASE-FIRST)**
+        from db_helpers import get_order_by_id, update_order_status, get_admin_order_by_id, update_admin_order_status, get_user_order_by_id
+        
         order_updated = False
+        old_status = None
+        customer_email = None
         
-        # D'abord chercher dans les commandes des marchands via la DB
-        from db_helpers import get_order_by_id, update_order_status
+        # Chercher dans les commandes marchands
         db_order = get_order_by_id(order_id)
-        
-        if db_order and db_order.merchant_id:
-            # Commande de marchand trouvée, la mettre à jour
-            try:
-                result = update_order_status(order_id, status, notes, 'Administrateur')
-                if result:
-                    order_updated = True
-                    
-                    # **DÉSASSIGNATION AUTOMATIQUE: Si la commande est livrée ou annulée, la désassigner du livreur**
-                    if status in ['delivered', 'cancelled']:
+        if db_order:
+            print(f"📦 Commande marchand trouvée: {order_id}")
+            old_status = db_order.status
+            customer_email = db_order.customer_email
+            
+            # Mettre à jour via db_helpers
+            result = update_order_status(order_id, status, notes, 'Administrateur')
+            if result:
+                order_updated = True
+                print(f"✅ Commande marchand {order_id} mise à jour: {old_status} -> {status}")
+                
+                # Désassignation automatique
+                if status in ['delivered', 'cancelled']:
+                    try:
                         from db_helpers import get_merchant_by_id
                         merchant_record = get_merchant_by_id(db_order.merchant_id) if db_order.merchant_id else None
                         merchant_email_for_unassign = merchant_record.email if merchant_record else None
-                        
-                        unassign_success = unassign_order_from_livreur(order_id, 'merchant', merchant_email_for_unassign)
-                        if unassign_success:
-                            print(f"✅ Commande marchand {order_id} désassignée automatiquement après {status} (Admin DB)")
-                        else:
-                            print(f"⚠️ Échec désassignation automatique commande marchand {order_id} (Admin)")
-                    
-                    # Envoyer notification email si nécessaire
-                    customer_email = db_order.customer_email
-                    if customer_email and status in ['processing', 'shipped', 'delivered', 'cancelled']:
-                        try:
-                            from db_helpers import get_user_order_by_id
-                            order_data = get_user_order_by_id(customer_email, order_id)
-                            if order_data:
-                                send_order_status_email(customer_email, order_data, db_order.status, status)
-                                print(f"Email de notification envoyé à {customer_email} pour commande {order_id}")
-                        except Exception as e:
-                            print(f"Erreur lors de l'envoi de l'email: {e}")
-            except Exception as e:
-                print(f"Erreur lors de la mise à jour de la commande marchand: {e}")
+                        unassign_order_from_livreur(order_id, 'merchant', merchant_email_for_unassign)
+                        print(f"📤 Commande {order_id} désassignée du livreur")
+                    except Exception as e:
+                        print(f"⚠️ Erreur désassignation: {e}")
         
-        # Si pas trouvé en DB, fallback vers l'ancien dictionnaire
+        # Si pas trouvée dans marchands, chercher dans commandes admin
+        elif get_admin_order_by_id(order_id):
+            print(f"🏛️ Commande admin trouvée: {order_id}")
+            admin_order = get_admin_order_by_id(order_id)
+            old_status = admin_order.status
+            customer_email = admin_order.customer_email
+            
+            # Mettre à jour via db_helpers
+            success, retrieved_old_status = update_admin_order_status(order_id, status)
+            if success:
+                order_updated = True
+                print(f"✅ Commande admin {order_id} mise à jour: {retrieved_old_status} -> {status}")
+                
+                # Désassignation automatique
+                if status in ['delivered', 'cancelled']:
+                    try:
+                        unassign_order_from_livreur(order_id, 'admin', None)
+                        print(f"📤 Commande admin {order_id} désassignée du livreur")
+                    except Exception as e:
+                        print(f"⚠️ Erreur désassignation admin: {e}")
+        
+        # Si toujours pas trouvée, chercher dans les dictionnaires en mémoire (fallback)
         if not order_updated:
+            print(f"🔍 Recherche fallback dans dictionnaires pour commande {order_id}")
+            order_id_str = str(order_id)
+            
             for merchant_email, merchant in merchants_db.items():
                 for order in merchant.get('orders', []):
                     if str(order.get('id')) == order_id_str:
-                        # Capturer l'ancien statut avant modification
                         old_status = order.get('status')
+                        customer_email = order.get('customer_email')
                         
-                        # Mettre à jour le statut
+                        # Mise à jour simple du dictionnaire
                         order['status'] = status
-                        
-                        # Ajouter les dates spécifiques selon le statut
-                        current_date = datetime.now().strftime('%d/%m/%Y')
-                        if status == 'processing' and 'processing_date' not in order:
-                            order['processing_date'] = current_date
-                        elif status == 'shipped' and 'shipping_date' not in order:
-                            order['shipping_date'] = current_date
-                        elif status == 'delivered' and 'delivery_date' not in order:
-                            order['delivery_date'] = current_date
+                        order['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         
                         # Ajouter les notes si fournies
                         if notes:
@@ -9701,152 +9686,62 @@ def admin_update_order_status(order_id):
                                 'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                             })
                         
-                        # Mettre à jour les informations de style pour le statut
-                        order['status_color'] = status_colors.get(status, 'secondary')
-                        order['status_text'] = status_texts.get(status, status)
-                    order['payment_status'] = payment_status_mapping.get(status, 'pending')
-                    
-                    # Enregistrer la date de mise à jour
-                    order['updated_at'] = datetime.now().strftime('%Y-%m-%d')
-                    order['admin_updated'] = True
-                    
-                    # Mettre à jour la commande correspondante dans la base de données
-                    customer_email = order.get('customer_email')
-                    if customer_email:
-                        # Convertir l'order_id_str en int pour la DB
-                        order_id_int = int(order_id_str)
-                        success, message = update_user_order_status(order_id_int, status)
-                        if success:
-                            print(f"✅ Commande {order_id_int} mise à jour en DB pour {customer_email}")
-                        else:
-                            print(f"⚠️ Erreur maj commande {order_id_int} en DB: {message}")
-                            
-                        # Envoyer email de notification au client
-                        if customer_email and status in ['processing', 'shipped', 'delivered', 'cancelled']:
-                            try:
-                                # Récupérer les détails de la commande pour l'email
-                                order_id_int = int(order_id_str)
-                                order_data = get_user_order_by_id(customer_email, order_id_int)
-                                if order_data:
-                                    send_order_status_email(customer_email, order_data, old_status, status)
-                                    print(f"Email de notification envoyé à {customer_email} pour commande {order_id_str} (admin)")
-                                else:
-                                    print(f"⚠️ Commande {order_id_str} non trouvée pour email à {customer_email}")
-                            except Exception as e:
-                                print(f"Erreur lors de l'envoi de l'email à {customer_email}: {str(e)}")
-                        
-                        # **GESTION DU STOCK POUR COMMANDES MARCHANDS (DEPUIS ADMIN)**
-                        if order.get('stock_reserved', False):
-                            reserved_items = order.get('reserved_items', [])
-                            
-                            if status == 'cancelled':
-                                # Commande annulée : libérer le stock réservé
-                                print(f"Commande marchand {order_id} annulée par admin - Libération du stock réservé")
-                                release_stock(reserved_items)
-                                # Marquer que le stock n'est plus réservé
-                                order['stock_reserved'] = False
-                                order['stock_released_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                                
-                            elif status == 'delivered':
-                                # Commande livrée : confirmer la déduction du stock
-                                print(f"Commande marchand {order_id} livrée par admin - Confirmation de la déduction du stock")
-                                confirm_stock_deduction(reserved_items)
-                                # Marquer que le stock a été définitivement déduit
-                                order['stock_confirmed_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                        
-                        # **DÉSASSIGNATION AUTOMATIQUE: Si la commande est livrée ou annulée, la désassigner du livreur**
-                        if status in ['delivered', 'cancelled']:
-                            order_id_int = int(order_id_str)
-                            unassign_success = unassign_order_from_livreur(order_id_int, 'merchant', merchant_email)
-                            if unassign_success:
-                                print(f"✅ Commande marchand {order_id} désassignée automatiquement après {status} (Admin Dict)")
-                            else:
-                                print(f"⚠️ Échec désassignation automatique commande marchand {order_id} (Admin Dict)")
-                        
-                        # Mettre à jour la commande correspondante dans la base de données
-                        customer_email = order.get('customer_email')
-                        if customer_email:
-                            success, message = update_user_order_status(order_id_int, status)
-                            if success:
-                                print(f"✅ Statut commande {order_id} mis à jour en DB pour {customer_email}")
-                            else:
-                                print(f"⚠️ Erreur mise à jour commande {order_id} en DB: {message}")
-                                
-                            # Envoyer notification email au client
-                            if status in ['processing', 'shipped', 'delivered', 'cancelled']:
-                                try:
-                                    order_data = get_user_order_by_id(customer_email, order_id_int)
-                                    if order_data:
-                                        send_order_status_email(customer_email, order_data, old_status, status)
-                                        print(f"Email de notification envoyé à {customer_email} pour commande {order_id}")
-                                except Exception as e:
-                                    print(f"Erreur lors de l'envoi de l'email: {e}")
-                        
                         order_updated = True
+                        print(f"✅ Commande dictionnaire {order_id} mise à jour: {old_status} -> {status}")
                         break
                 if order_updated:
                     break
         
-        # **NOUVELLE VERSION: Si pas trouvée dans les marchands, chercher dans la base de données admin**
         if not order_updated:
-            from db_helpers import get_admin_order_by_id, update_admin_order_status
-            
-            # Chercher dans les commandes admin de la base de données
-            admin_order = get_admin_order_by_id(order_id)
-            if admin_order:
-                
-                # Mettre à jour le statut dans la base de données
-                status_text = status_texts.get(status, status)
-                success, old_status = update_admin_order_status(order_id, status)
-                
-                if success:
-                    
-                    # **DÉSASSIGNATION AUTOMATIQUE: Si la commande admin est livrée ou annulée, la désassigner du livreur**
-                    if status in ['delivered', 'cancelled']:
-                        unassign_success = unassign_order_from_livreur(order_id, 'admin', None)
-                        if unassign_success:
-                            print(f"✅ Commande admin {order_id} désassignée automatiquement après {status} (Admin DB)")
-                        else:
-                            print(f"⚠️ Échec désassignation automatique commande admin {order_id} (Admin)")
-                    
-                    # **GESTION DU STOCK POUR LES COMMANDES ADMIN**
-                    if admin_order.stock_reserved:
-                        # Convertir les items pour la gestion du stock
-                        reserved_items = []
-                        for item in admin_order.items:
-                            reserved_items.append({
-                                'product_id': item.product_id,
-                                'quantity': item.quantity,
-                                'product_name': item.name
-                            })
-                        
-                        if status == 'cancelled':
-                            print(f"Commande admin {order_id} annulée - Libération du stock réservé")
-                            release_stock(reserved_items)
-                            admin_order.stock_reserved = False
-                            admin_order.stock_released_at = datetime.now()
-                            db.session.commit()
-                        elif status == 'delivered':
-                            print(f"Commande admin {order_id} livrée - Confirmation de la déduction du stock")
-                            confirm_stock_deduction(reserved_items)
-                            admin_order.stock_confirmed_at = datetime.now()
-                            db.session.commit()
-                    
-                    order_updated = True
-                else:
-                    print(f"Échec de mise à jour du statut pour la commande admin {order_id}")
-            else:
-                print(f"Commande admin {order_id} non trouvée")
-        
-        if not order_updated:
+            print(f"❌ Commande {order_id} non trouvée")
             return jsonify({'success': False, 'message': f'Commande {order_id} non trouvée'})
         
-        # Envoyer notification email si la commande a été trouvée et mise à jour
-        # Note: Les emails seront gérés par les fonctions de base de données
+        # **ÉTAPE 2: Envoyer l'email de notification (SÉPARÉ ET SÉCURISÉ)**
+        email_sent = False
+        if customer_email and status in ['processing', 'shipped', 'delivered', 'cancelled']:
+            try:
+                print(f"📧 Tentative d'envoi email à {customer_email} pour commande {order_id}")
+                
+                # Récupérer les données de commande pour l'email
+                order_data = get_user_order_by_id(customer_email, order_id)
+                if order_data:
+                    email_success = send_order_status_email(customer_email, order_data, old_status, status)
+                    if email_success:
+                        email_sent = True
+                        print(f"✅ Email de notification envoyé à {customer_email}")
+                    else:
+                        print(f"⚠️ Échec envoi email à {customer_email}")
+                else:
+                    print(f"⚠️ Données de commande non trouvées pour email à {customer_email}")
+                    
+            except Exception as e:
+                print(f"❌ Erreur lors de l'envoi de l'email à {customer_email}: {str(e)}")
         
-        return jsonify({'success': True, 'message': f'Statut mis à jour vers {status}'})
+        # **ÉTAPE 3: Retourner le succès avec informations sur l'email**
+        status_text = {
+            'processing': 'En cours de préparation',
+            'shipped': 'Expédiée', 
+            'delivered': 'Livrée',
+            'cancelled': 'Annulée'
+        }.get(status, status)
+        
+        message = f'Statut mis à jour vers "{status_text}"'
+        if customer_email:
+            if email_sent:
+                message += f' et email envoyé à {customer_email}'
+            else:
+                message += f' mais échec envoi email à {customer_email}'
+        
+        return jsonify({
+            'success': True, 
+            'message': message,
+            'email_sent': email_sent,
+            'customer_email': customer_email
+        })
         
     except Exception as e:
+        import traceback
+        print(f"❌ Erreur dans admin_update_order_status: {str(e)}")
         traceback.print_exc()
         return jsonify({'success': False, 'message': f'Erreur serveur: {str(e)}'})
 
