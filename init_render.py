@@ -22,22 +22,33 @@ try:
         print(f"📍 Traceback: {traceback.format_exc()}")
         sys.exit(1)
     
-    # Initialiser la base de données
-    print("🔄 Initialisation de la base de données...")
-    initialize_production_db()
-    
-    # Corriger la base de données (colonnes manquantes)
+    # D'ABORD corriger la base de données (colonnes manquantes)
     print("🔧 Correction de la base de données...")
     try:
         from fix_render_db import fix_render_database, create_sample_categories
         if fix_render_database():
-            create_sample_categories()
-            print("✅ Base de données corrigée")
+            print("✅ Schéma de base de données corrigé")
         else:
-            print("⚠️ Échec de la correction - l'application continuera")
+            print("⚠️ Échec de la correction du schéma")
     except Exception as fix_error:
         print(f"⚠️ Erreur lors de la correction DB: {fix_error}")
         print("🔄 L'application continuera malgré l'erreur")
+    
+    # ENSUITE initialiser la base de données avec les données
+    print("🔄 Initialisation de la base de données...")
+    try:
+        initialize_production_db()
+        print("✅ Données initialisées")
+    except Exception as init_error:
+        print(f"⚠️ Erreur lors de l'initialisation des données: {init_error}")
+        print("🔄 L'application continuera avec un schéma vide")
+    
+    # Enfin créer les catégories d'exemple si nécessaire
+    try:
+        create_sample_categories()
+        print("✅ Catégories d'exemple créées")
+    except Exception as cat_error:
+        print(f"⚠️ Erreur lors de la création des catégories: {cat_error}")
     
     print("✅ Application initialisée avec succès!")
     

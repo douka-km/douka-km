@@ -1,14 +1,189 @@
 #!/usr/bin/env python3
 """
-Script pour corriger la base de données sur Render.com
-Ajoute les colonnes 'updated_at' manquantes aux tables categories et subcategories
+Script pour corriger les problèmes de schéma de base de données sur Render.com
 """
 import os
 import sys
-from datetime import datetime
 
-# S'assurer qu'on est en mode production
-os.environ['RENDER'] = '1'
+def fix_render_database():
+    """Fonction principale pour corriger la base de données"""
+    try:
+        # S'assurer qu'on est en mode production
+        os.environ['RENDER'] = '1'
+        
+        # Importer les modules nécessaires
+        from app_final_with_db import app
+        from models import db
+        from sqlalchemy import text
+        
+        print("🔧 Correction de la base de données PostgreSQL...")
+        
+        with app.app_context():
+            # Créer toutes les tables manquantes d'abord
+            db.create_all()
+            print("✅ Tables créées ou vérifiées")
+            
+            # Détecter le type de base de données
+            db_type = str(db.engine.url).split(':')[0].lower()
+            print(f"🔍 Type de base de données détecté: {db_type}")
+            
+            if db_type.startswith('postgresql'):
+                # PostgreSQL - utiliser information_schema
+                check_category_query = text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'categories' AND column_name = 'updated_at'
+                """)
+                
+                check_subcategory_query = text("""
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'subcategories' AND column_name = 'updated_at'
+                """)
+                
+                # Vérifier et ajouter updated_at à categories
+                result = db.session.execute(check_category_query).fetchall()
+                if not result:
+                    print("➕ Ajout de updated_at à categories...")
+                    add_category_column = text("""
+                        ALTER TABLE categories 
+                        ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    """)
+                    db.session.execute(add_category_column)
+                    db.session.commit()
+                    print("✅ Colonne updated_at ajoutée à categories")
+                else:
+                    print("✅ Colonne updated_at existe déjà dans categories")
+                
+                # Vérifier et ajouter updated_at à subcategories
+                result = db.session.execute(check_subcategory_query).fetchall()
+                if not result:
+                    print("➕ Ajout de updated_at à subcategories...")
+                    add_subcategory_column = text("""
+                        ALTER TABLE subcategories 
+                        ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    """)
+                    db.session.execute(add_subcategory_column)
+                    db.session.commit()
+                    print("✅ Colonne updated_at ajoutée à subcategories")
+                else:
+                    print("✅ Colonne updated_at existe déjà dans subcategories")
+                    
+            elif db_type.startswith('sqlite'):
+                # SQLite - utiliser PRAGMA
+                check_category_query = text("PRAGMA table_info(categories)")
+                result = db.session.execute(check_category_query).fetchall()
+                
+                # Vérifier si updated_at existe déjà
+                category_has_updated_at = any('updated_at' in str(row) for row in result)
+                
+                if not category_has_updated_at:
+                    print("➕ Ajout de updated_at à categories (SQLite)...")
+                    add_category_column = text("""
+                        ALTER TABLE categories 
+                        ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    """)
+                    db.session.execute(add_category_column)
+                    db.session.commit()
+                    print("✅ Colonne updated_at ajoutée à categories")
+                else:
+                    print("✅ Colonne updated_at existe déjà dans categories")
+                
+                # Même chose pour subcategories
+                check_subcategory_query = text("PRAGMA table_info(subcategories)")
+                result = db.session.execute(check_subcategory_query).fetchall()
+                
+                subcategory_has_updated_at = any('updated_at' in str(row) for row in result)
+                
+                if not subcategory_has_updated_at:
+                    print("➕ Ajout de updated_at à subcategories (SQLite)...")
+                    add_subcategory_column = text("""
+                        ALTER TABLE subcategories 
+                        ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    """)
+                    db.session.execute(add_subcategory_column)
+                    db.session.commit()
+                    print("✅ Colonne updated_at ajoutée à subcategories")
+                else:
+                    print("✅ Colonne updated_at existe déjà dans subcategories")
+            
+            else:
+                print(f"⚠️ Type de base de données non supporté: {db_type}")
+                return False
+            
+        print("✅ Correction de la base de données terminée avec succès!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la correction: {e}")
+        import traceback
+        print(f"📍 Traceback: {traceback.format_exc()}")
+        return False
+
+def create_sample_categories():
+    """Créer des catégories d'exemple si aucune n'existe"""
+    try:
+        from app_final_with_db import app
+        from models import db, Category, Subcategory
+        from datetime import datetime
+        
+        with app.app_context():
+            # Vérifier s'il y a déjà des catégories
+            existing_categories = Category.query.count()
+            if existing_categories > 0:
+                print(f"✅ {existing_categories} catégories existent déjà")
+                return True
+            
+            # Créer quelques catégories d'exemple
+            categories_data = [
+                {
+                    'name': 'Électronique',
+                    'description': 'Téléphones, ordinateurs, accessoires',
+                    'icon': 'fas fa-laptop'
+                },
+                {
+                    'name': 'Vêtements',
+                    'description': 'Mode homme, femme, enfant',
+                    'icon': 'fas fa-tshirt'
+                },
+                {
+                    'name': 'Alimentaire',
+                    'description': 'Produits frais et épicerie',
+                    'icon': 'fas fa-apple-alt'
+                }
+            ]
+            
+            print("🏷️ Création de catégories d'exemple...")
+            for cat_data in categories_data:
+                category = Category(
+                    name=cat_data['name'],
+                    description=cat_data['description'],
+                    icon=cat_data['icon'],
+                    active=True,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                    created_by='system'
+                )
+                db.session.add(category)
+            
+            db.session.commit()
+            print(f"✅ {len(categories_data)} catégories d'exemple créées")
+            return True
+            
+    except Exception as e:
+        print(f"❌ Erreur lors de la création des catégories: {e}")
+        return False
+
+if __name__ == "__main__":
+    print("🚀 Démarrage de la correction de base de données...")
+    
+    success = fix_render_database()
+    if success:
+        create_sample_categories()
+        print("✅ Correction terminée avec succès!")
+    else:
+        print("❌ Correction échouée")
+        sys.exit(1)
 
 def fix_render_database():
     """Corrige la base de données sur Render en ajoutant les colonnes manquantes"""
