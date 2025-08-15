@@ -11823,7 +11823,7 @@ def admin_delete_user(user_id):
                     # Supprimer tous les éléments de la commande (OrderItem)
                     order_items = OrderItem.query.filter_by(order_id=order.id).all()
                     for item in order_items:
-                        print(f"     * Suppression item: {item.product_name} (x{item.quantity})")
+                        print(f"     * Suppression item: {item.name} (x{item.quantity})")
                         db.session.delete(item)
                     
                     # Supprimer la commande elle-même
