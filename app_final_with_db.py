@@ -11787,22 +11787,16 @@ def admin_delete_user(user_id):
         return jsonify({'success': False, 'message': 'Utilisateur non trouvé'})
     
     try:
-        # Vérifier s'il y a des commandes en cours dans les données mémoire
+        # Vérifier s'il y a des commandes associées à cet utilisateur
         user_orders = target_user.get('orders', [])
-        pending_orders = [o for o in user_orders if o.get('status') in ['processing', 'shipped']]
         
         # Vérifier aussi les commandes dans la base de données
-        user_db_orders = Order.query.filter_by(customer_email=user_email).filter(
-            Order.status.in_(['processing', 'shipped'])
-        ).all()
+        user_db_orders = Order.query.filter_by(customer_email=user_email).all()
         
-        total_pending = len(pending_orders) + len(user_db_orders)
+        total_orders = len(user_orders) + len(user_db_orders)
         
-        if total_pending > 0:
-            return jsonify({
-                'success': False, 
-                'message': f'Impossible de supprimer cet utilisateur car il a {total_pending} commande(s) en cours. Veuillez d\'abord traiter ces commandes.'
-            })
+        if total_orders > 0:
+            print(f"⚠️ Utilisateur {user_email} a {total_orders} commande(s) qui seront supprimées")
         
         # Supprimer l'utilisateur de la base de données SQLite
         user_record = User.query.filter_by(id=user_id).first()
@@ -11818,18 +11812,51 @@ def admin_delete_user(user_id):
                 # Supprimer les tokens de réinitialisation de mot de passe (utiliser l'email, pas user_id)
                 PasswordResetToken.query.filter_by(email=user_email).delete()
                 
-                # Anonymiser les commandes de l'utilisateur (pour conserver l'historique)
-                # plutôt que de les supprimer complètement
+                # Supprimer TOUTES les commandes de l'utilisateur et leurs éléments associés
                 user_orders_db = Order.query.filter_by(customer_email=user_email).all()
+                
+                print(f"🔄 Suppression des commandes pour l'utilisateur {user_email}")
+                
                 for order in user_orders_db:
-                    order.customer_name = "Utilisateur supprimé"
-                    order.customer_email = f"deleted_user_{user_id}@deleted.local"
-                    order.customer_phone = "N/A"
+                    print(f"   - Suppression commande #{order.id} (Status: {order.status})")
+                    
+                    # Supprimer tous les éléments de la commande (OrderItem)
+                    order_items = OrderItem.query.filter_by(order_id=order.id).all()
+                    for item in order_items:
+                        print(f"     * Suppression item: {item.product_name} (x{item.quantity})")
+                        db.session.delete(item)
+                    
+                    # Supprimer la commande elle-même
+                    db.session.delete(order)
+                
+                # Supprimer également les adresses de l'utilisateur
+                user_addresses = Address.query.filter_by(user_id=user_id).all()
+                for address in user_addresses:
+                    print(f"   - Suppression adresse: {address.name}")
+                    db.session.delete(address)
+                
+                # Supprimer les éléments du panier
+                user_carts = Cart.query.filter_by(user_id=user_id).all()
+                for cart in user_carts:
+                    # Supprimer les éléments du panier
+                    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+                    for cart_item in cart_items:
+                        db.session.delete(cart_item)
+                    # Supprimer le panier lui-même
+                    db.session.delete(cart)
+                
+                # Supprimer les avis/reviews de l'utilisateur
+                user_reviews = Review.query.filter_by(user_id=user_id).all()
+                for review in user_reviews:
+                    print(f"   - Suppression avis pour produit #{review.product_id}")
+                    db.session.delete(review)
                 
                 # Supprimer l'utilisateur lui-même
                 db.session.delete(user_record)
                 db.session.commit()
-                print(f"✅ Utilisateur ID {user_id} supprimé de la base de données")
+                
+                orders_message = f" et {total_orders} commande(s)" if total_orders > 0 else ""
+                print(f"✅ Utilisateur ID {user_id} supprimé de la base de données{orders_message}")
                 
             except Exception as db_error:
                 db.session.rollback()
@@ -11840,9 +11867,11 @@ def admin_delete_user(user_id):
         user_name = f"{target_user.get('first_name', '')} {target_user.get('last_name', '')}"
         del users_db[user_email]
         
+        orders_info = f" (avec {total_orders} commandes supprimées)" if total_orders > 0 else ""
+        
         return jsonify({
             'success': True, 
-            'message': f'Utilisateur "{user_name}" supprimé avec succès'
+            'message': f'Utilisateur "{user_name}" supprimé avec succès{orders_info}'
         })
         
     except Exception as e:
