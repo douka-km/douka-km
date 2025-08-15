@@ -998,7 +998,8 @@ def get_user_order_stats(user_email):
         orders = Order.query.filter_by(customer_id=user.id).all()
         
         total_orders = len(orders)
-        total_spent = sum(order.total for order in orders)
+        # Exclure les commandes annulées du total dépensé
+        total_spent = sum(order.total for order in orders if order.status != 'cancelled')
         pending_orders = sum(1 for order in orders if order.status in ['pending', 'processing'])
         completed_orders = sum(1 for order in orders if order.status == 'delivered')
         cancelled_orders = sum(1 for order in orders if order.status == 'cancelled')

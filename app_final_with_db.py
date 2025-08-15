@@ -3506,8 +3506,10 @@ def home():
     merchant_products = [p for p in all_products if p.get('source') == 'merchant']
     static_products = [p for p in all_products if p.get('source') == 'static']
     
-    # Trier les produits admin par date de création (plus récents en premier)
+    # Trier tous les produits par date de création (plus récents en premier)
     admin_products = sorted(admin_products, key=lambda x: x.get('created_at', ''), reverse=True)
+    merchant_products = sorted(merchant_products, key=lambda x: x.get('created_at', ''), reverse=True)
+    static_products = sorted(static_products, key=lambda x: x.get('created_at', ''), reverse=True)
     
     # Priorité aux produits récents : admin d'abord, puis marchands, puis statiques
     # Add 2 most recent admin products first
@@ -3612,7 +3614,7 @@ def products():
     min_price = request.args.get('min_price', '')
     max_price = request.args.get('max_price', '')
     in_stock = request.args.get('in_stock', '')
-    sort_option = request.args.get('sort', 'default')
+    sort_option = request.args.get('sort', 'newest')  # Défaut: plus récents en premier
     page = request.args.get('page', 1, type=int)
     per_page = 20  # 20 produits par page
     
@@ -3667,8 +3669,18 @@ def products():
     elif sort_option == 'name_desc':
         filtered_products = sorted(filtered_products, key=lambda p: p['name'], reverse=True)
         print("Sorting by name Z-A")
+    elif sort_option == 'newest' or sort_option == 'default':
+        # Tri par date de création (plus récent en premier)
+        filtered_products = sorted(filtered_products, key=lambda p: p.get('created_at', ''), reverse=True)
+        print("Sorting by newest first")
+    elif sort_option == 'oldest':
+        # Tri par date de création (plus ancien en premier)
+        filtered_products = sorted(filtered_products, key=lambda p: p.get('created_at', ''))
+        print("Sorting by oldest first")
     else:
-        print(f"Using default sort (no sorting applied)")
+        # Par défaut: produits les plus récents en premier
+        filtered_products = sorted(filtered_products, key=lambda p: p.get('created_at', ''), reverse=True)
+        print("Using fallback sort: newest first")
     
     # Calcul de la pagination
     total_products = len(filtered_products)
@@ -4604,12 +4616,12 @@ def cart():
 
 # Fonction utilitaire pour récupérer tous les produits (statiques + marchands)
 def get_all_products():
-    """Récupère tous les produits depuis la base de données"""
+    """Récupère tous les produits depuis la base de données, triés par date de création (plus récent en premier)"""
     try:
         all_products = []
         
-        # Récupérer tous les produits depuis la base de données
-        products_from_db = Product.query.all()
+        # Récupérer tous les produits depuis la base de données, triés par created_at DESC
+        products_from_db = Product.query.order_by(Product.created_at.desc()).all()
         
         for product_record in products_from_db:
             product_dict = product_record.to_dict()
@@ -4620,12 +4632,19 @@ def get_all_products():
                 merchant_record = Merchant.query.get(product_record.merchant_id)
                 if merchant_record:
                     product_dict['merchant_email'] = merchant_record.email
+                    product_dict['merchant_name'] = merchant_record.store_name
+                    product_dict['merchant_logo'] = merchant_record.store_logo
+                else:
+                    product_dict['merchant_name'] = 'Marchand inconnu'
+                    product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
             else:
                 product_dict['source'] = 'admin'
+                product_dict['merchant_name'] = None
+                product_dict['merchant_logo'] = None
             
             all_products.append(product_dict)
         
-        print(f"✅ Récupéré {len(all_products)} produits depuis la base de données")
+        print(f"✅ Récupéré {len(all_products)} produits depuis la base de données (triés par date)")
         return all_products
         
     except Exception as e:
@@ -4659,40 +4678,13 @@ def get_product_by_id(product_id):
             product_dict['merchant_id'] = merchant_record.id
             product_dict['merchant_logo'] = merchant_record.store_logo
             product_dict['merchant_banner'] = merchant_record.store_banner
+        else:
+            product_dict['merchant_name'] = 'Marchand inconnu'
+            product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
     else:
         product_dict['source'] = 'admin'
-    
-    return product_dict
-
-def get_product_by_id(product_id):
-    """Récupère un produit par son ID depuis la base de données"""
-    try:
-        # Convertir product_id en int si c'est une string
-        product_id = int(product_id)
-    except (ValueError, TypeError):
-        return None
-    
-    # Récupérer le produit depuis la base de données
-    product_record = Product.query.get(product_id)
-    
-    if not product_record:
-        return None
-    
-    # Convertir en dictionnaire
-    product_dict = product_record.to_dict()
-    
-    # Ajouter les informations source et merchant
-    if product_record.merchant_id:
-        product_dict['source'] = 'merchant'
-        merchant_record = Merchant.query.get(product_record.merchant_id)
-        if merchant_record:
-            product_dict['merchant_email'] = merchant_record.email
-            product_dict['merchant_name'] = merchant_record.store_name
-            product_dict['merchant_id'] = merchant_record.id
-            product_dict['merchant_logo'] = merchant_record.store_logo
-            product_dict['merchant_banner'] = merchant_record.store_banner
-    else:
-        product_dict['source'] = 'admin'
+        product_dict['merchant_name'] = None
+        product_dict['merchant_logo'] = None
     
     return product_dict
 
@@ -5679,17 +5671,22 @@ def complete_order():
             eligible_total = 0
             for product in products:
                 for eligible_item in eligible_items:
-                    if eligible_item['product_id'] == product['id']:
+                    if eligible_item['id'] == product['id']:
                         eligible_total += product['subtotal']
                         break
             
             if eligible_total > 0:
-                if promo_validation_result['promo_code']['type'] == 'percentage':
-                    discount_amount = eligible_total * (promo_validation_result['promo_code']['value'] / 100)
-                    max_discount = promo_validation_result['promo_code'].get('max_discount', float('inf'))
-                    applied_discount = min(discount_amount, max_discount)
-                elif promo_validation_result['promo_code']['type'] == 'fixed':
-                    applied_discount = min(promo_validation_result['promo_code']['value'], eligible_total)
+                # Récupérer les informations du code promo depuis la base de données
+                from models import PromoCode
+                promo_record = PromoCode.query.filter_by(code=promo_code).first()
+                
+                if promo_record:
+                    if promo_record.type == 'percentage':
+                        discount_amount = eligible_total * (promo_record.value / 100)
+                        max_discount = promo_record.max_discount or float('inf')
+                        applied_discount = min(discount_amount, max_discount)
+                    elif promo_record.type == 'fixed':
+                        applied_discount = min(promo_record.value, eligible_total)
         
         total_with_shipping = total + shipping_fee - applied_discount
         
@@ -5828,6 +5825,15 @@ def complete_order():
         session.pop('checkout_type', None)
     except Exception as e:
         print(f"Erreur lors du nettoyage du panier: {str(e)}")
+    
+    # **NOUVEAU: Appliquer le code promo (incrémenter le compteur d'utilisation)**
+    if promo_code and promo_validation_result and promo_validation_result.get('valid'):
+        print(f"📊 Application du code promo: {promo_code}")
+        promo_applied = apply_promo_code(promo_code, user_email)
+        if promo_applied:
+            print(f"✅ Compteur d'utilisation du code promo '{promo_code}' mis à jour")
+        else:
+            print(f"⚠️ Échec de la mise à jour du compteur pour le code promo '{promo_code}'")
     
     # Réponse de succès
     return jsonify({
@@ -14804,11 +14810,7 @@ def merchant_product_add():
         return redirect(url_for('merchant_products'))
     
     # Préparer les catégories pour le template
-    categories_list = [
-        {'id': cat_id, 'name': cat['name']} 
-        for cat_id, cat in admin_categories_db.items() 
-        if cat.get('active', True)  # Seulement les catégories actives
-    ]
+    categories_list = get_categories_with_subcategories()
     
     return render_template('merchant/product_add.html', merchant=merchant, categories=categories_list)
 
@@ -15012,20 +15014,20 @@ def merchant_product_edit(product_id):
             
         except ValueError:
             flash('Le prix, le stock et les catégories doivent être des nombres valides.', 'danger')
-            categories_list = list(get_active_categories().items())
+            categories_list = get_categories_with_subcategories()
             merchant_data = merchant_record.to_dict()
             return render_template('merchant/product_edit.html', merchant=merchant_data, product=product, categories=categories_list)
         
         # Validation des données
         if not new_name:
             flash('Le nom du produit est obligatoire.', 'danger')
-            categories_list = list(get_active_categories().items())
+            categories_list = get_categories_with_subcategories()
             merchant_data = merchant_record.to_dict()
             return render_template('merchant/product_edit.html', merchant=merchant_data, product=product, categories=categories_list)
         
         if new_price <= 0:
             flash('Le prix doit être supérieur à zéro.', 'danger')
-            categories_list = list(get_active_categories().items())
+            categories_list = get_categories_with_subcategories()
             merchant_data = merchant_record.to_dict()
             return render_template('merchant/product_edit.html', merchant=merchant_data, product=product, categories=categories_list)
         
@@ -15052,7 +15054,7 @@ def merchant_product_edit(product_id):
             flash('Erreur lors de la modification du produit.', 'danger')
     
     # Préparer les données pour le template
-    categories_list = list(get_active_categories().items())
+    categories_list = get_categories_with_subcategories()
     merchant_data = merchant_record.to_dict()
     
     return render_template('merchant/product_edit.html', merchant=merchant_data, product=product, categories=categories_list)

@@ -189,7 +189,8 @@
             <div class="mb-4">
               <label for="sort" class="form-label">Trier par</label>
               <select class="form-select form-select-sm" name="sort" id="sort">
-                <option value="default" {% if sort_option == 'default' %}selected{% endif %}>Pertinence</option>
+                <option value="newest" {% if sort_option == 'newest' or sort_option == 'default' %}selected{% endif %}>Plus récents</option>
+                <option value="oldest" {% if sort_option == 'oldest' %}selected{% endif %}>Plus anciens</option>
                 <option value="price_asc" {% if sort_option == 'price_asc' %}selected{% endif %}>Prix croissant</option>
                 <option value="price_desc" {% if sort_option == 'price_desc' %}selected{% endif %}>Prix décroissant</option>
                 <option value="name_asc" {% if sort_option == 'name_asc' %}selected{% endif %}>Nom A-Z</option>
@@ -219,7 +220,8 @@
           Trier par
         </button>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sortDropdown">
-          <li><a class="dropdown-item" href="{{ url_for('products', sort='default') }}">Pertinence</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('products', sort='newest') }}">Plus récents</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('products', sort='oldest') }}">Plus anciens</a></li>
           <li><a class="dropdown-item" href="{{ url_for('products', sort='price_asc') }}">Prix croissant</a></li>
           <li><a class="dropdown-item" href="{{ url_for('products', sort='price_desc') }}">Prix décroissant</a></li>
           <li><a class="dropdown-item" href="{{ url_for('products', sort='name_asc') }}">Nom A-Z</a></li>
