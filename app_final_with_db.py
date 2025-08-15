@@ -16132,6 +16132,69 @@ def serve_static_image(filename):
         print(f"Erreur lors du service de l'image {filename}: {e}")
         return "Error serving image", 500
 
+@app.route('/logo')
+def serve_logo():
+    """Route directe pour servir le logo DOUKA KM"""
+    try:
+        # Chemin vers le logo
+        img_folder = os.path.join(app.static_folder, 'img')
+        logo_path = os.path.join(img_folder, 'logo.png')
+        
+        if os.path.exists(logo_path):
+            return send_from_directory(img_folder, 'logo.png', mimetype='image/png')
+        else:
+            # Si le logo n'existe pas, retourner une image par défaut ou générer une réponse
+            return "Logo not found", 404
+            
+    except Exception as e:
+        print(f"Erreur lors du service du logo: {e}")
+        return "Error serving logo", 500
+
+@app.route('/debug/logo-test')
+def debug_logo_test():
+    """Route de debug pour tester l'accès au logo"""
+    try:
+        # Tester différents chemins pour le logo
+        static_folder = app.static_folder or 'static'
+        logo_path = os.path.join(static_folder, 'img', 'logo.png')
+        
+        # Vérifications
+        results = {
+            'static_folder': static_folder,
+            'logo_path': logo_path,
+            'logo_exists': os.path.exists(logo_path),
+            'static_folder_exists': os.path.exists(static_folder),
+            'img_folder_exists': os.path.exists(os.path.join(static_folder, 'img')),
+            'current_directory': os.getcwd(),
+            'app_static_folder': app.static_folder,
+            'url_for_logo': url_for('static', filename='img/logo.png'),
+            'render_env': os.environ.get('RENDER', 'Not set'),
+        }
+        
+        # Tenter de lire le fichier
+        if os.path.exists(logo_path):
+            try:
+                file_size = os.path.getsize(logo_path)
+                results['logo_size'] = f"{file_size} bytes"
+            except Exception as e:
+                results['logo_size_error'] = str(e)
+        
+        # Lister le contenu du dossier img
+        img_dir = os.path.join(static_folder, 'img')
+        if os.path.exists(img_dir):
+            try:
+                results['img_files'] = os.listdir(img_dir)
+            except Exception as e:
+                results['img_files_error'] = str(e)
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'message': 'Erreur lors du test du logo'
+        }), 500
+
 # =============================================
 # LANCEMENT DE L'APPLICATION
 # =============================================

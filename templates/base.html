@@ -96,11 +96,12 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                                 <a class="navbar-brand d-flex align-items-center" href="/">
-                    {% if site_settings.logo_url %}
-                        <img src="{{ site_settings.logo_url }}" alt="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}" class="me-2 navbar-logo" style="max-height: 40px; max-width: 150px;" onerror="this.style.display='none'">
-                    {% else %}
-                        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="DOUKA KM Logo" class="me-2 navbar-logo" width="40" height="40" onerror="this.style.display='none'">
-                    {% endif %}
+                    <!-- Utiliser toujours url_for pour la compatibilité avec Render.com -->
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" 
+                         alt="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}" 
+                         class="me-2 navbar-logo" 
+                         style="max-height: 40px; max-width: 150px;" 
+                         onerror="handleNavbarLogoError(this);">
                     <span class="navbar-text fw-bold">{{ site_settings.site_name or 'DOUKA KM' }}</span>
                 </a>
                 <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" style="visibility: hidden;">
@@ -351,11 +352,13 @@
                     <div class="col-md-6 mb-4">
                         <div class="footer-widget">
                             <div class="footer-logo mb-3">
-                                {% if site_settings.logo_url %}
-                                    <img src="{{ site_settings.logo_url }}" alt="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}" class="img-fluid" style="max-height: 50px;">
-                                {% else %}
-                                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="DOUKA KM" class="img-fluid" style="max-height: 50px;">
-                                {% endif %}
+                                <!-- Logo avec plusieurs fallbacks pour Render.com -->
+                                <img id="footer-logo" 
+                                     src="{{ url_for('static', filename='img/logo.png') }}" 
+                                     alt="{{ site_settings.logo_alt_text or site_settings.site_name or 'DOUKA KM' }}" 
+                                     class="img-fluid" 
+                                     style="max-height: 50px;"
+                                     onerror="handleFooterLogoError(this);">
                                 <h5 class="mt-2 text-warning">{{ site_settings.site_name or 'DOUKA KM' }}</h5>
                             </div>
                             <p class="text-light">{{ site_settings.site_description or 'La première plateforme de commerce électronique des Comores. Connectant acheteurs et vendeurs à travers l\'archipel.' }}</p>
@@ -852,6 +855,87 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mettre à jour le compteur toutes les 30 secondes (optionnel)
     // setInterval(updateCartCount, 30000);
+    </script>
+    
+    <!-- Script pour gérer les erreurs de logo -->
+    <script>
+    function handleFooterLogoError(img) {
+        console.log('🚫 Erreur chargement logo footer:', img.src);
+        
+        // Liste des URLs de fallback à essayer
+        const fallbackUrls = [
+            '{{ url_for("static", filename="img/logo.png") }}',
+            '/static/img/logo.png',
+            '/logo',
+            '{{ url_for("serve_logo") if url_for("serve_logo", _external=False) else "/static/img/logo.png" }}'
+        ];
+        
+        // Obtenir l'URL actuelle qui a échoué
+        const currentSrc = img.src;
+        
+        // Trouver le prochain fallback à essayer
+        for (let i = 0; i < fallbackUrls.length; i++) {
+            if (!currentSrc.includes(fallbackUrls[i]) && fallbackUrls[i] !== currentSrc) {
+                console.log('🔄 Tentative fallback footer:', fallbackUrls[i]);
+                img.src = fallbackUrls[i];
+                return;
+            }
+        }
+        
+        // Si tous les fallbacks ont échoué, masquer l'image et afficher seulement le texte
+        console.log('❌ Tous les fallbacks footer ont échoué, masquage du logo');
+        img.style.display = 'none';
+        
+        // Optionnel: Ajouter une icône de remplacement
+        const iconReplacement = document.createElement('i');
+        iconReplacement.className = 'fas fa-store text-warning me-2';
+        iconReplacement.style.fontSize = '2rem';
+        img.parentNode.insertBefore(iconReplacement, img);
+    }
+    
+    function handleNavbarLogoError(img) {
+        console.log('🚫 Erreur chargement logo navbar:', img.src);
+        
+        // Mêmes fallbacks pour la navbar
+        const fallbackUrls = [
+            '{{ url_for("static", filename="img/logo.png") }}',
+            '/static/img/logo.png',
+            '/logo',
+            '{{ url_for("serve_logo") if url_for("serve_logo", _external=False) else "/static/img/logo.png" }}'
+        ];
+        
+        const currentSrc = img.src;
+        
+        for (let i = 0; i < fallbackUrls.length; i++) {
+            if (!currentSrc.includes(fallbackUrls[i]) && fallbackUrls[i] !== currentSrc) {
+                console.log('🔄 Tentative fallback navbar:', fallbackUrls[i]);
+                img.src = fallbackUrls[i];
+                return;
+            }
+        }
+        
+        console.log('❌ Tous les fallbacks navbar ont échoué, masquage du logo');
+        img.style.display = 'none';
+    }
+    
+    // Test de connectivité des images au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tester si les images de logo se chargent correctement
+        const logoImages = document.querySelectorAll('img[src*="logo.png"]');
+        logoImages.forEach(function(img, index) {
+            console.log(`🔍 Test logo ${index + 1}:`, img.src);
+            
+            // Créer une nouvelle image pour tester
+            const testImg = new Image();
+            testImg.onload = function() {
+                console.log(`✅ Logo ${index + 1} OK:`, img.src);
+            };
+            testImg.onerror = function() {
+                console.log(`❌ Logo ${index + 1} ECHEC:`, img.src);
+            };
+            testImg.src = img.src;
+        });
+    });
     </script>
     
     <!-- Ajouter le script cart.js avant la fermeture du body -->
