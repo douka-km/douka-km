@@ -369,7 +369,9 @@ def get_all_site_settings():
                 'commission_rate': 15.0,
                 'shipping_fee': 2000,
                 'default_shipping_fee': 2000,
-                'free_shipping_threshold': 50000
+                'free_shipping_threshold': 50000,
+                'logo_url': '/static/img/logo.png',
+                'logo_alt_text': 'DOUKA KM Logo'
             }
         
         return site_settings
@@ -385,7 +387,9 @@ def get_all_site_settings():
             'commission_rate': 15.0,
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
-            'free_shipping_threshold': 50000
+            'free_shipping_threshold': 50000,
+            'logo_url': '/static/img/logo.png',
+            'logo_alt_text': 'DOUKA KM Logo'
         }
 
 def update_site_setting(key, value, description=None):
@@ -15994,6 +15998,94 @@ def initialize_production_db():
 # Initialiser automatiquement en production
 if os.environ.get('RENDER'):
     initialize_production_db()
+
+# =============================================
+# ROUTE TEMPORAIRE POUR CORRIGER LE LOGO
+# =============================================
+
+@app.route('/admin/fix-logo-urgent', methods=['GET'])
+def fix_logo_urgent():
+    """Route temporaire pour corriger le logo manquant sur render.com"""
+    try:
+        # Vérifier si le paramètre logo_url existe déjà
+        existing_logo = SiteSettings.query.filter_by(key='logo_url').first()
+        
+        if existing_logo:
+            return f"""
+            <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #28a745;">✅ Logo Settings - Déjà Configuré</h2>
+                <p><strong>Logo URL:</strong> {existing_logo.value}</p>
+                <p><strong>Description:</strong> {existing_logo.description or 'N/A'}</p>
+                <p><strong>Status:</strong> Le paramètre logo_url existe déjà dans la base</p>
+                <br>
+                <p style="background: #f8f9fa; padding: 15px; border-left: 4px solid #007bff;">
+                    <strong>💡 Si le logo n'apparaît toujours pas:</strong><br>
+                    1. Vérifiez que le fichier /static/img/logo.png existe<br>
+                    2. Vérifiez la console du navigateur pour les erreurs<br>
+                    3. Videz le cache du navigateur
+                </p>
+                <a href="/" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">← Retour à l'accueil</a>
+            </div>
+            """
+        
+        # Créer le paramètre logo_url par défaut
+        logo_setting = SiteSettings(
+            key='logo_url',
+            value='/static/img/logo.png',
+            description='URL du logo principal du site - Ajouté automatiquement'
+        )
+        
+        db.session.add(logo_setting)
+        
+        # Ajouter également le logo_alt_text s'il n'existe pas
+        existing_alt = SiteSettings.query.filter_by(key='logo_alt_text').first()
+        if not existing_alt:
+            logo_alt_setting = SiteSettings(
+                key='logo_alt_text',
+                value='DOUKA KM Logo',
+                description='Texte alternatif pour le logo'
+            )
+            db.session.add(logo_alt_setting)
+        
+        db.session.commit()
+        
+        return """
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #28a745;">✅ Logo Settings - Corrigé avec Succès!</h2>
+            <p><strong>Logo URL ajouté:</strong> /static/img/logo.png</p>
+            <p><strong>Logo Alt Text:</strong> DOUKA KM Logo</p>
+            <br>
+            <p style="background: #d4edda; padding: 15px; border: 1px solid #c3e6cb; border-radius: 5px;">
+                🔄 <strong>Le logo devrait maintenant apparaître sur le site.</strong><br>
+                Si ce n'est pas le cas, actualisez la page (Ctrl+F5 ou Cmd+Shift+R).
+            </p>
+            <br>
+            <p style="background: #fff3cd; padding: 15px; border: 1px solid #ffeaa7; border-radius: 5px;">
+                ⚠️ <strong>Important:</strong> Supprimez cette route après utilisation en commentant 
+                la section "Route temporaire pour corriger le logo" dans app_final_with_db.py
+            </p>
+            <br>
+            <a href="/" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">← Retour à l'accueil</a>
+            <script>
+                setTimeout(function() {
+                    window.location.href = '/';
+                }, 8000);
+            </script>
+        </div>
+        """
+        
+    except Exception as e:
+        db.session.rollback()
+        return f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc3545;">❌ Erreur lors de la correction</h2>
+            <p><strong>Erreur:</strong> {str(e)}</p>
+            <br>
+            <p>Contactez l'administrateur technique avec cette information d'erreur.</p>
+            <br>
+            <a href="/" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">← Retour à l'accueil</a>
+        </div>
+        """
 
 # =============================================
 # GESTION D'ERREURS
