@@ -4791,8 +4791,8 @@ def get_all_products():
                     product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
             else:
                 product_dict['source'] = 'admin'
-                product_dict['merchant_name'] = None
-                product_dict['merchant_logo'] = None
+                product_dict['merchant_name'] = 'DOUKA KM'
+                product_dict['merchant_logo'] = 'static/img/logo.png'
             
             all_products.append(product_dict)
         
@@ -4835,8 +4835,8 @@ def get_product_by_id(product_id):
             product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
     else:
         product_dict['source'] = 'admin'
-        product_dict['merchant_name'] = None
-        product_dict['merchant_logo'] = None
+        product_dict['merchant_name'] = 'DOUKA KM'
+        product_dict['merchant_logo'] = 'static/img/logo.png'
     
     return product_dict
 
@@ -15406,8 +15406,10 @@ def merchant_order_detail(order_id):
             'name': item.name,
             'quantity': item.quantity,
             'price': item.price,
+            'subtotal': item.subtotal,
             'image': item.image,
-            'variant_details': item.variant_details
+            'variant_details': item.variant_details,
+            'options': item.get_options()  # Récupérer les options formatées
         })
     
     # Récupérer l'adresse de livraison depuis le JSON
@@ -15433,6 +15435,7 @@ def merchant_order_detail(order_id):
         'customer_email': db_order.customer_email,
         'customer_phone': db_order.customer_phone,
         'items': order_items,
+        'products': order_items,  # Alias pour compatibilité template
         'total': db_order.total,
         'status': db_order.status,
         'status_text': db_order.status_text,
@@ -16516,8 +16519,8 @@ if __name__ == '__main__':
         print("🌐 URL: http://localhost:5001")
         print("="*60)
         
-        # Lancer le serveur Flask avec le mode debug activé sur le port 5002
-        app.run(debug=True, host='0.0.0.0', port=5002)
+        # Lancer le serveur Flask avec le mode debug activé sur le port 5003
+        app.run(debug=True, host='0.0.0.0', port=5003)
         
     except Exception as e:
         print(f"❌ Erreur au démarrage de l'application: {e}")

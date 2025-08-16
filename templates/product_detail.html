@@ -101,6 +101,17 @@
                 </div>
                 {% endif %}
                 
+                <!-- Informations du marchand -->
+                {% if product.merchant_name %}
+                <div class="merchant-info mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-store me-2 text-primary"></i>
+                        <span class="text-muted">Vendu par:</span>
+                        <strong class="ms-2">{{ product.merchant_name }}</strong>
+                    </div>
+                </div>
+                {% endif %}
+                
                 <!-- Options du produit - Section ajoutée -->
                 <div class="product-options mb-4">
                     <!-- Option de couleur -->

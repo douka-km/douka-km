@@ -285,7 +285,7 @@
                 <form id="review-form" action="{{ url_for('submit_order_review') }}" method="POST">
                     <input type="hidden" name="order_id" value="{{ order['id'] }}">
                     {% for item in order['items'] %}
-                    <div class="mb-4" data-product-id="{{ item.get('id', item.get('product_id')) }}">
+                    <div class="mb-4" data-product-id="{{ item.get('product_id', item.get('id')) }}">
                         <div class="d-flex align-items-center mb-2">
                             <img src="{{ item.get('image', '') }}" alt="{{ item['name'] }}" class="img-fluid rounded" width="50">
                             <h6 class="mb-0 ms-3">{{ item['name'] }}</h6>

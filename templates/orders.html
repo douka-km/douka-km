@@ -243,7 +243,7 @@
                 <form id="review-form-{{ order['id'] }}" action="{{ url_for('submit_order_review') }}" method="POST">
                     <input type="hidden" name="order_id" value="{{ order['id'] }}">
                     {% for item in order['items'] %}
-                    <div class="mb-4" data-product-id="{{ item.get('id', item.get('product_id')) }}">
+                    <div class="mb-4" data-product-id="{{ item.get('product_id', item.get('id')) }}">
                         <div class="d-flex align-items-center mb-2">
                             {% if item.get('image', '') %}
                                 {% if item['image'].startswith('http') %}
