@@ -53,6 +53,27 @@
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
+                            <label class="form-label text-muted">Email vérifié</label>
+                            <p class="fw-bold">
+                                {% if user.email_verified %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Vérifié
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Non vérifié
+                                    </span>
+                                    <button class="btn btn-sm btn-success ms-2" id="verifyEmailBtn" 
+                                            data-user-id="{{ user.id }}" 
+                                            data-user-name="{{ user.first_name }} {{ user.last_name }}">
+                                        <i class="fas fa-envelope-check me-1"></i>Vérifier maintenant
+                                    </button>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
                             <label class="form-label text-muted">Téléphone</label>
                             <p class="fw-bold">{{ user.phone or 'Non renseigné' }}</p>
                         </div>
@@ -245,6 +266,54 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du bouton de vérification d'email
+    const verifyEmailBtn = document.getElementById('verifyEmailBtn');
+    
+    if (verifyEmailBtn) {
+        verifyEmailBtn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const userName = this.getAttribute('data-user-name');
+            
+            if (confirm(`Êtes-vous sûr de vouloir vérifier l'email de ${userName} ? Cette action marquera l'email comme vérifié et permettra à l'utilisateur de se connecter.`)) {
+                // Désactiver le bouton pendant la requête
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Vérification...';
+                
+                fetch(`/admin/users/${userId}/verify-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Email vérifié avec succès !');
+                        location.reload();
+                    } else {
+                        alert('Erreur: ' + data.message);
+                        // Réactiver le bouton en cas d'erreur
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-envelope-check me-1"></i>Vérifier maintenant';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors de la vérification de l\'email');
+                    // Réactiver le bouton en cas d'erreur
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-envelope-check me-1"></i>Vérifier maintenant';
+                });
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
 
 {% block extra_css %}
