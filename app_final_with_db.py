@@ -16679,6 +16679,10 @@ def debug_logo_test():
             'message': 'Erreur lors du test du logo'
         }), 500
 
+@app.route('/sitemap.xml')
+def sitemap():
+    return send_from_directory(app.root_path, 'sitemap.xml', mimetype='application/xml')
+
 # =============================================
 # LANCEMENT DE L'APPLICATION
 # =============================================
