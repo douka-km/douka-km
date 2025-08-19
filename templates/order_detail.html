@@ -83,7 +83,15 @@
                                 <div class="step-icon">
                                     <i class="fas fa-box"></i>
                                 </div>
-                                <div class="step-date">{% if order['processing_date'] %}{{ order['processing_date'] }}{% else %}--{% endif %}</div>
+                                <div class="step-date">
+                                    {% if order['processing_date'] %}
+                                        {{ order['processing_date'] }}
+                                    {% elif order['status'] in ['processing', 'shipped', 'delivered'] %}
+                                        {{ order['date'] }}
+                                    {% else %}
+                                        --
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="step-label">En préparation</div>
                         </div>
@@ -93,7 +101,15 @@
                                 <div class="step-icon">
                                     <i class="fas fa-shipping-fast"></i>
                                 </div>
-                                <div class="step-date">{% if order['shipping_date'] %}{{ order['shipping_date'] }}{% else %}--{% endif %}</div>
+                                <div class="step-date">
+                                    {% if order['shipping_date'] %}
+                                        {{ order['shipping_date'] }}
+                                    {% elif order['status'] in ['shipped', 'delivered'] %}
+                                        {{ order['date'] }}
+                                    {% else %}
+                                        --
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="step-label">Expédiée</div>
                         </div>
@@ -103,7 +119,15 @@
                                 <div class="step-icon">
                                     <i class="fas fa-home"></i>
                                 </div>
-                                <div class="step-date">{% if order['delivery_date'] %}{{ order['delivery_date'] }}{% else %}--{% endif %}</div>
+                                <div class="step-date">
+                                    {% if order['delivery_date'] %}
+                                        {{ order['delivery_date'] }}
+                                    {% elif order['status'] == 'delivered' %}
+                                        {{ order['date'] }}
+                                    {% else %}
+                                        --
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="step-label">Livrée</div>
                         </div>
@@ -285,7 +309,7 @@
                 <form id="review-form" action="{{ url_for('submit_order_review') }}" method="POST">
                     <input type="hidden" name="order_id" value="{{ order['id'] }}">
                     {% for item in order['items'] %}
-                    <div class="mb-4" data-product-id="{{ item.get('id', item.get('product_id')) }}">
+                    <div class="mb-4" data-product-id="{{ item.get('product_id', item.get('id')) }}">
                         <div class="d-flex align-items-center mb-2">
                             <img src="{{ item.get('image', '') }}" alt="{{ item['name'] }}" class="img-fluid rounded" width="50">
                             <h6 class="mb-0 ms-3">{{ item['name'] }}</h6>

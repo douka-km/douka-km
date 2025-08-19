@@ -515,9 +515,15 @@
                 const submitBtn = this.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 
-                // Désactiver le bouton pendant le traitement
+                // Animation cool avec rotation sur le bouton
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Traitement...';
+                submitBtn.style.transform = 'rotateY(180deg)';
+                submitBtn.style.transition = 'transform 0.6s ease-in-out';
+                
+                setTimeout(() => {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Traitement...';
+                    submitBtn.style.transform = 'rotateY(360deg)';
+                }, 300);
                 
                 fetch('{{ url_for("merchant_request_withdrawal") }}', {
                     method: 'POST',
@@ -529,30 +535,62 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        // Animation de succès spectaculaire sur le bouton
+                        submitBtn.style.transform = 'rotateY(540deg) scale(1.1)';
+                        submitBtn.style.transition = 'transform 0.8s ease-out';
+                        
+                        setTimeout(() => {
+                            submitBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Demande envoyée !';
+                            submitBtn.classList.remove('btn-primary');
+                            submitBtn.classList.add('btn-success');
+                            submitBtn.style.transform = 'scale(1)';
+                            submitBtn.style.transition = 'transform 0.3s ease-out';
+                        }, 400);
+                        
                         // Afficher message de succès
                         const alertDiv = document.createElement('div');
                         alertDiv.className = 'alert alert-success alert-dismissible fade show';
                         alertDiv.innerHTML = `
                             <i class="fas fa-check-circle me-2"></i>
-                            ${data.message}
+                            <strong>Succès !</strong> ${data.message}
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         `;
                         document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
                         
-                        // Recharger la page après 2 secondes
+                        // Recharger la page après 3 secondes pour voir les changements
                         setTimeout(() => {
                             window.location.reload();
-                        }, 2000);
+                        }, 3000);
+                        
                     } else {
-                        // Afficher message d'erreur
+                        // Animation d'erreur sur le bouton
+                        submitBtn.style.transform = 'rotateX(180deg)';
+                        submitBtn.style.transition = 'transform 0.4s ease-in-out';
+                        submitBtn.classList.add('btn-danger');
+                        submitBtn.classList.remove('btn-primary');
+                        submitBtn.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> Erreur';
+                        
+                        // Afficher message d'erreur avec plus de visibilité
                         const alertDiv = document.createElement('div');
-                        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                        alertDiv.className = 'alert alert-danger alert-dismissible fade show border-danger';
+                        alertDiv.style.borderWidth = '2px';
                         alertDiv.innerHTML = `
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            ${data.message}
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Erreur !</strong> ${data.message}
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         `;
                         document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+                        
+                        // Faire défiler vers le haut pour voir l'erreur
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        
+                        // Restaurer le bouton après 2 secondes
+                        setTimeout(() => {
+                            submitBtn.classList.remove('btn-danger');
+                            submitBtn.classList.add('btn-primary');
+                            submitBtn.innerHTML = originalText;
+                            submitBtn.style.transform = 'rotateX(0deg)';
+                        }, 2000);
                         
                         // Si l'erreur concerne le montant, mettre en évidence le champ
                         if (data.message.toLowerCase().includes('montant')) {
@@ -566,18 +604,30 @@
                 .catch(error => {
                     console.error('Erreur:', error);
                     const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show border-danger';
+                    alertDiv.style.borderWidth = '2px';
                     alertDiv.innerHTML = `
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        Une erreur est survenue lors de la demande de retrait.
+                        <i class="fas fa-wifi me-2"></i>
+                        <strong>Erreur de connexion !</strong> 
+                        Une erreur est survenue lors de la demande de retrait. 
+                        Vérifiez votre connexion internet et réessayez.
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     `;
                     document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+                    
+                    // Faire défiler vers le haut pour voir l'erreur
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 })
                 .finally(() => {
-                    // Réactiver le bouton
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
+                    // En cas d'erreur, restaurer le bouton avec animation
+                    if (!submitBtn.classList.contains('btn-success')) {
+                        setTimeout(() => {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                            submitBtn.style.transform = 'rotateY(0deg) scale(1)';
+                            submitBtn.style.transition = 'transform 0.4s ease-out';
+                        }, 1000);
+                    }
                 });
             });
         }

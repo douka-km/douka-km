@@ -165,6 +165,26 @@
 
     <!-- Sidebar avec informations client et marchand -->
     <div class="col-md-4">
+        {% if assigned_livreur %}
+        <div class="card mb-4 border-info">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-motorcycle me-2"></i>Livreur Assigné</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>{{ assigned_livreur.name or 'Livreur' }}</strong></p>
+                {% if assigned_livreur.phone %}
+                <p><i class="fas fa-phone me-2"></i>{{ assigned_livreur.phone }}</p>
+                {% endif %}
+                {% if assigned_livreur.address %}
+                <p><i class="fas fa-home me-2"></i>{{ assigned_livreur.address }}</p>
+                {% endif %}
+                {% if assigned_livreur.city or assigned_livreur.region %}
+                <p><i class="fas fa-map-marker-alt me-2"></i>{{ assigned_livreur.city }}{% if assigned_livreur.region %}, {{ assigned_livreur.region }}{% endif %}</p>
+                {% endif %}
+                <p><small class="text-muted">{{ assigned_livreur.email }}</small></p>
+            </div>
+        </div>
+        {% endif %}
         <!-- Informations Client -->
         {% if order.get('customer_info') %}
         <div class="card mb-4">

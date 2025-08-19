@@ -4791,8 +4791,8 @@ def get_all_products():
                     product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
             else:
                 product_dict['source'] = 'admin'
-                product_dict['merchant_name'] = None
-                product_dict['merchant_logo'] = None
+                product_dict['merchant_name'] = 'DOUKA KM'
+                product_dict['merchant_logo'] = 'static/img/logo.png'
             
             all_products.append(product_dict)
         
@@ -4835,8 +4835,8 @@ def get_product_by_id(product_id):
             product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
     else:
         product_dict['source'] = 'admin'
-        product_dict['merchant_name'] = None
-        product_dict['merchant_logo'] = None
+        product_dict['merchant_name'] = 'DOUKA KM'
+        product_dict['merchant_logo'] = 'static/img/logo.png'
     
     return product_dict
 
@@ -6706,19 +6706,33 @@ def order_detail(order_id):
         }
         order_data['status_color'] = status_colors.get(order_data['status'], 'secondary')
     
+    # S'assurer que la date de commande est disponible sous le nom 'date' pour compatibilité
+    if 'date' not in order_data and 'created_at' in order_data:
+        order_data['date'] = order_data['created_at']
+    elif 'date' not in order_data:
+        order_data['date'] = '--'
+    
     # S'assurer que les dates spécifiques sont présentes
-    if 'processing_date' not in order_data:
+    if 'processing_date' not in order_data or not order_data['processing_date']:
         # Si la commande est au moins en traitement, utiliser la date de création
         if order_data['status'] in ['processing', 'shipped', 'delivered']:
-            order_data['processing_date'] = order_data.get('date', '')
+            order_data['processing_date'] = order_data.get('created_at', order_data.get('date', ''))
         else:
             order_data['processing_date'] = None
     
-    if 'shipping_date' not in order_data:
-        order_data['shipping_date'] = None
+    if 'shipping_date' not in order_data or not order_data['shipping_date']:
+        # Si la commande est au moins expédiée, utiliser la date de création ou de traitement
+        if order_data['status'] in ['shipped', 'delivered']:
+            order_data['shipping_date'] = order_data.get('created_at', order_data.get('date', ''))
+        else:
+            order_data['shipping_date'] = None
     
-    if 'delivery_date' not in order_data:
-        order_data['delivery_date'] = None
+    if 'delivery_date' not in order_data or not order_data['delivery_date']:
+        # Si la commande est livrée, utiliser la date de création
+        if order_data['status'] == 'delivered':
+            order_data['delivery_date'] = order_data.get('created_at', order_data.get('date', ''))
+        else:
+            order_data['delivery_date'] = None
     
     return render_template('order_detail.html', order=order_data)
 
@@ -9684,15 +9698,22 @@ def admin_order_detail(order_id):
             
             # Ajouter les items de la commande
             target_order['items'] = []
+            subtotal = 0
             for item in db_order.items:
+                item_subtotal = item.price * item.quantity
+                subtotal += item_subtotal
                 target_order['items'].append({
                     'name': item.name,
                     'quantity': item.quantity,
                     'price': item.price,
-                    'subtotal': item.price * item.quantity,
+                    'subtotal': item_subtotal,
                     'image': item.image,
-                    'variant_details': item.variant_details
+                    'variant_details': item.variant_details,
+                    'options': item.get_options()  # Ajouter les options
                 })
+            target_order['subtotal'] = subtotal
+            # Frais de livraison
+            target_order['shipping_fee'] = getattr(db_order, 'delivery_fee', 0) or 0
             
             merchant_info = {
                 'email': merchant_record.email,
@@ -9750,14 +9771,23 @@ def admin_order_detail(order_id):
             }
             
             # Ajouter les items
+            subtotal = 0
             for item in admin_order.items:
+                item_subtotal = item.price * item.quantity
+                subtotal += item_subtotal
+                # Récupérer les options si la méthode existe, sinon None
+                options = item.get_options() if hasattr(item, 'get_options') else getattr(item, 'options', None)
                 target_order['items'].append({
                     'name': item.name,
                     'quantity': item.quantity,
                     'price': item.price,
-                    'subtotal': item.price * item.quantity,
-                    'image': item.image or '/static/images/default.jpg'
+                    'subtotal': item_subtotal,
+                    'image': item.image or '/static/images/default.jpg',
+                    'options': options
                 })
+            target_order['subtotal'] = subtotal
+            # Frais de livraison
+            target_order['shipping_fee'] = getattr(admin_order, 'delivery_fee', 0) or 0
             
             merchant_info = {
                 'email': 'admin@douka-km.com',
@@ -9794,8 +9824,47 @@ def admin_order_detail(order_id):
     
     target_order['customer_info'] = customer_info
     
+    # Chercher le livreur assigné à cette commande (merchant ou admin)
+    assigned_livreur_email = None
+    assigned_livreur_info = None
+    order_type = 'merchant' if target_order.get('merchant_info', {}).get('email') != 'admin@douka-km.com' else 'admin'
+    merchant_email = target_order.get('merchant_info', {}).get('email') if order_type == 'merchant' else None
+    # Recherche dans livreur_assignments_db (même si la commande n'est plus assignée, on veut garder la trace)
+    # On va aussi regarder dans la commande elle-même si possible
+    # 1. Chercher dans les assignations en mémoire
+    for livreur_email, assignments in livreur_assignments_db.items():
+        for assignment in assignments:
+            if (str(assignment['order_id']) == str(order_id) and assignment['order_type'] == order_type):
+                if order_type == 'merchant' and merchant_email:
+                    if assignment.get('merchant_email') == merchant_email:
+                        assigned_livreur_email = livreur_email
+                        break
+                else:
+                    assigned_livreur_email = livreur_email
+                    break
+        if assigned_livreur_email:
+            break
+    # 2. Si pas trouvé, essayer de retrouver l'email du livreur dans la commande (si stocké)
+    if not assigned_livreur_email and hasattr(target_order, 'livreur_email'):
+        assigned_livreur_email = getattr(target_order, 'livreur_email', None)
+    # 3. Si pas trouvé, essayer de retrouver dans une table d'historique (à implémenter si besoin)
+    # 4. Récupérer toutes les infos du livreur si possible
+    if assigned_livreur_email:
+        user = users_db.get(assigned_livreur_email)
+        if user:
+            assigned_livreur_info = {
+                'email': assigned_livreur_email,
+                'name': f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+                'phone': user.get('phone', ''),
+                'region': user.get('region', ''),
+                'city': user.get('city', ''),
+                'address': user.get('address', ''),
+            }
+        else:
+            assigned_livreur_info = {'email': assigned_livreur_email}
     return render_template('admin/order_detail.html', 
-                          order=target_order)
+                          order=target_order,
+                          assigned_livreur=assigned_livreur_info)
 
 @app.route('/admin/orders/<order_id>/update-status', methods=['POST'])
 @admin_required
@@ -11546,6 +11615,7 @@ def admin_admin_products():
 @permission_required(['super_admin', 'admin'])
 def admin_users():
     """Page d'administration pour la gestion des utilisateurs"""
+    from datetime import datetime
     
     # Paramètres de pagination et filtres
     page = request.args.get('page', 1, type=int)
@@ -11570,10 +11640,11 @@ def admin_users():
                 'first_name': user_record.first_name or '',
                 'last_name': user_record.last_name or '',
                 'phone': user_record.phone or '',
+                'address': user_record.address or '',
                 'city': user_record.city or '',
                 'region': user_record.region or '',
-                'registration_date': user_record.created_at.strftime('%Y-%m-%d') if user_record.created_at else '',
-                'last_login': user_record.last_login.strftime('%Y-%m-%d') if user_record.last_login else '',
+                'created_at': user_record.created_at,  # Garder l'objet datetime pour le template
+                'last_login': user_record.last_login,
                 'is_active': user_record.is_active,
                 'email_verified': user_record.email_verified,
                 'orders_count': user_stats['total_orders'],
@@ -11593,15 +11664,25 @@ def admin_users():
     for email, user in users_db.items():
         # Vérifier si cet utilisateur n'est pas déjà dans all_users
         if not any(u['email'] == email for u in all_users):
+            # Convertir la date string en objet datetime si possible
+            created_at = None
+            if user.get('registration_date'):
+                try:
+                    from datetime import datetime
+                    created_at = datetime.strptime(user.get('registration_date'), '%Y-%m-%d')
+                except:
+                    created_at = None
+            
             user_info = {
                 'id': user.get('id'),
                 'email': email,
                 'first_name': user.get('first_name', ''),
                 'last_name': user.get('last_name', ''),
                 'phone': user.get('phone', ''),
+                'address': user.get('address', ''),
                 'city': user.get('city', ''),
                 'region': user.get('region', ''),
-                'registration_date': user.get('registration_date', ''),
+                'created_at': created_at,  # Objet datetime pour compatibilité template
                 'last_login': user.get('last_login', ''),
                 'is_active': user.get('is_active', True),
                 'email_verified': user.get('email_verified', False),
@@ -11637,7 +11718,7 @@ def admin_users():
         all_users = [user for user in all_users if not user.get('is_active', True)]
     
     # Trier par date d'inscription (plus récents en premier)
-    all_users.sort(key=lambda x: x.get('registration_date', ''), reverse=True)
+    all_users.sort(key=lambda x: x.get('created_at') or datetime.min, reverse=True)
     
     # Pagination
     total_users = len(all_users)
@@ -11663,6 +11744,8 @@ def admin_users():
         'total_users': len(all_users),
         'active_users': len([u for u in all_users if u.get('is_active', True)]),
         'inactive_users': len([u for u in all_users if not u.get('is_active', True)]),
+        'verified_emails': len([u for u in all_users if u.get('email_verified', False)]),
+        'unverified_emails': len([u for u in all_users if not u.get('email_verified', False)]),
         'users_with_orders': len([u for u in all_users if u.get('orders_count', 0) > 0]),
         'total_revenue': sum(u.get('total_spent', 0) for u in all_users),
         'avg_orders_per_user': sum(u.get('orders_count', 0) for u in all_users) / len(all_users) if all_users else 0
@@ -11925,6 +12008,76 @@ def admin_toggle_user_status(user_id):
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erreur lors de la mise à jour: {str(e)}'})
+
+@app.route('/admin/users/<int:user_id>/verify-email', methods=['POST'])
+@admin_required
+def admin_verify_user_email(user_id):
+    """Vérifier manuellement l'email d'un utilisateur - Version database-first"""
+    
+    # **DATABASE-FIRST: Chercher l'utilisateur dans la base de données d'abord**
+    try:
+        user_record = User.query.filter_by(id=user_id).first()
+        
+        if user_record:
+            # Vérifier si l'email n'est pas déjà vérifié
+            if user_record.email_verified:
+                return jsonify({
+                    'success': False, 
+                    'message': 'L\'email de cet utilisateur est déjà vérifié'
+                })
+            
+            # Marquer l'email comme vérifié dans la base de données
+            user_record.email_verified = True
+            db.session.commit()
+            
+            # Synchroniser avec le dictionnaire si l'utilisateur y existe
+            if user_record.email in users_db:
+                users_db[user_record.email]['email_verified'] = True
+            
+            print(f"✅ Email de l'utilisateur {user_record.email} vérifié par l'admin dans la base de données")
+            
+            return jsonify({
+                'success': True, 
+                'message': f'Email de {user_record.first_name} {user_record.last_name} vérifié avec succès'
+            })
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la vérification de l'email en DB: {str(e)}")
+        db.session.rollback()
+    
+    # Fallback: chercher dans le dictionnaire
+    target_user = None
+    user_email = None
+    
+    for email, user in users_db.items():
+        if user.get('id') == user_id:
+            target_user = user
+            user_email = email
+            break
+    
+    if not target_user:
+        return jsonify({'success': False, 'message': 'Utilisateur non trouvé'})
+    
+    try:
+        # Vérifier si l'email n'est pas déjà vérifié
+        if target_user.get('email_verified', False):
+            return jsonify({
+                'success': False, 
+                'message': 'L\'email de cet utilisateur est déjà vérifié'
+            })
+        
+        # Marquer l'email comme vérifié dans le dictionnaire
+        users_db[user_email]['email_verified'] = True
+        
+        print(f"🔄 Email de l'utilisateur {user_email} vérifié par l'admin dans le dictionnaire (fallback)")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Email de {target_user["first_name"]} {target_user["last_name"]} vérifié avec succès'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erreur lors de la vérification: {str(e)}'})
 
 @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @admin_required
@@ -12320,11 +12473,14 @@ def admin_add_promo_code():
 def admin_edit_promo_code(code):
     """Modifier un code promo existant"""
     
-    if code not in promo_codes_db:
+    # Chercher dans la base de données d'abord
+    promo_record = PromoCode.query.filter_by(code=code).first()
+    promo_in_memory = code in promo_codes_db
+    if not promo_record and not promo_in_memory:
         flash('Code promo non trouvé.', 'danger')
         return redirect(url_for('admin_promo_codes'))
-    
-    promo = promo_codes_db[code]
+    # Utiliser l'objet en mémoire pour le formulaire, mais on mettra à jour les deux si besoin
+    promo = promo_codes_db[code] if promo_in_memory else (promo_record.to_dict() if promo_record else {})
     
     if request.method == 'POST':
         try:
@@ -12339,28 +12495,42 @@ def admin_edit_promo_code(code):
             user_limit = request.form.get('user_limit', '')
             start_date = request.form.get('start_date', '')
             end_date = request.form.get('end_date', '')
+            # Conversion en date
+            from datetime import datetime
+            start_date_obj = None
+            end_date_obj = None
+            if start_date:
+                try:
+                    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                except Exception:
+                    start_date_obj = None
+            if end_date:
+                try:
+                    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                except Exception:
+                    end_date_obj = None
             active = 'active' in request.form
-            
+
             # Nouvelles données pour les restrictions
             applicable_to = request.form.get('applicable_to', 'all')
             applicable_categories = request.form.getlist('applicable_categories')
             applicable_subcategories = request.form.getlist('applicable_subcategories')
             applicable_products = request.form.getlist('applicable_products')
             applicable_merchants = request.form.getlist('applicable_merchants')
-            
+
             # Validation
             if not name:
                 flash('Le nom du code promo est obligatoire.', 'danger')
                 return redirect(request.url)
-            
+
             if value <= 0:
                 flash('La valeur de remise doit être positive.', 'danger')
                 return redirect(request.url)
-            
+
             if type_discount == 'percentage' and value > 100:
                 flash('Le pourcentage de remise ne peut pas dépasser 100%.', 'danger')
                 return redirect(request.url)
-            
+
             # Validation des restrictions
             if applicable_to != 'all':
                 if applicable_to == 'categories' and not applicable_categories:
@@ -12375,32 +12545,55 @@ def admin_edit_promo_code(code):
                 elif applicable_to == 'merchants' and not applicable_merchants:
                     flash('Veuillez sélectionner au moins un marchand.', 'danger')
                     return redirect(request.url)
-            
-            # Mettre à jour le code promo
-            promo.update({
-                'name': name,
-                'description': description,
-                'type': type_discount,
-                'value': value,
-                'min_amount': min_amount,
-                'max_discount': float(max_discount) if max_discount else None,
-                'usage_limit': int(usage_limit) if usage_limit else None,
-                'user_limit': int(user_limit) if user_limit else None,
-                'start_date': start_date if start_date else None,
-                'end_date': end_date if end_date else None,
-                'active': active,
-                'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'updated_by': session.get('admin_email', 'admin'),
-                'applicable_to': applicable_to,
-                'applicable_categories': [int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()],
-                'applicable_subcategories': [int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()],
-                'applicable_products': [int(prod_id) for prod_id in applicable_products if prod_id.isdigit()],
-                'applicable_merchants': applicable_merchants
-            })
-            
+
+            # Mettre à jour le code promo en mémoire
+            if promo_in_memory:
+                promo.update({
+                    'name': name,
+                    'description': description,
+                    'type': type_discount,
+                    'value': value,
+                    'min_amount': min_amount,
+                    'max_discount': float(max_discount) if max_discount else None,
+                    'usage_limit': int(usage_limit) if usage_limit else None,
+                    'user_limit': int(user_limit) if user_limit else None,
+                    'start_date': start_date if start_date else None,
+                    'end_date': end_date if end_date else None,
+                    'active': active,
+                    'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': session.get('admin_email', 'admin'),
+                    'applicable_to': applicable_to,
+                    'applicable_categories': [int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()],
+                    'applicable_subcategories': [int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()],
+                    'applicable_products': [int(prod_id) for prod_id in applicable_products if prod_id.isdigit()],
+                    'applicable_merchants': applicable_merchants
+                })
+
+            # Mettre à jour le code promo en base de données si présent
+            if promo_record:
+                promo_record.name = name
+                promo_record.description = description
+                promo_record.type = type_discount
+                promo_record.value = value
+                promo_record.min_order_amount = min_amount
+                promo_record.max_discount = float(max_discount) if max_discount else None
+                promo_record.usage_limit = int(usage_limit) if usage_limit else None
+                promo_record.user_limit = int(user_limit) if user_limit else None
+                promo_record.start_date = start_date_obj
+                promo_record.end_date = end_date_obj
+                promo_record.active = active
+                promo_record.updated_at = datetime.now()
+                promo_record.updated_by = session.get('admin_email', 'admin')
+                promo_record.applicable_to = applicable_to
+                promo_record.applicable_categories = ','.join([str(cat_id) for cat_id in applicable_categories if cat_id.isdigit()])
+                promo_record.applicable_subcategories = ','.join([str(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()])
+                promo_record.applicable_products = ','.join([str(prod_id) for prod_id in applicable_products if prod_id.isdigit()])
+                promo_record.applicable_merchants = ','.join(applicable_merchants)
+                db.session.commit()
+
             flash(f'Code promo "{code}" mis à jour avec succès.', 'success')
             return redirect(url_for('admin_promo_codes'))
-            
+
         except ValueError:
             flash('Erreur dans les valeurs numériques. Veuillez vérifier vos saisies.', 'danger')
         except Exception as e:
@@ -12421,6 +12614,31 @@ def admin_edit_promo_code(code):
     all_products = get_all_products()
     merchants = list(merchants_db.values())
     
+    # Correction robustesse : forcer les champs à être des listes
+    def ensure_list(val):
+        if isinstance(val, list):
+            return val
+        if val is None:
+            return []
+        if isinstance(val, str):
+            # Si c'est une string de type '1,2,3' ou '[1,2,3]'
+            try:
+                # Essayer de parser JSON
+                import json
+                parsed = json.loads(val)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                # Split par virgule si besoin
+                return [int(x) if x.isdigit() else x for x in val.split(',') if x]
+        if isinstance(val, int):
+            return [val]
+        return list(val) if hasattr(val, '__iter__') else [val]
+
+    for key in ['applicable_categories', 'applicable_subcategories', 'applicable_products', 'applicable_merchants']:
+        if key in promo:
+            promo[key] = ensure_list(promo[key])
+
     return render_template('admin/promo_code_form.html', 
                           promo=promo, 
                           edit_mode=True,
@@ -15342,7 +15560,8 @@ def merchant_orders():
                     'quantity': item.quantity,
                     'price': item.price,
                     'image': item.image,
-                    'variant_details': item.variant_details
+                    'variant_details': item.variant_details,
+                    'options': item.get_options()  # Ajouter les options
                 })
             
             # Récupérer l'adresse de livraison depuis le JSON
@@ -15406,8 +15625,10 @@ def merchant_order_detail(order_id):
             'name': item.name,
             'quantity': item.quantity,
             'price': item.price,
+            'subtotal': item.subtotal,
             'image': item.image,
-            'variant_details': item.variant_details
+            'variant_details': item.variant_details,
+            'options': item.get_options()  # Récupérer les options formatées
         })
     
     # Récupérer l'adresse de livraison depuis le JSON
@@ -15433,6 +15654,7 @@ def merchant_order_detail(order_id):
         'customer_email': db_order.customer_email,
         'customer_phone': db_order.customer_phone,
         'items': order_items,
+        'products': order_items,  # Alias pour compatibilité template
         'total': db_order.total,
         'status': db_order.status,
         'status_text': db_order.status_text,
@@ -16513,7 +16735,7 @@ if __name__ == '__main__':
         
         print("🚀 Application DOUKA KM COMPLÈTE avec base de données SQLite démarrée!")
         print("📁 Base de données: douka_km.db")
-        print("🌐 URL: http://localhost:5001")
+        print("🌐 URL: http://localhost:5002")
         print("="*60)
         
         # Lancer le serveur Flask avec le mode debug activé sur le port 5002
