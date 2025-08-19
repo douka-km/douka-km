@@ -370,7 +370,7 @@ def get_all_site_settings():
                 'shipping_fee': 2000,
                 'default_shipping_fee': 2000,
                 'free_shipping_threshold': 50000,
-                'logo_url': '/static/img/logo.png',
+                'logo_url': '/static/img/logo.svg',
                 'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
             }
         
@@ -384,7 +384,7 @@ def get_all_site_settings():
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
-            'logo_url': '/static/img/logo.png',
+            'logo_url': '/static/img/logo.svg',
             'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
         
@@ -407,7 +407,7 @@ def get_all_site_settings():
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
-            'logo_url': '/static/img/logo.png',
+            'logo_url': '/static/img/logo.svg',
             'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
 
@@ -4792,7 +4792,7 @@ def get_all_products():
             else:
                 product_dict['source'] = 'admin'
                 product_dict['merchant_name'] = 'DOUKA KM'
-                product_dict['merchant_logo'] = 'static/img/logo.png'
+                product_dict['merchant_logo'] = 'static/img/logo.svg'
             
             all_products.append(product_dict)
         
@@ -4836,7 +4836,7 @@ def get_product_by_id(product_id):
     else:
         product_dict['source'] = 'admin'
         product_dict['merchant_name'] = 'DOUKA KM'
-        product_dict['merchant_logo'] = 'static/img/logo.png'
+        product_dict['merchant_logo'] = 'static/img/logo.svg'
     
     return product_dict
 
@@ -16528,12 +16528,12 @@ def fix_logo_urgent():
         if not logo_url_setting:
             logo_url_setting = SiteSettings(
                 key='logo_url',
-                value='/static/img/logo.png',
+                value='/static/img/logo.svg',
                 description='URL du logo du site'
             )
             db.session.add(logo_url_setting)
         elif not logo_url_setting.value or logo_url_setting.value.strip() == '':
-            logo_url_setting.value = '/static/img/logo.png'
+            logo_url_setting.value = '/static/img/logo.svg'
         
         # Vérifier si logo_alt_text existe
         logo_alt_setting = SiteSettings.query.filter_by(key='logo_alt_text').first()
@@ -16651,7 +16651,7 @@ def debug_logo_test():
             'img_folder_exists': os.path.exists(os.path.join(static_folder, 'img')),
             'current_directory': os.getcwd(),
             'app_static_folder': app.static_folder,
-            'url_for_logo': url_for('static', filename='img/logo.png'),
+            'url_for_logo': url_for('static', filename='img/logo.svg'),
             'render_env': os.environ.get('RENDER', 'Not set'),
         }
         

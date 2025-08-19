@@ -294,12 +294,12 @@
                         <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
                             {% if merchant and merchant.store_logo %}
                                 {% if merchant.store_logo.startswith('http') %}
-                                    <img src="{{ merchant.store_logo }}" alt="Logo" onerror="this.src='/static/img/merchants/store_logo_default.png';">
+                                    <img src="{{ merchant.store_logo }}" alt="Logo" onerror="this.src='/static/img/merchants/store_logo_default.svg';">
                                 {% else %}
                                     <img src="{{ url_for('static', filename=merchant.store_logo.replace('static/', '')) }}" alt="Logo">
                                 {% endif %}
                             {% else %}
-                                <img src="{{ url_for('static', filename='img/merchants/store_logo_default.png') }}" alt="Logo">
+                                <img src="{{ url_for('static', filename='img/merchants/store_logo_default.svg') }}" alt="Logo">
                             {% endif %}
                             <span>{{ merchant.first_name }}</span>
                         </a>
