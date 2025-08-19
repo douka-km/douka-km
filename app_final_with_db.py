@@ -370,7 +370,7 @@ def get_all_site_settings():
                 'shipping_fee': 2000,
                 'default_shipping_fee': 2000,
                 'free_shipping_threshold': 50000,
-                'logo_url': '/static/img/logo.png',
+                'logo_url': '/static/img/logo.svg',
                 'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
             }
         
@@ -384,7 +384,7 @@ def get_all_site_settings():
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
-            'logo_url': '/static/img/logo.png',
+            'logo_url': '/static/img/logo.svg',
             'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
         
@@ -407,7 +407,7 @@ def get_all_site_settings():
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
-            'logo_url': '/static/img/logo.png',
+            'logo_url': '/static/img/logo.svg',
             'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
 
@@ -4792,7 +4792,7 @@ def get_all_products():
             else:
                 product_dict['source'] = 'admin'
                 product_dict['merchant_name'] = 'DOUKA KM'
-                product_dict['merchant_logo'] = 'static/img/logo.png'
+                product_dict['merchant_logo'] = 'static/img/logo.svg'
             
             all_products.append(product_dict)
         
@@ -4836,7 +4836,7 @@ def get_product_by_id(product_id):
     else:
         product_dict['source'] = 'admin'
         product_dict['merchant_name'] = 'DOUKA KM'
-        product_dict['merchant_logo'] = 'static/img/logo.png'
+        product_dict['merchant_logo'] = 'static/img/logo.svg'
     
     return product_dict
 
@@ -16409,12 +16409,12 @@ def fix_logo_urgent():
         if not logo_url_setting:
             logo_url_setting = SiteSettings(
                 key='logo_url',
-                value='/static/img/logo.png',
+                value='/static/img/logo.svg',
                 description='URL du logo du site'
             )
             db.session.add(logo_url_setting)
         elif not logo_url_setting.value or logo_url_setting.value.strip() == '':
-            logo_url_setting.value = '/static/img/logo.png'
+            logo_url_setting.value = '/static/img/logo.svg'
         
         # Vérifier si logo_alt_text existe
         logo_alt_setting = SiteSettings.query.filter_by(key='logo_alt_text').first()
@@ -16469,7 +16469,7 @@ def debug_site_settings():
                 'logo_url_in_db': db_settings.get('logo_url'),
                 'logo_url_computed': computed_settings.get('logo_url'),
                 'logo_alt_computed': computed_settings.get('logo_alt_text'),
-                'static_path_exists': os.path.exists(os.path.join(app.static_folder, 'img', 'logo.png'))
+                'static_path_exists': os.path.exists(os.path.join(app.static_folder, 'img', 'logo.svg'))
             }
         })
     except Exception as e:
@@ -16503,10 +16503,10 @@ def serve_logo():
     try:
         # Chemin vers le logo
         img_folder = os.path.join(app.static_folder, 'img')
-        logo_path = os.path.join(img_folder, 'logo.png')
+        logo_path = os.path.join(img_folder, 'logo.svg')
         
         if os.path.exists(logo_path):
-            return send_from_directory(img_folder, 'logo.png', mimetype='image/png')
+            return send_from_directory(img_folder, 'logo.svg', mimetype='image/png')
         else:
             # Si le logo n'existe pas, retourner une image par défaut ou générer une réponse
             return "Logo not found", 404
@@ -16521,7 +16521,7 @@ def debug_logo_test():
     try:
         # Tester différents chemins pour le logo
         static_folder = app.static_folder or 'static'
-        logo_path = os.path.join(static_folder, 'img', 'logo.png')
+        logo_path = os.path.join(static_folder, 'img', 'logo.svg')
         
         # Vérifications
         results = {
@@ -16532,7 +16532,7 @@ def debug_logo_test():
             'img_folder_exists': os.path.exists(os.path.join(static_folder, 'img')),
             'current_directory': os.getcwd(),
             'app_static_folder': app.static_folder,
-            'url_for_logo': url_for('static', filename='img/logo.png'),
+            'url_for_logo': url_for('static', filename='img/logo.svg'),
             'render_env': os.environ.get('RENDER', 'Not set'),
         }
         
