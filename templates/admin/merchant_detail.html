@@ -255,19 +255,15 @@
                                             <td>{{ order.total }} KMF</td>
                                             <td>
                                                 {% if order.status == 'pending' %}
-                                                    <span class="badge bg-warning">En attente</span>
+                                                    <span class="badge bg-warning text-dark">En attente</span>
                                                 {% elif order.status == 'confirmed' %}
-                                                    <span class="badge bg-info">Confirmée</span>
-                                                {% elif order.status == 'processing' %}
-                                                    <span class="badge bg-primary">En cours de préparation</span>
-                                                {% elif order.status == 'shipped' %}
-                                                    <span class="badge bg-info">Expédiée</span>
+                                                    <span class="badge bg-info">Confirmé</span>
                                                 {% elif order.status == 'delivered' %}
-                                                    <span class="badge bg-success">Livrée</span>
+                                                    <span class="badge bg-success">Livré</span>
                                                 {% elif order.status == 'cancelled' %}
-                                                    <span class="badge bg-danger">Annulée</span>
+                                                    <span class="badge bg-danger">Annulé</span>
                                                 {% else %}
-                                                    <span class="badge bg-secondary">{{ order.status|title }}</span>
+                                                    <span class="badge bg-secondary">{{ order.status }}</span>
                                                 {% endif %}
                                             </td>
                                         </tr>

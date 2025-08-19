@@ -370,7 +370,7 @@ def get_all_site_settings():
                 'shipping_fee': 2000,
                 'default_shipping_fee': 2000,
                 'free_shipping_threshold': 50000,
-                'logo_url': '/static/img/logo.svg',
+                'logo_url': '/static/img/logo.png',
                 'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
             }
         
@@ -384,7 +384,7 @@ def get_all_site_settings():
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
-            'logo_url': '/static/img/logo.svg',
+            'logo_url': '/static/img/logo.png',
             'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
         
@@ -407,7 +407,7 @@ def get_all_site_settings():
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
-            'logo_url': '/static/img/logo.svg',
+            'logo_url': '/static/img/logo.png',
             'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
 
@@ -4791,8 +4791,8 @@ def get_all_products():
                     product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
             else:
                 product_dict['source'] = 'admin'
-                product_dict['merchant_name'] = 'DOUKA KM'
-                product_dict['merchant_logo'] = 'static/img/logo.svg'
+                product_dict['merchant_name'] = None
+                product_dict['merchant_logo'] = None
             
             all_products.append(product_dict)
         
@@ -4835,8 +4835,8 @@ def get_product_by_id(product_id):
             product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
     else:
         product_dict['source'] = 'admin'
-        product_dict['merchant_name'] = 'DOUKA KM'
-        product_dict['merchant_logo'] = 'static/img/logo.svg'
+        product_dict['merchant_name'] = None
+        product_dict['merchant_logo'] = None
     
     return product_dict
 
@@ -6706,33 +6706,19 @@ def order_detail(order_id):
         }
         order_data['status_color'] = status_colors.get(order_data['status'], 'secondary')
     
-    # S'assurer que la date de commande est disponible sous le nom 'date' pour compatibilité
-    if 'date' not in order_data and 'created_at' in order_data:
-        order_data['date'] = order_data['created_at']
-    elif 'date' not in order_data:
-        order_data['date'] = '--'
-    
     # S'assurer que les dates spécifiques sont présentes
-    if 'processing_date' not in order_data or not order_data['processing_date']:
+    if 'processing_date' not in order_data:
         # Si la commande est au moins en traitement, utiliser la date de création
         if order_data['status'] in ['processing', 'shipped', 'delivered']:
-            order_data['processing_date'] = order_data.get('created_at', order_data.get('date', ''))
+            order_data['processing_date'] = order_data.get('date', '')
         else:
             order_data['processing_date'] = None
     
-    if 'shipping_date' not in order_data or not order_data['shipping_date']:
-        # Si la commande est au moins expédiée, utiliser la date de création ou de traitement
-        if order_data['status'] in ['shipped', 'delivered']:
-            order_data['shipping_date'] = order_data.get('created_at', order_data.get('date', ''))
-        else:
-            order_data['shipping_date'] = None
+    if 'shipping_date' not in order_data:
+        order_data['shipping_date'] = None
     
-    if 'delivery_date' not in order_data or not order_data['delivery_date']:
-        # Si la commande est livrée, utiliser la date de création
-        if order_data['status'] == 'delivered':
-            order_data['delivery_date'] = order_data.get('created_at', order_data.get('date', ''))
-        else:
-            order_data['delivery_date'] = None
+    if 'delivery_date' not in order_data:
+        order_data['delivery_date'] = None
     
     return render_template('order_detail.html', order=order_data)
 
@@ -9705,8 +9691,7 @@ def admin_order_detail(order_id):
                     'price': item.price,
                     'subtotal': item.price * item.quantity,
                     'image': item.image,
-                    'variant_details': item.variant_details,
-                    'options': item.get_options()  # Ajouter les options
+                    'variant_details': item.variant_details
                 })
             
             merchant_info = {
@@ -11561,7 +11546,6 @@ def admin_admin_products():
 @permission_required(['super_admin', 'admin'])
 def admin_users():
     """Page d'administration pour la gestion des utilisateurs"""
-    from datetime import datetime
     
     # Paramètres de pagination et filtres
     page = request.args.get('page', 1, type=int)
@@ -11586,11 +11570,10 @@ def admin_users():
                 'first_name': user_record.first_name or '',
                 'last_name': user_record.last_name or '',
                 'phone': user_record.phone or '',
-                'address': user_record.address or '',
                 'city': user_record.city or '',
                 'region': user_record.region or '',
-                'created_at': user_record.created_at,  # Garder l'objet datetime pour le template
-                'last_login': user_record.last_login,
+                'registration_date': user_record.created_at.strftime('%Y-%m-%d') if user_record.created_at else '',
+                'last_login': user_record.last_login.strftime('%Y-%m-%d') if user_record.last_login else '',
                 'is_active': user_record.is_active,
                 'email_verified': user_record.email_verified,
                 'orders_count': user_stats['total_orders'],
@@ -11610,25 +11593,15 @@ def admin_users():
     for email, user in users_db.items():
         # Vérifier si cet utilisateur n'est pas déjà dans all_users
         if not any(u['email'] == email for u in all_users):
-            # Convertir la date string en objet datetime si possible
-            created_at = None
-            if user.get('registration_date'):
-                try:
-                    from datetime import datetime
-                    created_at = datetime.strptime(user.get('registration_date'), '%Y-%m-%d')
-                except:
-                    created_at = None
-            
             user_info = {
                 'id': user.get('id'),
                 'email': email,
                 'first_name': user.get('first_name', ''),
                 'last_name': user.get('last_name', ''),
                 'phone': user.get('phone', ''),
-                'address': user.get('address', ''),
                 'city': user.get('city', ''),
                 'region': user.get('region', ''),
-                'created_at': created_at,  # Objet datetime pour compatibilité template
+                'registration_date': user.get('registration_date', ''),
                 'last_login': user.get('last_login', ''),
                 'is_active': user.get('is_active', True),
                 'email_verified': user.get('email_verified', False),
@@ -11664,7 +11637,7 @@ def admin_users():
         all_users = [user for user in all_users if not user.get('is_active', True)]
     
     # Trier par date d'inscription (plus récents en premier)
-    all_users.sort(key=lambda x: x.get('created_at') or datetime.min, reverse=True)
+    all_users.sort(key=lambda x: x.get('registration_date', ''), reverse=True)
     
     # Pagination
     total_users = len(all_users)
@@ -11690,8 +11663,6 @@ def admin_users():
         'total_users': len(all_users),
         'active_users': len([u for u in all_users if u.get('is_active', True)]),
         'inactive_users': len([u for u in all_users if not u.get('is_active', True)]),
-        'verified_emails': len([u for u in all_users if u.get('email_verified', False)]),
-        'unverified_emails': len([u for u in all_users if not u.get('email_verified', False)]),
         'users_with_orders': len([u for u in all_users if u.get('orders_count', 0) > 0]),
         'total_revenue': sum(u.get('total_spent', 0) for u in all_users),
         'avg_orders_per_user': sum(u.get('orders_count', 0) for u in all_users) / len(all_users) if all_users else 0
@@ -11954,76 +11925,6 @@ def admin_toggle_user_status(user_id):
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erreur lors de la mise à jour: {str(e)}'})
-
-@app.route('/admin/users/<int:user_id>/verify-email', methods=['POST'])
-@admin_required
-def admin_verify_user_email(user_id):
-    """Vérifier manuellement l'email d'un utilisateur - Version database-first"""
-    
-    # **DATABASE-FIRST: Chercher l'utilisateur dans la base de données d'abord**
-    try:
-        user_record = User.query.filter_by(id=user_id).first()
-        
-        if user_record:
-            # Vérifier si l'email n'est pas déjà vérifié
-            if user_record.email_verified:
-                return jsonify({
-                    'success': False, 
-                    'message': 'L\'email de cet utilisateur est déjà vérifié'
-                })
-            
-            # Marquer l'email comme vérifié dans la base de données
-            user_record.email_verified = True
-            db.session.commit()
-            
-            # Synchroniser avec le dictionnaire si l'utilisateur y existe
-            if user_record.email in users_db:
-                users_db[user_record.email]['email_verified'] = True
-            
-            print(f"✅ Email de l'utilisateur {user_record.email} vérifié par l'admin dans la base de données")
-            
-            return jsonify({
-                'success': True, 
-                'message': f'Email de {user_record.first_name} {user_record.last_name} vérifié avec succès'
-            })
-        
-    except Exception as e:
-        print(f"❌ Erreur lors de la vérification de l'email en DB: {str(e)}")
-        db.session.rollback()
-    
-    # Fallback: chercher dans le dictionnaire
-    target_user = None
-    user_email = None
-    
-    for email, user in users_db.items():
-        if user.get('id') == user_id:
-            target_user = user
-            user_email = email
-            break
-    
-    if not target_user:
-        return jsonify({'success': False, 'message': 'Utilisateur non trouvé'})
-    
-    try:
-        # Vérifier si l'email n'est pas déjà vérifié
-        if target_user.get('email_verified', False):
-            return jsonify({
-                'success': False, 
-                'message': 'L\'email de cet utilisateur est déjà vérifié'
-            })
-        
-        # Marquer l'email comme vérifié dans le dictionnaire
-        users_db[user_email]['email_verified'] = True
-        
-        print(f"🔄 Email de l'utilisateur {user_email} vérifié par l'admin dans le dictionnaire (fallback)")
-        
-        return jsonify({
-            'success': True, 
-            'message': f'Email de {target_user["first_name"]} {target_user["last_name"]} vérifié avec succès'
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Erreur lors de la vérification: {str(e)}'})
 
 @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @admin_required
@@ -15441,8 +15342,7 @@ def merchant_orders():
                     'quantity': item.quantity,
                     'price': item.price,
                     'image': item.image,
-                    'variant_details': item.variant_details,
-                    'options': item.get_options()  # Ajouter les options
+                    'variant_details': item.variant_details
                 })
             
             # Récupérer l'adresse de livraison depuis le JSON
@@ -15506,10 +15406,8 @@ def merchant_order_detail(order_id):
             'name': item.name,
             'quantity': item.quantity,
             'price': item.price,
-            'subtotal': item.subtotal,
             'image': item.image,
-            'variant_details': item.variant_details,
-            'options': item.get_options()  # Récupérer les options formatées
+            'variant_details': item.variant_details
         })
     
     # Récupérer l'adresse de livraison depuis le JSON
@@ -15535,7 +15433,6 @@ def merchant_order_detail(order_id):
         'customer_email': db_order.customer_email,
         'customer_phone': db_order.customer_phone,
         'items': order_items,
-        'products': order_items,  # Alias pour compatibilité template
         'total': db_order.total,
         'status': db_order.status,
         'status_text': db_order.status_text,
@@ -16409,12 +16306,12 @@ def fix_logo_urgent():
         if not logo_url_setting:
             logo_url_setting = SiteSettings(
                 key='logo_url',
-                value='/static/img/logo.svg',
+                value='/static/img/logo.png',
                 description='URL du logo du site'
             )
             db.session.add(logo_url_setting)
         elif not logo_url_setting.value or logo_url_setting.value.strip() == '':
-            logo_url_setting.value = '/static/img/logo.svg'
+            logo_url_setting.value = '/static/img/logo.png'
         
         # Vérifier si logo_alt_text existe
         logo_alt_setting = SiteSettings.query.filter_by(key='logo_alt_text').first()
@@ -16469,7 +16366,7 @@ def debug_site_settings():
                 'logo_url_in_db': db_settings.get('logo_url'),
                 'logo_url_computed': computed_settings.get('logo_url'),
                 'logo_alt_computed': computed_settings.get('logo_alt_text'),
-                'static_path_exists': os.path.exists(os.path.join(app.static_folder, 'img', 'logo.svg'))
+                'static_path_exists': os.path.exists(os.path.join(app.static_folder, 'img', 'logo.png'))
             }
         })
     except Exception as e:
@@ -16503,10 +16400,10 @@ def serve_logo():
     try:
         # Chemin vers le logo
         img_folder = os.path.join(app.static_folder, 'img')
-        logo_path = os.path.join(img_folder, 'logo.svg')
+        logo_path = os.path.join(img_folder, 'logo.png')
         
         if os.path.exists(logo_path):
-            return send_from_directory(img_folder, 'logo.svg', mimetype='image/png')
+            return send_from_directory(img_folder, 'logo.png', mimetype='image/png')
         else:
             # Si le logo n'existe pas, retourner une image par défaut ou générer une réponse
             return "Logo not found", 404
@@ -16521,7 +16418,7 @@ def debug_logo_test():
     try:
         # Tester différents chemins pour le logo
         static_folder = app.static_folder or 'static'
-        logo_path = os.path.join(static_folder, 'img', 'logo.svg')
+        logo_path = os.path.join(static_folder, 'img', 'logo.png')
         
         # Vérifications
         results = {
@@ -16532,7 +16429,7 @@ def debug_logo_test():
             'img_folder_exists': os.path.exists(os.path.join(static_folder, 'img')),
             'current_directory': os.getcwd(),
             'app_static_folder': app.static_folder,
-            'url_for_logo': url_for('static', filename='img/logo.svg'),
+            'url_for_logo': url_for('static', filename='img/logo.png'),
             'render_env': os.environ.get('RENDER', 'Not set'),
         }
         
@@ -16616,7 +16513,7 @@ if __name__ == '__main__':
         
         print("🚀 Application DOUKA KM COMPLÈTE avec base de données SQLite démarrée!")
         print("📁 Base de données: douka_km.db")
-        print("🌐 URL: http://localhost:5002")
+        print("🌐 URL: http://localhost:5001")
         print("="*60)
         
         # Lancer le serveur Flask avec le mode debug activé sur le port 5002
