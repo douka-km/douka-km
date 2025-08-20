@@ -4365,11 +4365,11 @@ def category(category_slug, subcategory_slug=None):
         title=f"{page_title} - DOUKA KM"
     )
 
-# Ajout d'une route pour le favicon.ico
-@app.route('/favicon.ico')
+# Ajout d'une route pour le favicon.svg
+@app.route('/favicon.svg')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static', 'img'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+                               'favicon.svg', mimetype='image/vnd.microsoft.icon')
 
 # Fonctions utilitaires pour la gestion du panier persistant
 def get_or_create_cart():

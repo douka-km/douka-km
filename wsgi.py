@@ -8,7 +8,7 @@ import os
 os.environ['RENDER'] = '1'
 # S'assurer que l'URL de base est définie
 if not os.environ.get('VERIFICATION_URL_BASE'):
-    os.environ['VERIFICATION_URL_BASE'] = 'https://douka-km.onrender.com'
+    os.environ['VERIFICATION_URL_BASE'] = 'https://doukakm.com'
 
 try:
     from app_final_with_db import app
