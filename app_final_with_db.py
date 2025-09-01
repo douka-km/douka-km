@@ -13711,18 +13711,47 @@ def admin_shipping_rates():
                 standard_rate = float(request.form.get('standard_rate', 0))
                 express_rate = float(request.form.get('express_rate', 0))
                 
-                print(f"DEBUG: Création tarif - type={rate_type}, standard={standard_rate}, express={express_rate}")
+                print(f"DEBUG: Création tarif - type={rate_type}, cat_id={category_id}, sub_id={subcategory_id}")
+                print(f"DEBUG: Tarifs - standard={standard_rate}, express={express_rate}")
                 
-                # Pour l'instant, on met à jour les paramètres généraux
-                # Dans une vraie implémentation, on créerait une table dédiée
-                if rate_type == 'default' or not rate_type:
+                # Récupérer les tarifs existants
+                existing_rates = get_site_setting('custom_shipping_rates', '[]')
+                try:
+                    import json
+                    custom_rates = json.loads(existing_rates) if existing_rates else []
+                except:
+                    custom_rates = []
+                
+                # Créer le nouveau tarif
+                new_rate = {
+                    'id': len(custom_rates) + 2,  # +2 car ID 1 est réservé au tarif par défaut
+                    'rate_type': rate_type,
+                    'category_id': int(category_id) if category_id else None,
+                    'subcategory_id': int(subcategory_id) if subcategory_id else None,
+                    'standard_rate': standard_rate,
+                    'express_rate': express_rate,
+                    'active': True,
+                    'created_at': str(datetime.now())
+                }
+                
+                # Ajouter le nouveau tarif
+                custom_rates.append(new_rate)
+                
+                # Sauvegarder dans les paramètres
+                update_site_setting('custom_shipping_rates', json.dumps(custom_rates))
+                
+                # Si c'est un tarif par défaut, mettre à jour aussi shipping_fee
+                if rate_type == 'default':
                     update_site_setting('shipping_fee', standard_rate)
                     print(f"DEBUG: Paramètre shipping_fee mis à jour à {standard_rate}")
                 
+                print(f"DEBUG: Nouveau tarif créé avec ID {new_rate['id']}")
                 flash('Tarif de livraison créé avec succès !', 'success')
                 
             except Exception as e:
                 print(f"DEBUG: Erreur création tarif = {e}")
+                import traceback
+                traceback.print_exc()
                 flash(f'Erreur lors de la création du tarif : {str(e)}', 'error')
                 
         elif action == 'update':
@@ -13771,12 +13800,20 @@ def admin_shipping_rates():
     # Récupérer les paramètres de livraison actuels
     site_settings = get_all_site_settings()
     
+    # Récupérer les tarifs personnalisés
+    custom_rates_json = get_site_setting('custom_shipping_rates', '[]')
+    try:
+        import json
+        custom_rates = json.loads(custom_rates_json) if custom_rates_json else []
+    except:
+        custom_rates = []
+    
     # Créer une structure de données compatible avec le template
     shipping_rates = [
         {
             'id': 1,
-            'name': 'Livraison Standard',
-            'rate_type': 'Toutes catégories',
+            'name': 'Livraison Standard (Par défaut)',
+            'rate_type': 'Tarif par défaut',
             'category_name': None,
             'subcategory_name': None,
             'active': True,
@@ -13788,6 +13825,45 @@ def admin_shipping_rates():
             'description': 'Tarif de livraison standard pour toutes les commandes'
         }
     ]
+    
+    # Ajouter les tarifs personnalisés
+    for rate in custom_rates:
+        # Récupérer les noms des catégories
+        category_name = None
+        subcategory_name = None
+        
+        if rate.get('category_id'):
+            category = admin_categories_db.get(rate['category_id'], {})
+            category_name = category.get('name', f'Catégorie {rate["category_id"]}')
+            
+        if rate.get('subcategory_id'):
+            subcategory = admin_subcategories_db.get(rate['subcategory_id'], {})
+            subcategory_name = subcategory.get('name', f'Sous-catégorie {rate["subcategory_id"]}')
+        
+        # Déterminer le type d'affichage
+        if rate['rate_type'] == 'category':
+            rate_type_display = f'Par catégorie: {category_name}'
+        elif rate['rate_type'] == 'subcategory':
+            rate_type_display = f'Par sous-catégorie: {subcategory_name}'
+        else:
+            rate_type_display = 'Tarif général'
+            
+        shipping_rates.append({
+            'id': rate['id'],
+            'name': f'Tarif {rate_type_display}',
+            'rate_type': rate_type_display,
+            'category_name': category_name,
+            'subcategory_name': subcategory_name,
+            'active': rate.get('active', True),
+            'standard_rate': rate['standard_rate'],
+            'express_rate': rate['express_rate'],
+            'standard_delivery_formatted': '2-3 jours ouvrables',
+            'express_delivery_formatted': '24-48h',
+            'free_threshold': site_settings.get('free_shipping_threshold', 15000),
+            'description': f'Tarif personnalisé pour {rate_type_display.lower()}'
+        })
+    
+    print(f"DEBUG: Affichage de {len(shipping_rates)} tarifs (dont {len(custom_rates)} personnalisés)")
     
     return render_template('admin/shipping_rates.html',
                           admin=admin,
