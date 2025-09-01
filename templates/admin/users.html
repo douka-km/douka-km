@@ -10,7 +10,7 @@
 </div>
 
 <!-- Statistiques -->
-<div class="row mb-4">
+<div class="row">
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body">
@@ -64,11 +64,11 @@
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Chiffre d'Affaires Total</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_revenue|format_number }} KMF</div>
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Email Non Vérifié</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.unverified_emails }}</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        <i class="fas fa-envelope fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
@@ -76,43 +76,47 @@
     </div>
 </div>
 
-<!-- Filtres et recherche -->
+<!-- Filtre et recherche -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-filter me-2"></i>Filtres et recherche
-        </h6>
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-filter me-2"></i>Filtres et Recherche
+                </h6>
+            </div>
+        </div>
     </div>
     <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-4">
-                <label for="search" class="form-label">Recherche</label>
-                <input type="text" class="form-control" id="search" name="search" 
-                       value="{{ current_search }}" placeholder="Email, nom, téléphone...">
-            </div>
-            <div class="col-md-3">
-                <label for="status" class="form-label">Statut</label>
-                <select class="form-select" id="status" name="status">
-                    <option value="all" {% if current_status_filter == 'all' %}selected{% endif %}>Tous</option>
-                    <option value="active" {% if current_status_filter == 'active' %}selected{% endif %}>Actifs</option>
-                    <option value="inactive" {% if current_status_filter == 'inactive' %}selected{% endif %}>Inactifs</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label for="per_page" class="form-label">Par page</label>
-                <select class="form-select" id="per_page" name="per_page">
-                    <option value="10" {% if pagination.per_page == 10 %}selected{% endif %}>10</option>
-                    <option value="20" {% if pagination.per_page == 20 %}selected{% endif %}>20</option>
-                    <option value="50" {% if pagination.per_page == 50 %}selected{% endif %}>50</option>
-                </select>
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="fas fa-search me-1"></i>Rechercher
-                </button>
-                <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-times me-1"></i>Reset
-                </a>
+        <form method="GET" class="form-inline">
+            <div class="row w-100">
+                <div class="col-md-3 mb-2">
+                    <input type="text" name="search" class="form-control" placeholder="Rechercher un utilisateur..." value="{{ request.args.get('search', '') }}">
+                </div>
+                <div class="col-md-2 mb-2">
+                    <select name="status" class="form-control">
+                        <option value="">Tous les statuts</option>
+                        <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Actifs</option>
+                        <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>Inactifs</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <select name="email_verified" class="form-control">
+                        <option value="">Vérification Email</option>
+                        <option value="true" {% if request.args.get('email_verified') == 'true' %}selected{% endif %}>Vérifié</option>
+                        <option value="false" {% if request.args.get('email_verified') == 'false' %}selected{% endif %}>Non vérifié</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-search"></i> Filtrer
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2 text-right">
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-times"></i> Réinitialiser
+                    </a>
+                </div>
             </div>
         </form>
     </div>
@@ -120,169 +124,182 @@
 
 <!-- Liste des utilisateurs -->
 <div class="card shadow mb-4">
-    <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary">
-            <i class="fas fa-list me-2"></i>Liste des utilisateurs
-        </h6>
-        <span class="badge bg-info">{{ pagination.total }} utilisateur(s)</span>
+    <div class="card-header py-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-list me-2"></i>Liste des Utilisateurs
+                </h6>
+            </div>
+            <div class="col-md-6 text-right">
+                <span class="text-muted">{{ users|length }} utilisateur(s) trouvé(s)</span>
+            </div>
+        </div>
     </div>
     <div class="card-body">
-        {% if users %}
-            <div class="table-responsive">
-                <table class="table table-bordered" id="usersTable">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Utilisateur</th>
-                            <th>Email</th>
-                            <th>Téléphone</th>
-                            <th>Localisation</th>
-                            <th>Commandes</th>
-                            <th>Total dépensé</th>
-                            <th>Statut</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom Complet</th>
+                        <th>Email</th>
+                        <th>Téléphone</th>
+                        <th>Région</th>
+                        <th>Email Vérifié</th>
+                        <th>Statut</th>
+                        <th>Date d'inscription</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if users %}
                         {% for user in users %}
                         <tr>
-                            <td>#{{ user.id }}</td>
+                            <td>{{ user.id }}</td>
                             <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-circle bg-primary text-white me-2">
-                                        {{ user.first_name[:1]|upper if user.first_name else 'U' }}
-                                    </div>
-                                    <div>
-                                        <strong>{{ user.first_name }} {{ user.last_name }}</strong>
-                                        <small class="text-muted d-block">
-                                            Inscrit le {{ user.registration_date or 'N/A' }}
-                                        </small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.phone or 'N/A' }}</td>
-                            <td>
-                                {% if user.city or user.region %}
-                                    {{ user.city }}{% if user.city and user.region %}, {% endif %}{{ user.region }}
+                                {% if user.first_name and user.last_name %}
+                                    <div class="font-weight-bold">{{ user.first_name }} {{ user.last_name }}</div>
                                 {% else %}
-                                    <span class="text-muted">Non renseigné</span>
+                                    <div class="font-weight-bold text-muted">Nom non défini</div>
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-info">{{ user.orders_count }}</span>
+                                <a href="mailto:{{ user.email }}" class="text-decoration-none">{{ user.email }}</a>
                             </td>
                             <td>
-                                <strong class="text-success">{{ user.total_spent|format_number }} KMF</strong>
+                                {% if user.phone %}
+                                    <a href="tel:{{ user.phone }}" class="text-decoration-none">{{ user.phone }}</a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.region %}
+                                    <span class="badge bg-info">{{ user.region|title }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.email_verified %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> Vérifié
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-exclamation-circle"></i> Non vérifié
+                                    </span>
+                                {% endif %}
                             </td>
                             <td>
                                 {% if user.is_active %}
-                                    <span class="badge bg-success">Actif</span>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-user-check"></i> Actif
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-danger">Inactif</span>
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-user-slash"></i> Inactif
+                                    </span>
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
+                                {% if user.created_at %}
+                                    {{ user.created_at.strftime('%d/%m/%Y') }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group" aria-label="Actions utilisateur">
                                     <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" 
-                                       class="btn btn-sm btn-outline-primary" title="Voir détails">
+                                       class="btn btn-sm btn-outline-info" title="Voir les détails">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    {% if not user.email_verified %}
+                                    <button class="btn btn-sm btn-outline-success verify-email-btn" 
+                                            data-user-id="{{ user.id }}" 
+                                            data-user-name="{{ user.first_name }} {{ user.last_name }}"
+                                            title="Vérifier l'email">
+                                        <i class="fas fa-envelope-check"></i>
+                                    </button>
+                                    {% endif %}
                                     <button class="btn btn-sm btn-outline-warning toggle-user-btn" 
                                             data-user-id="{{ user.id }}" 
                                             data-current-status="{{ user.is_active }}"
-                                            title="{% if user.is_active %}Désactiver{% else %}Activer{% endif %}">
-                                        <i class="fas fa-{% if user.is_active %}ban{% else %}check{% endif %}"></i>
+                                            title="{% if user.is_active %}Désactiver{% else %}Activer{% endif %} l'utilisateur">
+                                        {% if user.is_active %}
+                                            <i class="fas fa-user-slash"></i>
+                                        {% else %}
+                                            <i class="fas fa-user-check"></i>
+                                        {% endif %}
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger delete-user-btn" 
-                                            data-user-id="{{ user.id }}" 
+                                            data-user-id="{{ user.id }}"
                                             data-user-name="{{ user.first_name }} {{ user.last_name }}"
-                                            title="Supprimer">
+                                            title="Supprimer l'utilisateur">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
                             </td>
                         </tr>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Pagination -->
-            {% if pagination.total_pages > 1 %}
-            <nav aria-label="Navigation des pages">
-                <ul class="pagination justify-content-center">
-                    {% if pagination.has_prev %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('admin_users', page=pagination.prev_num, search=current_search, status=current_status_filter) }}">Précédent</a>
-                    </li>
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fas fa-users fa-3x mb-3 text-gray-300"></i>
+                                <br>
+                                Aucun utilisateur trouvé
+                            </td>
+                        </tr>
                     {% endif %}
-                    
-                    {% for page_num in range(1, pagination.total_pages + 1) %}
-                        {% if page_num == pagination.page %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ page_num }}</span>
-                        </li>
-                        {% else %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('admin_users', page=page_num, search=current_search, status=current_status_filter) }}">{{ page_num }}</a>
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if pagination.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('admin_users', page=pagination.next_num, search=current_search, status=current_status_filter) }}">Suivant</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-        {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">Aucun utilisateur trouvé</h5>
-                <p class="text-muted">Aucun utilisateur ne correspond à vos critères de recherche.</p>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Modal de confirmation pour suppression -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirmer la suppression</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Êtes-vous sûr de vouloir supprimer l'utilisateur <strong id="userNameToDelete"></strong> ?</p>
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Cette action est irréversible et supprimera toutes les données associées à cet utilisateur.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-danger" id="confirmDelete">Supprimer</button>
-            </div>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<style>
-.avatar-circle {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-}
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    Confirmer la suppression
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer l'utilisateur <strong id="userNameToDelete"></strong> ?</p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Attention :</strong> Cette action est irréversible et supprimera également :
+                </p>
+                <ul class="text-danger">
+                    <li>Toutes les commandes associées</li>
+                    <li>L'historique d'achat</li>
+                    <li>Les évaluations laissées</li>
+                    <li>Les adresses enregistrées</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">
+                    <i class="fas fa-trash"></i> Supprimer définitivement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
 .border-left-primary {
     border-left: 4px solid #4e73df !important;
 }
@@ -330,7 +347,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Erreur:', error);
-                    alert('Erreur lors de la mise à jour du statut');
+                    alert('Erreur lors de la modification du statut');
+                });
+            }
+        });
+    });
+    
+    // Gestion des boutons de vérification d'email
+    document.querySelectorAll('.verify-email-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const userName = this.getAttribute('data-user-name');
+            
+            if (confirm(`Êtes-vous sûr de vouloir vérifier l'email de ${userName} ? Cette action marquera l'email comme vérifié et permettra à l'utilisateur de se connecter.`)) {
+                fetch(`/admin/users/${userId}/verify-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Email vérifié avec succès !');
+                        location.reload();
+                    } else {
+                        alert('Erreur: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur lors de la vérification de l\'email');
                 });
             }
         });

@@ -63,6 +63,137 @@ body {
     text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
 
+/* ===== ICON SELECTOR STYLES ===== */
+.icon-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 45px;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+}
+
+.icon-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.icon-btn i {
+    font-size: 1.1rem;
+}
+
+.icon-btn.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+#iconSelectorModal .modal-dialog {
+    max-width: 800px;
+}
+
+#iconSelectorModal .tab-content {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.input-group-text i {
+    width: 20px;
+    text-align: center;
+}
+
+.icon-preview-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.icon-preview-area:hover {
+    border-color: var(--primary-color);
+    background-color: #fff;
+}
+
+#iconSearch {
+    border-radius: 8px;
+}
+
+.nav-tabs .nav-link {
+    border-radius: 8px 8px 0 0;
+    border: none;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    margin-right: 5px;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+}
+
+.nav-tabs .nav-link:hover {
+    background-color: #e9ecef;
+    border: none;
+}
+
+.nav-tabs .nav-link.active:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Styles pour les suggestions intelligentes */
+.suggestion-icon-btn {
+    transition: all 0.2s ease;
+    border-radius: 8px !important;
+}
+
+.suggestion-icon-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#suggestionIndicator {
+    animation: slideInDown 0.3s ease;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#smartSuggestions {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#smartSuggestions h6 {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.suggestion-icon-btn .badge {
+    font-size: 0.6rem !important;
+    padding: 2px 4px;
+}
+/* ===== END ICON SELECTOR STYLES ===== */
+
 /* Featured products */
 .featured-products h2,
 .features h2,

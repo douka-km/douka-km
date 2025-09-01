@@ -3,15 +3,23 @@ services:
     name: douka-km
     env: python
     plan: free
-    runtime: python311
     buildCommand: |
-      chmod +x build.sh && ./build.sh
+      echo "🐍 Using Python 3.13..."
+      python --version
+      echo "📦 Upgrading pip for Python 3.13..."
+      pip install --upgrade pip setuptools wheel
+      echo "📋 Installing Python 3.13 compatible packages..."
+      pip install --no-cache-dir --timeout 300 -r requirements.txt
+      echo "🧪 Testing imports with Python 3.13..."
+      python -c "from models import db, User, Product; print('✅ Models OK with Python 3.13')"
     startCommand: |
       export RENDER=1
-      python init_render.py && gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --preload
+      export PYTHONPATH=/opt/render/project/src:$PYTHONPATH
+      export PYTHONWARNINGS=ignore
+      gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --preload --log-level info
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.9
+        value: 3.13.0
       - key: FLASK_APP
         value: app_final_with_db.py
       - key: FLASK_ENV
@@ -21,12 +29,16 @@ services:
       - key: SECRET_KEY
         value: c20f60e2902185e2bd2948acdd190ccb
       - key: DATABASE_URL
-        value: postgresql://douka_km_disk_user:knTLe25stMrj3GiYHQPZZui7jKsDP24Q@dpg-d2f3kgf5r7bs73c884b0-a/douka_km_disk
+        value: postgresql+psycopg://douka_km_disk_user:knTLe25stMrj3GiYHQPZZui7jKsDP24Q@dpg-d2f3kgf5r7bs73c884b0-a/douka_km_disk
       - key: VERIFICATION_URL_BASE
-        value: https://douka-km.onrender.com
+        value: https://doukakm.com
       - key: ADMIN_EMAIL
         value: admin@doukakm.com
       - key: ADMIN_PASSWORD
         value: admin123!
       - key: ADMIN_NAME
         value: Super Admin DOUKA KM
+      - key: SQLALCHEMY_SILENCE_UBER_WARNING
+        value: "1"
+      - key: SQLALCHEMY_WARN_20
+        value: "0"

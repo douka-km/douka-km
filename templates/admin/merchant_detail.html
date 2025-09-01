@@ -255,15 +255,19 @@
                                             <td>{{ order.total }} KMF</td>
                                             <td>
                                                 {% if order.status == 'pending' %}
-                                                    <span class="badge bg-warning text-dark">En attente</span>
+                                                    <span class="badge bg-warning">En attente</span>
                                                 {% elif order.status == 'confirmed' %}
-                                                    <span class="badge bg-info">Confirmé</span>
+                                                    <span class="badge bg-info">Confirmée</span>
+                                                {% elif order.status == 'processing' %}
+                                                    <span class="badge bg-primary">En cours de préparation</span>
+                                                {% elif order.status == 'shipped' %}
+                                                    <span class="badge bg-info">Expédiée</span>
                                                 {% elif order.status == 'delivered' %}
-                                                    <span class="badge bg-success">Livré</span>
+                                                    <span class="badge bg-success">Livrée</span>
                                                 {% elif order.status == 'cancelled' %}
-                                                    <span class="badge bg-danger">Annulé</span>
+                                                    <span class="badge bg-danger">Annulée</span>
                                                 {% else %}
-                                                    <span class="badge bg-secondary">{{ order.status }}</span>
+                                                    <span class="badge bg-secondary">{{ order.status|title }}</span>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -546,6 +550,21 @@
                             <button type="button" class="btn btn-outline-danger" onclick="showSuspensionModal('suspend')" id="suspendBtn">
                                 <i class="fas fa-ban me-1"></i> Suspendre le compte
                             </button>
+                        {% endif %}
+                        
+                        <!-- Bouton de suppression DANGER - Seulement pour super_admin -->
+                        {% if session.admin_role == 'super_admin' %}
+                        <div class="mt-3 pt-3 border-top">
+                            <h6 class="text-danger mb-2">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Zone Dangereuse
+                            </h6>
+                            <button type="button" class="btn btn-danger" onclick="showDeleteModal()">
+                                <i class="fas fa-trash-alt me-1"></i> Supprimer définitivement
+                            </button>
+                            <small class="d-block text-muted mt-1">
+                                Cette action supprimera le marchand et toutes ses données (produits, commandes, etc.)
+                            </small>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -977,6 +996,97 @@
                 }
             });
         });
+        
+        // Fonction pour afficher le modal de suppression
+        window.showDeleteModal = function() {
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            deleteModal.show();
+        };
+    });
+</script>
+
+<!-- Modal de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Supprimer définitivement le marchand
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle me-1"></i> ATTENTION - Action irréversible</h6>
+                    <p class="mb-0">Cette action supprimera <strong>définitivement</strong> :</p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-store text-danger me-2"></i> Le compte marchand</li>
+                            <li><i class="fas fa-box text-warning me-2"></i> Tous les produits</li>
+                            <li><i class="fas fa-shopping-cart text-info me-2"></i> Toutes les commandes</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-star text-primary me-2"></i> Tous les avis/notes</li>
+                            <li><i class="fas fa-money-bill text-success me-2"></i> L'historique des retraits</li>
+                            <li><i class="fas fa-heart text-danger me-2"></i> Les items en favoris</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <p class="mb-2"><strong>Marchand à supprimer :</strong></p>
+                    <p class="mb-1"><strong>{{ merchant.store_name }}</strong></p>
+                    <p class="mb-1">{{ merchant.first_name }} {{ merchant.last_name }}</p>
+                    <p class="mb-0">{{ merchant.email }}</p>
+                </div>
+                
+                <form method="POST" action="{{ url_for('admin_delete_merchant', merchant_id=merchant.id) }}" id="deleteForm">
+                    <div class="mb-3">
+                        <label for="confirmationInput" class="form-label">
+                            <strong>Pour confirmer, tapez exactement : <code>SUPPRIMER</code></strong>
+                        </label>
+                        <input type="text" class="form-control" id="confirmationInput" name="confirmation" 
+                               placeholder="Tapez SUPPRIMER pour confirmer" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Annuler
+                </button>
+                <button type="submit" form="deleteForm" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                    <i class="fas fa-trash-alt me-1"></i> Supprimer définitivement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Validation du champ de confirmation pour la suppression
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmationInput = document.getElementById('confirmationInput');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        
+        if (confirmationInput && confirmDeleteBtn) {
+            confirmationInput.addEventListener('input', function() {
+                if (this.value === 'SUPPRIMER') {
+                    confirmDeleteBtn.disabled = false;
+                    confirmDeleteBtn.classList.remove('btn-danger');
+                    confirmDeleteBtn.classList.add('btn-outline-danger');
+                } else {
+                    confirmDeleteBtn.disabled = true;
+                    confirmDeleteBtn.classList.remove('btn-outline-danger');
+                    confirmDeleteBtn.classList.add('btn-danger');
+                }
+            });
+        }
     });
 </script>
 {% endblock %}

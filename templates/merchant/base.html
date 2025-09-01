@@ -54,7 +54,7 @@ merchants_db = {
         'store_address': '789 Avenue Commerciale',
         'store_city': 'Moroni',
         'store_region': 'grande-comore',
-        'store_logo': 'static/img/merchants/store_logo_default.png',
+        'store_logo': 'static/img/merchants/store_logo_default.svg',
         'store_banner': 'static/img/merchants/store_banner_default.jpg',
         'store_verified': True,
         'registration_date': '2023-01-15',
@@ -829,11 +829,11 @@ def food_delivery():
     """Route for the food delivery page"""
     return render_template('food_delivery.html')
 
-# Ajout d'une route pour le favicon.ico
-@app.route('/favicon.ico')
+# Ajout d'une route pour le favicon.svg
+@app.route('/favicon.svg')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static', 'img'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+                               'favicon.svg', mimetype='image/vnd.microsoft.icon')
 
 # Fonction utilitaire pour obtenir le panier actuel
 def get_cart():
@@ -2000,7 +2000,7 @@ def merchant_register():
             'store_address': '',
             'store_city': '',
             'store_region': '',
-            'store_logo': 'static/img/merchants/store_logo_default.png',
+            'store_logo': 'static/img/merchants/store_logo_default.svg',
             'store_banner': 'static/img/merchants/store_banner_default.jpg',
             'store_verified': False,
             'registration_date': '2023-01-15',

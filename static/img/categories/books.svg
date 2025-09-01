@@ -1,0 +1,99 @@
+<!-- Placeholder SVG pour la catégorie Livres -->
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arrière-plan dégradé bibliothèque -->
+  <defs>
+    <linearGradient id="bookGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F5F5DC;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#DEB887;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D2B48C;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Arrière-plan -->
+  <rect width="400" height="300" fill="url(#bookGradient)"/>
+  
+  <!-- Étagère -->
+  <rect x="50" y="200" width="300" height="10" fill="#8B4513"/>
+  <rect x="50" y="150" width="300" height="10" fill="#8B4513"/>
+  
+  <!-- Pile de livres -->
+  <g transform="translate(100, 120)">
+    <!-- Livre 1 (rouge) -->
+    <rect x="0" y="60" width="60" height="8" fill="#DC143C"/>
+    <rect x="2" y="58" width="56" height="8" fill="#FF6347"/>
+    
+    <!-- Livre 2 (bleu) -->
+    <rect x="0" y="50" width="60" height="8" fill="#1E90FF"/>
+    <rect x="2" y="48" width="56" height="8" fill="#87CEEB"/>
+    
+    <!-- Livre 3 (vert) -->
+    <rect x="0" y="40" width="60" height="8" fill="#228B22"/>
+    <rect x="2" y="38" width="56" height="8" fill="#90EE90"/>
+    
+    <!-- Livre 4 (orange) -->
+    <rect x="0" y="30" width="60" height="8" fill="#FF8C00"/>
+    <rect x="2" y="28" width="56" height="8" fill="#FFA500"/>
+    
+    <!-- Livre 5 (violet) -->
+    <rect x="0" y="20" width="60" height="8" fill="#8A2BE2"/>
+    <rect x="2" y="18" width="56" height="8" fill="#DDA0DD"/>
+  </g>
+  
+  <!-- Livre ouvert -->
+  <g transform="translate(200, 100)">
+    <!-- Page gauche -->
+    <path d="M 0,0 Q -20,10 -40,0 L -40,80 Q -20,70 0,80 Z" fill="#FFFACD" stroke="#D3D3D3"/>
+    <!-- Page droite -->
+    <path d="M 0,0 Q 20,10 40,0 L 40,80 Q 20,70 0,80 Z" fill="#FFFACD" stroke="#D3D3D3"/>
+    
+    <!-- Lignes de texte (page gauche) -->
+    <g stroke="#696969" stroke-width="1">
+      <line x1="-35" y1="15" x2="-5" y2="15"/>
+      <line x1="-35" y1="25" x2="-5" y2="25"/>
+      <line x1="-35" y1="35" x2="-5" y2="35"/>
+      <line x1="-35" y1="45" x2="-5" y2="45"/>
+    </g>
+    
+    <!-- Lignes de texte (page droite) -->
+    <g stroke="#696969" stroke-width="1">
+      <line x1="5" y1="15" x2="35" y2="15"/>
+      <line x1="5" y1="25" x2="35" y2="25"/>
+      <line x1="5" y1="35" x2="35" y2="35"/>
+      <line x1="5" y1="45" x2="35" y2="45"/>
+    </g>
+  </g>
+  
+  <!-- Lunettes de lecture -->
+  <g transform="translate(280, 60)">
+    <!-- Monture -->
+    <circle cx="-15" cy="0" r="15" fill="none" stroke="#8B4513" stroke-width="2"/>
+    <circle cx="15" cy="0" r="15" fill="none" stroke="#8B4513" stroke-width="2"/>
+    <line x1="0" y1="0" x2="0" y2="0" stroke="#8B4513" stroke-width="2"/>
+    <!-- Verres -->
+    <circle cx="-15" cy="0" r="13" fill="#E6E6FA" opacity="0.7"/>
+    <circle cx="15" cy="0" r="13" fill="#E6E6FA" opacity="0.7"/>
+    <!-- Branches -->
+    <line x1="-30" y1="0" x2="-40" y2="5" stroke="#8B4513" stroke-width="2"/>
+    <line x1="30" y1="0" x2="40" y2="5" stroke="#8B4513" stroke-width="2"/>
+  </g>
+  
+  <!-- Plume et encrier -->
+  <g transform="translate(60, 80)">
+    <!-- Encrier -->
+    <ellipse cx="0" cy="15" rx="12" ry="8" fill="#2F4F4F"/>
+    <ellipse cx="0" cy="12" rx="10" ry="6" fill="#000"/>
+    
+    <!-- Plume -->
+    <path d="M 20,0 Q 15,5 10,0 Q 8,-2 10,-5 Q 15,-10 25,-5" fill="#8B4513"/>
+    <path d="M 20,0 Q 18,2 15,0 Q 14,-1 15,-3 Q 18,-5 22,-2" fill="#F4A460"/>
+  </g>
+  
+  <!-- Étoiles de savoir -->
+  <g fill="#FFD700" opacity="0.6">
+    <polygon points="320,120 322,125 327,125 323,129 325,134 320,131 315,134 317,129 313,125 318,125" />
+    <polygon points="80,180 82,185 87,185 83,189 85,194 80,191 75,194 77,189 73,185 78,185" />
+  </g>
+  
+  <!-- Texte -->
+  <text x="200" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#8B4513">Livres & Éducation</text>
+</svg>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouvelle commande - DOUKA KM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        
+        .email-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            background: linear-gradient(135deg, #0d6efd, #0056b3);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            margin: -30px -30px 30px -30px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .order-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .value {
+            color: #6c757d;
+        }
+        
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .products-table th,
+        .products-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .products-table th {
+            background-color: #e9ecef;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .total-section {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: right;
+            margin: 20px 0;
+        }
+        
+        .total-amount {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        
+        .action-buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 0 10px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-processing {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .email-container {
+                padding: 20px;
+            }
+            
+            .header {
+                margin: -20px -20px 20px -20px;
+            }
+            
+            .info-row {
+                flex-direction: column;
+            }
+            
+            .products-table {
+                font-size: 14px;
+            }
+            
+            .btn {
+                display: block;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>🛍️ Nouvelle commande reçue</h1>
+            <p style="margin: 5px 0 0 0;">Une nouvelle commande nécessite votre attention</p>
+        </div>
+        
+        <div class="order-info">
+            <h3 style="margin-top: 0; color: #0d6efd;">📋 Informations de la commande</h3>
+            
+            <div class="info-row">
+                <span class="label">Numéro de commande:</span>
+                <span class="value">{{ order.order_number }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Date de commande:</span>
+                <span class="value">{{ order.created_at }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Client:</span>
+                <span class="value">{{ order.customer_name }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Email client:</span>
+                <span class="value">{{ order.customer_email }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Téléphone:</span>
+                <span class="value">{{ order.customer_phone }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Statut:</span>
+                <span class="value">
+                    <span class="status-badge status-processing">{{ order.status }}</span>
+                </span>
+            </div>
+            
+            {% if order.merchant_email and order.merchant_email not in ['admin_products', 'static_products'] %}
+            <div class="info-row">
+                <span class="label">Marchand:</span>
+                <span class="value">{{ order.merchant_email }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <h3 style="color: #0d6efd;">🛒 Produits commandés</h3>
+        <table class="products-table">
+            <thead>
+                <tr>
+                    <th>Produit</th>
+                    <th>Prix unitaire</th>
+                    <th>Quantité</th>
+                    <th>Sous-total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td>
+                        <strong>{{ item.name }}</strong>
+                        {% if item.variant_details %}
+                        <br><small style="color: #6c757d;">{{ item.variant_details }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ "{:,.0f}".format(item.price) }} KMF</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ "{:,.0f}".format(item.price * item.quantity) }} KMF</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="total-section">
+            <div style="margin-bottom: 10px;">
+                <span>Sous-total: {{ "{:,.0f}".format(order.subtotal) }} KMF</span>
+            </div>
+            
+            {% if order.shipping_fee > 0 %}
+            <div style="margin-bottom: 10px;">
+                <span>Frais de livraison: {{ "{:,.0f}".format(order.shipping_fee) }} KMF</span>
+            </div>
+            {% endif %}
+            
+            {% if order.discount > 0 %}
+            <div style="margin-bottom: 10px; color: #28a745;">
+                <span>Réduction: -{{ "{:,.0f}".format(order.discount) }} KMF</span>
+                {% if order.promo_code %}
+                <br><small>(Code: {{ order.promo_code }})</small>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="total-amount">
+                <strong>Total: {{ "{:,.0f}".format(order.total) }} KMF</strong>
+            </div>
+        </div>
+        
+        <h3 style="color: #0d6efd;">🚚 Livraison</h3>
+        <div class="order-info">
+            <div class="info-row">
+                <span class="label">Méthode:</span>
+                <span class="value">{{ order.shipping_method }}</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Adresse:</span>
+                <span class="value">
+                    {{ order.shipping_address.full_name }}<br>
+                    {{ order.shipping_address.street }}<br>
+                    {{ order.shipping_address.city }}, {{ order.shipping_address.region }}<br>
+                    Tél: {{ order.shipping_address.phone }}
+                </span>
+            </div>
+            
+            <div class="info-row">
+                <span class="label">Paiement:</span>
+                <span class="value">{{ order.payment_method }}</span>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <a href="{{ admin_url }}/orders/{{ order.id }}" class="btn btn-primary">
+                📋 Voir la commande
+            </a>
+            <a href="{{ admin_url }}/orders" class="btn btn-secondary">
+                📊 Toutes les commandes
+            </a>
+        </div>
+        
+        <div class="footer">
+            <p><strong>DOUKA KM - Panneau d'administration</strong></p>
+            <p>Cette notification vous a été envoyée automatiquement pour vous informer d'une nouvelle commande.</p>
+            <p>Connectez-vous à votre panneau d'administration pour gérer cette commande.</p>
+        </div>
+    </div>
+</body>
+</html>

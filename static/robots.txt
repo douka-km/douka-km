@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.doukakm.com/sitemap.xml
+
+# Interdire l'accès aux zones administratives
+Disallow: /admin/
+Disallow: /merchant/dashboard/
+Disallow: /api/
+
+# Interdire l'accès aux fichiers de configuration
+Disallow: /*.env
+Disallow: /*.json
+Disallow: /static/uploads/
+
+# Permettre l'accès aux ressources importantes
+Allow: /static/img/
+Allow: /static/css/
+Allow: /static/js/
+
+# Crawl-delay (optionnel, pour éviter la surcharge du serveur)
+Crawl-delay: 1

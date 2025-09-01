@@ -1,5 +1,40 @@
 {% extends 'base.html' %}
 
+{% block title %}DOUKA KM - Commerce en ligne aux Comores | Livraison gratuite{% endblock %}
+
+{% block description %}Découvrez DOUKA KM, la première plateforme de commerce en ligne aux Comores. Des milliers de produits de qualité, livraison gratuite dès 50.000 KMF. Grande Comore, Anjouan, Mohéli.{% endblock %}
+
+{% block keywords %}DOUKA KM, commerce en ligne, Comores, livraison, produits, achat, vente, Grande Comore, Anjouan, Mohéli, marketplace, boutique en ligne{% endblock %}
+
+{% block og_title %}DOUKA KM - Commerce en ligne aux Comores | Livraison gratuite{% endblock %}
+{% block og_description %}Découvrez des milliers de produits de qualité sur DOUKA KM. Livraison gratuite dès 50.000 KMF dans toutes les Comores.{% endblock %}
+
+{% block twitter_title %}DOUKA KM - Commerce en ligne aux Comores{% endblock %}
+{% block twitter_description %}La première plateforme de commerce en ligne aux Comores. Découvrez des milliers de produits avec livraison gratuite.{% endblock %}
+
+{% block extra_schemas %}
+<!-- Schema.org pour la page d'accueil -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Store",
+  "name": "DOUKA KM",
+  "description": "Commerce en ligne aux Comores",
+  "url": "{{ url_for('home', _external=True) }}",
+  "logo": "{{ url_for('static', filename='img/logo.png', _external=True) }}",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Moroni",
+    "addressRegion": "Grande Comore",
+    "addressCountry": "KM"
+  },
+  "openingHours": "Mo-Su 08:00-18:00",
+  "paymentAccepted": ["Cash", "Credit Card"],
+  "currenciesAccepted": "KMF"
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="search-section mb-4" id="search-bar-container">
     <div class="container">
@@ -191,31 +226,16 @@
     <h2 class="text-center mb-4">Produits populaires</h2>
     <div class="row">
         {% for product in products %}
-        <div class="col-md-4 mb-4">
+        <div class="col-6 col-md-4 mb-4">
             <div class="card h-100 product-card">
-                {% if product.image %}
-                    {% if product.image.startswith('http') %}
-                        <!-- Image via URL -->
-                        <img src="{{ product.image }}" 
-                             class="card-img-top" 
-                             alt="{{ product.name }}"
-                             onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/f8f9fa/6c757d?text=Produit';">
-                    {% else %}
-                        <!-- Image locale -->
-                        <img src="{{ url_for('static', filename=product.image.replace('static/', '') if product.image.startswith('static/') else product.image) }}" 
-                             class="card-img-top" 
-                             alt="{{ product.name }}"
-                             onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300/f8f9fa/6c757d?text=Produit';">
-                    {% endif %}
-                {% else %}
-                    <!-- Image placeholder -->
-                    <img src="https://via.placeholder.com/400x300/f8f9fa/6c757d?text=Produit" 
-                         class="card-img-top" 
-                         alt="Aucune image">
-                {% endif %}
+                <img src="{{ product.image }}" 
+                     class="card-img-top" 
+                     alt="{{ product.name }}" 
+                     loading="lazy"
+                     onerror="this.src='https://via.placeholder.com/400x300?text=Image+non+disponible'">
                 <div class="card-body">
                     <h5 class="card-title">{{ product.name }}</h5>
-                    <p class="card-text">{{ product.description }}</p>
+                    <p class="card-text d-none d-md-block">{{ product.description }}</p>
                     
                     <p class="card-text text-primary fw-bold">{{ product.price|format_number }} KMF</p>
                     <div class="action-buttons">
@@ -237,31 +257,16 @@
     <div class="row">
         {% if recommended_products %}
             {% for product in recommended_products %}
-            <div class="col-md-3 mb-4">
+            <div class="col-6 col-md-3 mb-4">
                 <div class="card h-100 product-card">
-                    {% if product.image %}
-                        {% if product.image.startswith('http') %}
-                            <!-- Image via URL -->
-                            <img src="{{ product.image }}" 
-                                 class="card-img-top" 
-                                 alt="{{ product.name }}"
-                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit';">
-                        {% else %}
-                            <!-- Image locale -->
-                            <img src="{{ url_for('static', filename=product.image.replace('static/', '') if product.image.startswith('static/') else product.image) }}" 
-                                 class="card-img-top" 
-                                 alt="{{ product.name }}"
-                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit';">
-                        {% endif %}
-                    {% else %}
-                        <!-- Image placeholder -->
-                        <img src="https://via.placeholder.com/300x200/f8f9fa/6c757d?text=Produit" 
-                             class="card-img-top" 
-                             alt="Aucune image">
-                    {% endif %}
+                    <img src="{{ product.image }}" 
+                         class="card-img-top" 
+                         alt="{{ product.name }}" 
+                         loading="lazy"
+                         onerror="this.src='https://via.placeholder.com/400x300?text=Image+non+disponible'">
                     <div class="card-body">
                         <h5 class="card-title">{{ product.name }}</h5>
-                        <p class="card-text">{{ product.description }}</p>
+                        <p class="card-text d-none d-md-block">{{ product.description }}</p>
                         
                         <p class="card-text text-primary fw-bold">{{ product.price|format_number }} KMF</p>
                         <div class="action-buttons">
@@ -314,42 +319,23 @@
 <section class="categories mb-5">
     <h2 class="text-center mb-4">Nos catégories</h2>
     <div class="row">
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <img src="{{ url_for('static', filename='img/category1.jpg') }}" class="card-img-top" alt="Électronique">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Électronique</h5>
-                    <a href="/category/electronics" class="btn btn-outline-primary">Voir produits</a>
+        {% for category in display_categories %}
+        <div class="col-6 col-md-3 mb-4">
+            <div class="card category-card h-100">
+                <img src="{{ url_for('static', filename=category.image) }}" 
+                     class="card-img-top" 
+                     alt="{{ category.name }}"
+                     style="height: 200px; object-fit: cover;">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">
+                        <i class="{{ category.icon }} me-2"></i>{{ category.name }}
+                    </h5>
+                    <p class="card-text flex-grow-1">{{ category.description }}</p>
+                    <a href="{{ category.url }}" class="btn btn-outline-primary">Voir produits</a>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <img src="{{ url_for('static', filename='img/category2.jpg') }}" class="card-img-top" alt="Vêtements">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Vêtements</h5>
-                    <a href="/category/clothing" class="btn btn-outline-primary">Voir produits</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <img src="{{ url_for('static', filename='img/category3.jpg') }}" class="card-img-top" alt="Alimentation">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Alimentation</h5>
-                    <a href="/products?category_filter=3" class="btn btn-outline-primary">Voir produits</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <img src="{{ url_for('static', filename='img/category4.jpg') }}" class="card-img-top" alt="Artisanat local">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Artisanat local</h5>
-                    <a href="/category/crafts" class="btn btn-outline-primary">Voir produits</a>
-                </div>
-            </div>
-        </div>
+        {% endfor %}
     </div>
 </section>
 {% endblock %}
@@ -722,6 +708,193 @@
         to {
             opacity: 1;
             transform: translate(-50%, -50%) scale(1);
+        }
+    }
+    
+    /* Styles pour les catégories dynamiques */
+    .category-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .category-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    .category-card .card-img-top {
+        transition: transform 0.3s ease;
+    }
+    
+    .category-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+    
+    .category-card .card-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    .category-card .card-text {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .category-card .btn {
+        border-radius: 20px;
+        padding: 8px 20px;
+        font-weight: 500;
+    }
+    
+    @media (max-width: 768px) {
+        .category-card {
+            margin-bottom: 1rem;
+        }
+        
+        .category-card .card-img-top {
+            height: 150px !important;
+            object-fit: cover;
+            object-position: center;
+            width: 100%;
+        }
+        
+        /* Optimisation des cartes produits sur mobile */
+        .product-card {
+            font-size: 0.9em;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        
+/* Styles généraux pour les cartes produits */
+.product-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e9ecef;
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.product-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.product-card .card-img-top {
+    height: 250px;
+    object-fit: contain;
+    object-position: center;
+    width: 100%;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* Classe alternative pour remplir le conteneur (optionnel) */
+.product-card.cover-image .card-img-top {
+    object-fit: cover;
+    background-color: transparent;
+}
+
+.product-card .card-body {
+    padding: 1.25rem;
+}
+
+.product-card .card-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.product-card .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.product-card .action-buttons .btn {
+    flex: 1;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+}
+        
+        .product-card .card-title {
+            font-size: 1rem;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+        }
+        
+        .product-card .card-text {
+            font-size: 0.85em;
+            line-height: 1.3;
+            margin-bottom: 0.5rem;
+        }
+        
+        .product-card .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .product-card .action-buttons .btn {
+            font-size: 0.8em;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.375rem;
+        }
+        
+        /* Styles spécifiques pour les images de produits sur mobile */
+        .product-card .card-img-top {
+            height: 220px;
+            object-fit: contain;
+            object-position: center;
+            width: 100%;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        /* Ajustement pour les cartes en 2 colonnes */
+        .col-6 .card {
+            margin-bottom: 1rem;
+        }
+        
+        .col-6 .product-card .card-img-top {
+            height: 180px;
+            object-fit: contain;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        /* Amélioration du padding des cartes sur mobile */
+        .product-card .card-body {
+            padding: 0.75rem;
+        }
+        
+        .product-card .card-title {
+            font-size: 0.95rem;
+            line-height: 1.3;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Optimisation des prix sur mobile */
+        .product-card .card-text.text-primary {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        /* Style pour les images qui ne se chargent pas */
+        .product-card img {
+            background-color: #f8f9fa;
+        }
+        
+        /* Amélioration du contraste sur mobile */
+        .card {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
     }
 </style>

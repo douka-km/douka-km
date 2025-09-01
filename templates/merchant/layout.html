@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Espace Marchand - DOUKA KM{% endblock %}</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.svg') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -294,12 +295,12 @@
                         <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown">
                             {% if merchant and merchant.store_logo %}
                                 {% if merchant.store_logo.startswith('http') %}
-                                    <img src="{{ merchant.store_logo }}" alt="Logo" onerror="this.src='/static/img/merchants/store_logo_default.png';">
+                                    <img src="{{ merchant.store_logo }}" alt="Logo" onerror="this.src='/static/img/merchants/store_logo_default.svg';">
                                 {% else %}
                                     <img src="{{ url_for('static', filename=merchant.store_logo.replace('static/', '')) }}" alt="Logo">
                                 {% endif %}
                             {% else %}
-                                <img src="{{ url_for('static', filename='img/merchants/store_logo_default.png') }}" alt="Logo">
+                                <img src="{{ url_for('static', filename='img/merchants/store_logo_default.svg') }}" alt="Logo">
                             {% endif %}
                             <span>{{ merchant.first_name }}</span>
                         </a>

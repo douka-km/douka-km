@@ -1,0 +1,68 @@
+<!-- Placeholder SVG pour la catégorie Bébé -->
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arrière-plan dégradé rose/bleu bébé -->
+  <defs>
+    <linearGradient id="babyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFB6C1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E6E6FA;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Arrière-plan -->
+  <rect width="400" height="300" fill="url(#babyGradient)"/>
+  
+  <!-- Nuages décoratifs -->
+  <circle cx="80" cy="60" r="15" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="95" cy="55" r="20" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="110" cy="60" r="15" fill="#FFFFFF" opacity="0.7"/>
+  
+  <circle cx="320" cy="50" r="12" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="335" cy="45" r="18" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="350" cy="50" r="12" fill="#FFFFFF" opacity="0.6"/>
+  
+  <!-- Ours en peluche stylisé -->
+  <g transform="translate(150, 80)">
+    <!-- Corps -->
+    <ellipse cx="50" cy="100" rx="45" ry="55" fill="#F4E4BC"/>
+    
+    <!-- Tête -->
+    <circle cx="50" cy="50" r="40" fill="#F4E4BC"/>
+    
+    <!-- Oreilles -->
+    <circle cx="25" cy="25" r="18" fill="#F4E4BC"/>
+    <circle cx="75" cy="25" r="18" fill="#F4E4BC"/>
+    <circle cx="25" cy="25" r="12" fill="#E6D3A3"/>
+    <circle cx="75" cy="25" r="12" fill="#E6D3A3"/>
+    
+    <!-- Yeux -->
+    <circle cx="40" cy="45" r="4" fill="#000"/>
+    <circle cx="60" cy="45" r="4" fill="#000"/>
+    <circle cx="41" cy="43" r="1.5" fill="#FFF"/>
+    <circle cx="61" cy="43" r="1.5" fill="#FFF"/>
+    
+    <!-- Nez -->
+    <ellipse cx="50" cy="55" rx="3" ry="2" fill="#000"/>
+    
+    <!-- Bouche -->
+    <path d="M 45 62 Q 50 67 55 62" stroke="#000" stroke-width="2" fill="none"/>
+    
+    <!-- Bras -->
+    <ellipse cx="15" cy="80" rx="15" ry="25" fill="#F4E4BC"/>
+    <ellipse cx="85" cy="80" rx="15" ry="25" fill="#F4E4BC"/>
+    
+    <!-- Jambes -->
+    <ellipse cx="35" cy="135" rx="15" ry="25" fill="#F4E4BC"/>
+    <ellipse cx="65" cy="135" rx="15" ry="25" fill="#F4E4BC"/>
+  </g>
+  
+  <!-- Étoiles décoratives -->
+  <g fill="#FFD700" opacity="0.8">
+    <polygon points="50,180 52,185 57,185 53,189 55,194 50,191 45,194 47,189 43,185 48,185" />
+    <polygon points="350,180 352,185 357,185 353,189 355,194 350,191 345,194 347,189 343,185 348,185" />
+    <polygon points="100,240 102,245 107,245 103,249 105,254 100,251 95,254 97,249 93,245 98,245" />
+    <polygon points="300,240 302,245 307,245 303,249 305,254 300,251 295,254 297,249 293,245 298,245" />
+  </g>
+  
+  <!-- Texte centré -->
+  <text x="200" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#FF69B4">Bébé & Enfants</text>
+</svg>

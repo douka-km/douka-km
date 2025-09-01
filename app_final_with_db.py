@@ -27,8 +27,163 @@ from email_config import send_email, CURRENT_EMAIL_CONFIG
 from models import db, User, Merchant, Product, Category, Subcategory, Order, OrderItem, Cart, CartItem, WishlistItem
 
 # Imports pour la base de données
-from models import db, User, Merchant, Admin, Product, Order, OrderItem, Review, Category, Subcategory, PromoCode, WithdrawalRequest, WishlistItem, EmailVerificationToken, PasswordResetToken, SiteSettings, Employee
+from models import db, User, Merchant, Admin, Product, Order, OrderItem, Review, Category, Subcategory, PromoCode, WithdrawalRequest, WishlistItem, EmailVerificationToken, PasswordResetToken, SiteSettings, Employee, Address
 from db_helpers import *
+
+# =============================================
+# FONCTIONS DE NOTIFICATION ADMIN
+# =============================================
+
+def send_admin_notification_new_order(order):
+    """Envoie une notification email à l'admin pour une nouvelle commande"""
+    try:
+        # Récupérer l'email admin depuis la configuration ou utiliser l'email par défaut
+        admin_email = os.environ.get('ADMIN_EMAIL', 'ledouka.km@gmail.com')
+        
+        # Construire l'URL de base pour l'admin
+        base_url = CURRENT_EMAIL_CONFIG['VERIFICATION_URL_BASE']
+        admin_url = f"{base_url}/admin"
+        
+        # Préparer les données de la commande pour le template
+        order_data = {
+            'id': order.id,
+            'order_number': order.order_number,
+            'created_at': order.created_at.strftime('%d/%m/%Y à %H:%M'),
+            'customer_name': order.customer_name,
+            'customer_email': order.customer_email,
+            'customer_phone': order.customer_phone,
+            'status': order.status.title(),
+            'total': order.total,
+            'subtotal': order.total - order.shipping_fee + order.discount,
+            'shipping_fee': order.shipping_fee,
+            'discount': order.discount,
+            'promo_code': order.promo_code,
+            'shipping_method': order.shipping_method,
+            'payment_method': order.payment_method,
+            'merchant_email': getattr(order.merchant, 'email', None) if order.merchant else None,
+            'shipping_address': {
+                'full_name': order.shipping_address_line1 or order.customer_name,
+                'street': order.shipping_address_line1 or '',
+                'city': order.shipping_address_city or '',
+                'region': order.shipping_address_region or '',
+                'phone': order.customer_phone or ''
+            },
+            'items': []
+        }
+        
+        # Ajouter les articles de la commande
+        for item in order.items:
+            order_data['items'].append({
+                'name': item.name,
+                'price': item.price,
+                'quantity': item.quantity,
+                'variant_details': item.variant_details or ''
+            })
+        
+        # Rendre le template HTML
+        html_content = render_template('emails/admin_new_order.html', 
+                                     order=order_data, 
+                                     admin_url=admin_url)
+        
+        # Contenu texte alternatif
+        text_content = f"""
+Nouvelle commande reçue - DOUKA KM
+
+Numéro de commande: {order_data['order_number']}
+Client: {order_data['customer_name']} ({order_data['customer_email']})
+Total: {order_data['total']:,.0f} KMF
+Statut: {order_data['status']}
+
+Connectez-vous à votre panneau d'administration pour gérer cette commande:
+{admin_url}/orders/{order_data['id']}
+        """
+        
+        # Envoyer l'email
+        subject = f"🛍️ Nouvelle commande #{order_data['order_number']} - {order_data['total']:,.0f} KMF"
+        
+        success = send_email(admin_email, subject, html_content, text_content)
+        
+        if success:
+            print(f"✅ Notification admin envoyée pour la commande #{order_data['order_number']}")
+        else:
+            print(f"❌ Échec envoi notification admin pour la commande #{order_data['order_number']}")
+            
+        return success
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de l'envoi de notification admin (commande): {str(e)}")
+        return False
+
+def send_admin_notification_new_merchant(merchant):
+    """Envoie une notification email à l'admin pour un nouveau compte marchand"""
+    try:
+        # Récupérer l'email admin depuis la configuration ou utiliser l'email par défaut
+        admin_email = os.environ.get('ADMIN_EMAIL', 'ledouka.km@gmail.com')
+        
+        # Construire l'URL de base pour l'admin
+        base_url = CURRENT_EMAIL_CONFIG['VERIFICATION_URL_BASE']
+        admin_url = f"{base_url}/admin"
+        
+        # Préparer les données du marchand pour le template
+        merchant_data = {
+            'id': merchant.id,
+            'email': merchant.email,
+            'first_name': merchant.first_name,
+            'last_name': merchant.last_name,
+            'phone': merchant.phone,
+            'store_name': merchant.store_name,
+            'store_description': merchant.store_description,
+            'store_address': merchant.store_address,
+            'store_city': merchant.store_city,
+            'store_region': merchant.store_region,
+            'latitude': merchant.latitude,
+            'longitude': merchant.longitude,
+            'created_at': merchant.created_at.strftime('%d/%m/%Y à %H:%M'),
+            'bank_info': None
+        }
+        
+        # Récupérer les informations bancaires si disponibles
+        if hasattr(merchant, 'get_bank_info'):
+            bank_info = merchant.get_bank_info()
+            if bank_info:
+                merchant_data['bank_info'] = bank_info
+        
+        # Rendre le template HTML
+        html_content = render_template('emails/admin_new_merchant.html', 
+                                     merchant=merchant_data, 
+                                     admin_url=admin_url)
+        
+        # Contenu texte alternatif
+        text_content = f"""
+Nouveau compte marchand - DOUKA KM
+
+Marchand: {merchant_data['first_name']} {merchant_data['last_name']}
+Email: {merchant_data['email']}
+Boutique: {merchant_data['store_name']}
+Téléphone: {merchant_data['phone']}
+Date d'inscription: {merchant_data['created_at']}
+
+Ce compte nécessite votre vérification avant de pouvoir vendre sur la plateforme.
+
+Connectez-vous à votre panneau d'administration pour examiner ce compte:
+{admin_url}/merchants/{merchant_data['id']}
+        """
+        
+        # Envoyer l'email
+        subject = f"🏪 Nouveau marchand inscrit: {merchant_data['store_name']}"
+        
+        success = send_email(admin_email, subject, html_content, text_content)
+        
+        if success:
+            print(f"✅ Notification admin envoyée pour le nouveau marchand: {merchant_data['email']}")
+        else:
+            print(f"❌ Échec envoi notification admin pour le marchand: {merchant_data['email']}")
+            
+        return success
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de l'envoi de notification admin (marchand): {str(e)}")
+        return False
 
 app = Flask(__name__)
 
@@ -363,28 +518,28 @@ def get_all_site_settings():
         if not site_settings:
             return {
                 'site_name': 'DOUKA KM',
-                'site_description': "La première plateforme de commerce électronique des Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
+                'site_description': "La première plateforme de commerce aux Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
                 'contact_email': 'ledouka.km@gmail.com',
                 'contact_phone': '+269 342 40 19',
                 'commission_rate': 15.0,
                 'shipping_fee': 2000,
                 'default_shipping_fee': 2000,
                 'free_shipping_threshold': 50000,
-                'logo_url': '/static/img/logo.png',
+                'logo_url': '/static/img/logo.svg',
                 'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
             }
         
         # Ajouter les valeurs manquantes importantes
         defaults = {
             'site_name': 'DOUKA KM',
-            'site_description': "La première plateforme de commerce électronique des Comores.",
+            'site_description': "La première plateforme de commerce aux Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
             'contact_email': 'ledouka.km@gmail.com',
             'contact_phone': '+269 342 40 19',
             'commission_rate': 15.0,
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
-            'logo_url': '/static/img/logo.png',
+            'logo_url': '/static/img/logo.svg',
             'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
         
@@ -400,14 +555,14 @@ def get_all_site_settings():
         # Retourner des paramètres par défaut
         return {
             'site_name': 'DOUKA KM',
-            'site_description': "La première plateforme de commerce électronique des Comores.",
+            'site_description': "La première plateforme de commerce aux Comores. Connectant acheteurs et vendeurs à travers l'archipel",
             'contact_email': 'ledouka.km@gmail.com',
             'contact_phone': '+269 342 40 19',
             'commission_rate': 15.0,
             'shipping_fee': 2000,
             'default_shipping_fee': 2000,
             'free_shipping_threshold': 50000,
-            'logo_url': '/static/img/logo.png',
+            'logo_url': '/static/img/logo.svg',
             'logo_alt_text': 'DOUKA KM - Marketplace des Comores'
         }
 
@@ -2321,7 +2476,7 @@ def get_site_settings():
     """
     default_settings = {
         'site_name': 'DOUKA KM',
-        'site_description': "La première plateforme de commerce électronique des Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
+        'site_description': "La première plateforme de commerce aux Comores. Connectant acheteurs et vendeurs à travers l'archipel.",
         'contact_email': 'ledouka.km@gmail.com',
         'contact_phone': '+269 342 40 19',
         'commission_rate': 15.0,  # Pourcentage
@@ -3493,6 +3648,255 @@ def get_payment_method_info(payment_method):
         'color': 'secondary'
     })
 
+def get_categories_for_display():
+    """Récupère les catégories actives pour l'affichage sur la page d'accueil (maximum 4)"""
+    try:
+        # Récupérer les catégories actives depuis la base de données, limitées à 4
+        categories = Category.query.filter_by(active=True).order_by(Category.name).limit(4).all()
+        
+        categories_list = []
+        for category in categories:
+            # Générer une image par défaut basée sur le nom de la catégorie
+            category_image = generate_category_image(category.name, category.id)
+            
+            categories_list.append({
+                'id': category.id,
+                'name': category.name,
+                'description': category.description or f'Découvrez nos produits {category.name.lower()}',
+                'image': category_image,
+                'icon': category.icon or 'fas fa-folder',
+                'url': f'/products?category_filter={category.id}'
+            })
+        
+        return categories_list
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération des catégories pour affichage: {e}")
+        # Retourner des catégories par défaut en cas d'erreur
+        return get_default_categories()
+
+def generate_category_image(category_name, category_id):
+    """Génère le chemin de l'image pour une catégorie avec intelligence artificielle"""
+    import os
+    
+    # Mappage intelligent des noms de catégories vers des images
+    category_mappings = {
+        # Bébé et enfants
+        'bébé': 'img/categories/baby.jpg',
+        'bebe': 'img/categories/baby.jpg',
+        'baby': 'img/categories/baby.jpg',
+        'enfant': 'img/categories/baby.jpg',
+        'enfants': 'img/categories/baby.jpg',
+        'children': 'img/categories/baby.jpg',
+        'kids': 'img/categories/baby.jpg',
+        'puériculture': 'img/categories/baby.jpg',
+        'nourrisson': 'img/categories/baby.jpg',
+        'bambin': 'img/categories/baby.jpg',
+        'petite enfance': 'img/categories/baby.jpg',
+        
+        # Électronique et technologie
+        'électronique': 'img/category1.jpg',
+        'electronique': 'img/category1.jpg',
+        'electronics': 'img/category1.jpg',
+        'technologie': 'img/category1.jpg',
+        'informatique': 'img/category1.jpg',
+        'téléphones': 'img/category1.jpg',
+        'ordinateurs': 'img/category1.jpg',
+        'appareils': 'img/category1.jpg',
+        'gadgets': 'img/category1.jpg',
+        'smartphones': 'img/category1.jpg',
+        
+        # Mode et vêtements
+        'vêtements': 'img/category2.jpg',
+        'vetements': 'img/category2.jpg',
+        'clothing': 'img/category2.jpg',
+        'mode': 'img/category2.jpg',
+        'fashion': 'img/category2.jpg',
+        'chaussures': 'img/category2.jpg',
+        'accessoires': 'img/category2.jpg',
+        'textile': 'img/category2.jpg',
+        'habits': 'img/category2.jpg',
+        'tenues': 'img/category2.jpg',
+        
+        # Alimentation et produits frais
+        'alimentation': 'img/category3.jpg',
+        'food': 'img/category3.jpg',
+        'nourriture': 'img/category3.jpg',
+        'cuisine': 'img/category3.jpg',
+        'épicerie': 'img/category3.jpg',
+        'boissons': 'img/category3.jpg',
+        'fruits': 'img/category3.jpg',
+        'légumes': 'img/category3.jpg',
+        'bio': 'img/category3.jpg',
+        'alimentaire': 'img/category3.jpg',
+        
+        # Artisanat et culture locale
+        'artisanat': 'img/category4.jpg',
+        'artisanat local': 'img/category4.jpg',
+        'crafts': 'img/category4.jpg',
+        'fait main': 'img/category4.jpg',
+        'traditionnel': 'img/category4.jpg',
+        'local': 'img/category4.jpg',
+        'culture': 'img/category4.jpg',
+        'art': 'img/category4.jpg',
+        
+        # Beauté et cosmétiques
+        'beauté': 'img/categories/beauty.jpg',
+        'cosmétiques': 'img/categories/beauty.jpg',
+        'cosmetics': 'img/categories/beauty.jpg',
+        'beauty': 'img/categories/beauty.jpg',
+        'maquillage': 'img/categories/beauty.jpg',
+        'parfum': 'img/categories/beauty.jpg',
+        'soins': 'img/categories/beauty.jpg',
+        'skincare': 'img/categories/beauty.jpg',
+        
+        # Sport et fitness
+        'sport': 'img/categories/sports.jpg',
+        'sports': 'img/categories/sports.jpg',
+        'fitness': 'img/categories/sports.jpg',
+        'gym': 'img/categories/sports.jpg',
+        'équipement sportif': 'img/categories/sports.jpg',
+        'musculation': 'img/categories/sports.jpg',
+        'course': 'img/categories/sports.jpg',
+        'natation': 'img/categories/sports.jpg',
+        
+        # Maison et jardin
+        'maison': 'img/categories/home.jpg',
+        'home': 'img/categories/home.jpg',
+        'décoration': 'img/categories/home.jpg',
+        'meubles': 'img/categories/home.jpg',
+        'jardin': 'img/categories/home.jpg',
+        'garden': 'img/categories/home.jpg',
+        'bricolage': 'img/categories/home.jpg',
+        'électroménager': 'img/categories/home.jpg',
+        'home & garden': 'img/categories/home.jpg',
+        
+        # Livres et éducation
+        'livres': 'img/categories/books.jpg',
+        'books': 'img/categories/books.jpg',
+        'éducation': 'img/categories/books.jpg',
+        'education': 'img/categories/books.jpg',
+        'apprentissage': 'img/categories/books.jpg',
+        'lecture': 'img/categories/books.jpg',
+        'formation': 'img/categories/books.jpg',
+        'cours': 'img/categories/books.jpg',
+        
+        # Santé et bien-être
+        'santé': 'img/categories/health.jpg',
+        'health': 'img/categories/health.jpg',
+        'bien-être': 'img/categories/health.jpg',
+        'wellness': 'img/categories/health.jpg',
+        'médical': 'img/categories/health.jpg',
+        'pharmacie': 'img/categories/health.jpg',
+        'vitamines': 'img/categories/health.jpg',
+        'supplements': 'img/categories/health.jpg',
+        
+        # Automobile
+        'automobile': 'img/categories/auto.jpg',
+        'auto': 'img/categories/auto.jpg',
+        'voiture': 'img/categories/auto.jpg',
+        'véhicule': 'img/categories/auto.jpg',
+        'moto': 'img/categories/auto.jpg',
+        'pièces auto': 'img/categories/auto.jpg',
+        'automotive': 'img/categories/auto.jpg',
+        
+        # Animaux
+        'animaux': 'img/categories/pets.jpg',
+        'pets': 'img/categories/pets.jpg',
+        'chien': 'img/categories/pets.jpg',
+        'chat': 'img/categories/pets.jpg',
+        'animalerie': 'img/categories/pets.jpg',
+        'pet supplies': 'img/categories/pets.jpg',
+        
+        # Musique et instruments
+        'musique': 'img/categories/music.jpg',
+        'music': 'img/categories/music.jpg',
+        'instruments': 'img/categories/music.jpg',
+        'audio': 'img/categories/music.jpg',
+        'sound': 'img/categories/music.jpg',
+        'musical': 'img/categories/music.jpg',
+        
+        # Jeux et jouets
+        'jeux': 'img/categories/toys.jpg',
+        'jouets': 'img/categories/toys.jpg',
+        'toys': 'img/categories/toys.jpg',
+        'games': 'img/categories/toys.jpg',
+        'gaming': 'img/categories/toys.jpg',
+        'console': 'img/categories/toys.jpg',
+        'divertissement': 'img/categories/toys.jpg'
+    }
+    
+    # Normaliser le nom de la catégorie
+    category_name_clean = category_name.lower().strip()
+    
+    # Recherche exacte
+    if category_name_clean in category_mappings:
+        return category_mappings[category_name_clean]
+    
+    # Recherche par mots-clés
+    for keyword, image in category_mappings.items():
+        if keyword in category_name_clean or category_name_clean in keyword:
+            return category_mappings[keyword]
+    
+    # Vérifier si des images personnalisées existent pour cette catégorie
+    custom_image_path = f'img/categories/category_{category_id}.jpg'
+    full_path = os.path.join('static', custom_image_path)
+    
+    if os.path.exists(full_path):
+        return custom_image_path
+    
+    # Images par défaut avec rotation intelligente
+    default_images = [
+        'img/category1.jpg',  # Électronique (bleu)
+        'img/category2.jpg',  # Mode (rose/violet) 
+        'img/category3.jpg',  # Alimentation (vert)
+        'img/category4.jpg'   # Artisanat (orange/marron)
+    ]
+    
+    # Utiliser le hash du nom de catégorie pour une distribution plus équitable
+    import hashlib
+    category_hash = hashlib.md5(category_name_clean.encode()).hexdigest()
+    image_index = int(category_hash[:2], 16) % len(default_images)
+    
+    return default_images[image_index]
+
+def get_default_categories():
+    """Retourne des catégories par défaut en cas d'erreur"""
+    return [
+        {
+            'id': 1,
+            'name': 'Électronique',
+            'description': 'Découvrez nos produits électroniques',
+            'image': 'img/category1.jpg',
+            'icon': 'fas fa-laptop',
+            'url': '/products?category_filter=1'
+        },
+        {
+            'id': 2,
+            'name': 'Vêtements',
+            'description': 'Mode et vêtements pour tous',
+            'image': 'img/category2.jpg',
+            'icon': 'fas fa-tshirt',
+            'url': '/products?category_filter=2'
+        },
+        {
+            'id': 3,
+            'name': 'Alimentation',
+            'description': 'Produits alimentaires frais',
+            'image': 'img/category3.jpg',
+            'icon': 'fas fa-apple-alt',
+            'url': '/products?category_filter=3'
+        },
+        {
+            'id': 4,
+            'name': 'Artisanat local',
+            'description': 'Artisanat traditionnel comorien',
+            'image': 'img/category4.jpg',
+            'icon': 'fas fa-palette',
+            'url': '/products?category_filter=4'
+        }
+    ]
+
 @app.route('/')
 def home():
     # Get all products from active categories for public display
@@ -3506,8 +3910,10 @@ def home():
     merchant_products = [p for p in all_products if p.get('source') == 'merchant']
     static_products = [p for p in all_products if p.get('source') == 'static']
     
-    # Trier les produits admin par date de création (plus récents en premier)
+    # Trier tous les produits par date de création (plus récents en premier)
     admin_products = sorted(admin_products, key=lambda x: x.get('created_at', ''), reverse=True)
+    merchant_products = sorted(merchant_products, key=lambda x: x.get('created_at', ''), reverse=True)
+    static_products = sorted(static_products, key=lambda x: x.get('created_at', ''), reverse=True)
     
     # Priorité aux produits récents : admin d'abord, puis marchands, puis statiques
     # Add 2 most recent admin products first
@@ -3562,7 +3968,13 @@ def home():
         recommendations = recent_admin_products + recent_merchant_products + other_trending
         recommended_products = recommendations[:4]
     
-    return render_template('home.html', products=featured_products, recommended_products=recommended_products)
+    # Récupérer les catégories actives pour la section "Nos catégories"
+    categories_for_display = get_categories_for_display()
+    
+    return render_template('home.html', 
+                         products=featured_products, 
+                         recommended_products=recommended_products,
+                         display_categories=categories_for_display)
 
 @app.route('/api/search-suggestions')
 def search_suggestions():
@@ -3612,7 +4024,7 @@ def products():
     min_price = request.args.get('min_price', '')
     max_price = request.args.get('max_price', '')
     in_stock = request.args.get('in_stock', '')
-    sort_option = request.args.get('sort', 'default')
+    sort_option = request.args.get('sort', 'newest')  # Défaut: plus récents en premier
     page = request.args.get('page', 1, type=int)
     per_page = 20  # 20 produits par page
     
@@ -3667,8 +4079,18 @@ def products():
     elif sort_option == 'name_desc':
         filtered_products = sorted(filtered_products, key=lambda p: p['name'], reverse=True)
         print("Sorting by name Z-A")
+    elif sort_option == 'newest' or sort_option == 'default':
+        # Tri par date de création (plus récent en premier)
+        filtered_products = sorted(filtered_products, key=lambda p: p.get('created_at', ''), reverse=True)
+        print("Sorting by newest first")
+    elif sort_option == 'oldest':
+        # Tri par date de création (plus ancien en premier)
+        filtered_products = sorted(filtered_products, key=lambda p: p.get('created_at', ''))
+        print("Sorting by oldest first")
     else:
-        print(f"Using default sort (no sorting applied)")
+        # Par défaut: produits les plus récents en premier
+        filtered_products = sorted(filtered_products, key=lambda p: p.get('created_at', ''), reverse=True)
+        print("Using fallback sort: newest first")
     
     # Calcul de la pagination
     total_products = len(filtered_products)
@@ -4201,11 +4623,11 @@ def category(category_slug, subcategory_slug=None):
         title=f"{page_title} - DOUKA KM"
     )
 
-# Ajout d'une route pour le favicon.ico
-@app.route('/favicon.ico')
+# Ajout d'une route pour le favicon.svg
+@app.route('/favicon.svg')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static', 'img'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+                               'favicon.svg', mimetype='image/vnd.microsoft.icon')
 
 # Fonctions utilitaires pour la gestion du panier persistant
 def get_or_create_cart():
@@ -4604,12 +5026,12 @@ def cart():
 
 # Fonction utilitaire pour récupérer tous les produits (statiques + marchands)
 def get_all_products():
-    """Récupère tous les produits depuis la base de données"""
+    """Récupère tous les produits depuis la base de données, triés par date de création (plus récent en premier)"""
     try:
         all_products = []
         
-        # Récupérer tous les produits depuis la base de données
-        products_from_db = Product.query.all()
+        # Récupérer tous les produits depuis la base de données, triés par created_at DESC
+        products_from_db = Product.query.order_by(Product.created_at.desc()).all()
         
         for product_record in products_from_db:
             product_dict = product_record.to_dict()
@@ -4620,12 +5042,19 @@ def get_all_products():
                 merchant_record = Merchant.query.get(product_record.merchant_id)
                 if merchant_record:
                     product_dict['merchant_email'] = merchant_record.email
+                    product_dict['merchant_name'] = merchant_record.store_name
+                    product_dict['merchant_logo'] = merchant_record.store_logo
+                else:
+                    product_dict['merchant_name'] = 'Marchand inconnu'
+                    product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
             else:
                 product_dict['source'] = 'admin'
+                product_dict['merchant_name'] = 'DOUKA KM'
+                product_dict['merchant_logo'] = 'static/img/logo.svg'
             
             all_products.append(product_dict)
         
-        print(f"✅ Récupéré {len(all_products)} produits depuis la base de données")
+        print(f"✅ Récupéré {len(all_products)} produits depuis la base de données (triés par date)")
         return all_products
         
     except Exception as e:
@@ -4659,40 +5088,13 @@ def get_product_by_id(product_id):
             product_dict['merchant_id'] = merchant_record.id
             product_dict['merchant_logo'] = merchant_record.store_logo
             product_dict['merchant_banner'] = merchant_record.store_banner
+        else:
+            product_dict['merchant_name'] = 'Marchand inconnu'
+            product_dict['merchant_logo'] = 'static/img/merchants/store_logo_default.png'
     else:
         product_dict['source'] = 'admin'
-    
-    return product_dict
-
-def get_product_by_id(product_id):
-    """Récupère un produit par son ID depuis la base de données"""
-    try:
-        # Convertir product_id en int si c'est une string
-        product_id = int(product_id)
-    except (ValueError, TypeError):
-        return None
-    
-    # Récupérer le produit depuis la base de données
-    product_record = Product.query.get(product_id)
-    
-    if not product_record:
-        return None
-    
-    # Convertir en dictionnaire
-    product_dict = product_record.to_dict()
-    
-    # Ajouter les informations source et merchant
-    if product_record.merchant_id:
-        product_dict['source'] = 'merchant'
-        merchant_record = Merchant.query.get(product_record.merchant_id)
-        if merchant_record:
-            product_dict['merchant_email'] = merchant_record.email
-            product_dict['merchant_name'] = merchant_record.store_name
-            product_dict['merchant_id'] = merchant_record.id
-            product_dict['merchant_logo'] = merchant_record.store_logo
-            product_dict['merchant_banner'] = merchant_record.store_banner
-    else:
-        product_dict['source'] = 'admin'
+        product_dict['merchant_name'] = 'DOUKA KM'
+        product_dict['merchant_logo'] = 'static/img/logo.svg'
     
     return product_dict
 
@@ -5679,17 +6081,22 @@ def complete_order():
             eligible_total = 0
             for product in products:
                 for eligible_item in eligible_items:
-                    if eligible_item['product_id'] == product['id']:
+                    if eligible_item['id'] == product['id']:
                         eligible_total += product['subtotal']
                         break
             
             if eligible_total > 0:
-                if promo_validation_result['promo_code']['type'] == 'percentage':
-                    discount_amount = eligible_total * (promo_validation_result['promo_code']['value'] / 100)
-                    max_discount = promo_validation_result['promo_code'].get('max_discount', float('inf'))
-                    applied_discount = min(discount_amount, max_discount)
-                elif promo_validation_result['promo_code']['type'] == 'fixed':
-                    applied_discount = min(promo_validation_result['promo_code']['value'], eligible_total)
+                # Récupérer les informations du code promo depuis la base de données
+                from models import PromoCode
+                promo_record = PromoCode.query.filter_by(code=promo_code).first()
+                
+                if promo_record:
+                    if promo_record.type == 'percentage':
+                        discount_amount = eligible_total * (promo_record.value / 100)
+                        max_discount = promo_record.max_discount or float('inf')
+                        applied_discount = min(discount_amount, max_discount)
+                    elif promo_record.type == 'fixed':
+                        applied_discount = min(promo_record.value, eligible_total)
         
         total_with_shipping = total + shipping_fee - applied_discount
         
@@ -5741,6 +6148,12 @@ def complete_order():
             
             if db_order:
                 print(f"✅ Commande créée en base de données: {db_order.order_number}")
+                
+                # **NOUVELLE FONCTIONNALITÉ: Envoyer notification à l'admin**
+                try:
+                    send_admin_notification_new_order(db_order)
+                except Exception as e:
+                    print(f"⚠️ Erreur notification admin: {str(e)}")
                 
                 # **NOUVELLE FONCTIONNALITÉ: Synchroniser avec merchants_db pour compatibilité avec l'interface**
                 if merchant_email not in ['static_products', 'admin_products'] and merchant_email in merchants_db:
@@ -5828,6 +6241,15 @@ def complete_order():
         session.pop('checkout_type', None)
     except Exception as e:
         print(f"Erreur lors du nettoyage du panier: {str(e)}")
+    
+    # **NOUVEAU: Appliquer le code promo (incrémenter le compteur d'utilisation)**
+    if promo_code and promo_validation_result and promo_validation_result.get('valid'):
+        print(f"📊 Application du code promo: {promo_code}")
+        promo_applied = apply_promo_code(promo_code, user_email)
+        if promo_applied:
+            print(f"✅ Compteur d'utilisation du code promo '{promo_code}' mis à jour")
+        else:
+            print(f"⚠️ Échec de la mise à jour du compteur pour le code promo '{promo_code}'")
     
     # Réponse de succès
     return jsonify({
@@ -5944,34 +6366,67 @@ def orders():
 @app.route('/addresses')
 @login_required
 def addresses():
-    """Affiche la page des adresses de l'utilisateur - Version migrée"""
+    """Affiche la page des adresses de l'utilisateur - Version multi-adresses"""
     user_email = session.get('user_email')
     
-    # Récupérer l'utilisateur depuis la base de données d'abord
+    # Récupérer l'utilisateur depuis la base de données
     user_record = User.query.filter_by(email=user_email).first()
     
     if user_record:
-        # Utiliser les adresses stockées dans les champs de la base de données
+        # Utiliser les nouvelles adresses de la table Address
         user_addresses = []
         
-        # Si l'utilisateur a une adresse principale dans son profil
-        if user_record.address:
+        # Récupérer toutes les adresses de l'utilisateur
+        db_addresses = Address.query.filter_by(user_id=user_record.id).order_by(Address.is_default.desc(), Address.created_at.asc()).all()
+        
+        for addr in db_addresses:
             user_addresses.append({
-                'id': 1,
-                'name': 'Adresse principale',
-                'full_name': f"{user_record.first_name or ''} {user_record.last_name or ''}".strip(),
-                'street': user_record.address,
-                'city': user_record.city or '',
-                'region': user_record.region or '',
-                'phone': user_record.phone or '',
-                'is_default': True
+                'id': addr.id,
+                'name': addr.name,
+                'full_name': addr.full_name,
+                'street': addr.street,
+                'city': addr.city,
+                'region': addr.region,
+                'phone': addr.phone,
+                'is_default': addr.is_default
             })
         
-        # Vérifier s'il y a des adresses supplémentaires en JSON (pour extension future)
-        # Pour l'instant, on utilise seulement l'adresse principale du profil
+        # Si aucune adresse dans la nouvelle table, fallback vers l'ancienne adresse du profil
+        if not user_addresses and user_record.address:
+            # Migration automatique de l'adresse du profil
+            try:
+                new_address = Address(
+                    user_id=user_record.id,
+                    name='Adresse principale',
+                    full_name=f"{user_record.first_name} {user_record.last_name}",
+                    street=user_record.address,
+                    city=user_record.city or 'N/A',
+                    region=user_record.region or 'N/A',
+                    phone=user_record.phone or 'N/A',
+                    is_default=True
+                )
+                
+                db.session.add(new_address)
+                db.session.commit()
+                
+                # Ajouter à la liste pour l'affichage
+                user_addresses.append({
+                    'id': new_address.id,
+                    'name': new_address.name,
+                    'full_name': new_address.full_name,
+                    'street': new_address.street,
+                    'city': new_address.city,
+                    'region': new_address.region,
+                    'phone': new_address.phone,
+                    'is_default': new_address.is_default
+                })
+                
+            except Exception as e:
+                print(f"Erreur migration automatique: {e}")
+                db.session.rollback()
         
     else:
-        # Fallback: utiliser l'ancien système
+        # Fallback: utiliser l'ancien système (pour compatibilité)
         user = users_db.get(user_email, {})
         user_addresses = user.get('addresses', [])
         
@@ -5986,19 +6441,21 @@ def addresses():
                 'phone': user.get('phone', ''),
                 'is_default': True
             }]
-            # Sauvegarder cette adresse dans le profil utilisateur
-            users_db[user_email]['addresses'] = user_addresses
     
     return render_template('addresses.html', addresses=user_addresses)
 
 @app.route('/add-address', methods=['POST'])
 @login_required
 def add_address():
-    """Ajouter une nouvelle adresse - Version migrée"""
+    """Ajouter une nouvelle adresse - Version multi-adresses complète"""
     user_email = session.get('user_email')
     
-    # Récupérer l'utilisateur depuis la base de données d'abord
+    # Récupérer l'utilisateur depuis la base de données
     user_record = User.query.filter_by(email=user_email).first()
+    
+    if not user_record:
+        flash('Utilisateur non trouvé.', 'danger')
+        return redirect(url_for('addresses'))
     
     # Récupérer les données du formulaire
     name = request.form.get('name', '').strip()
@@ -6014,178 +6471,122 @@ def add_address():
         flash('Tous les champs sont requis.', 'danger')
         return redirect(url_for('addresses'))
     
-    if user_record:
-        # Pour l'instant, on ne supporte qu'une seule adresse (adresse principale du profil)
-        # Mise à jour de l'adresse principale dans la base de données
-        try:
-            user_record.address = street
-            user_record.city = city
-            user_record.region = region
-            user_record.phone = phone
-            user_record.updated_at = datetime.utcnow()
-            
-            db.session.commit()
-            
-            # Synchroniser avec le dictionnaire en mémoire pour compatibilité
-            if user_email in users_db:
-                users_db[user_email].update({
-                    'address': street,
-                    'city': city,
-                    'region': region,
-                    'phone': phone
-                })
-            
-            flash('Adresse mise à jour avec succès.', 'success')
-            return redirect(url_for('addresses'))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash('Erreur lors de la mise à jour de l\'adresse.', 'error')
-            print(f"Erreur mise à jour adresse: {e}")
-            return redirect(url_for('addresses'))
-    else:
-        # Fallback: utiliser l'ancien système
-        user = users_db.get(user_email, {})
-        if not user:
-            flash('Utilisateur non trouvé.', 'danger')
-            return redirect(url_for('addresses'))
-        
-        # Récupérer ou initialiser la liste d'adresses de l'utilisateur
-        if 'addresses' not in user:
-            user['addresses'] = []
-        
-        # Générer un ID pour la nouvelle adresse
-        new_id = 1
-        if user['addresses']:
-            new_id = max(addr['id'] for addr in user['addresses']) + 1
+    try:
+        # Si cette adresse doit être par défaut, retirer le statut des autres
+        if is_default:
+            existing_default = Address.query.filter_by(user_id=user_record.id, is_default=True).all()
+            for addr in existing_default:
+                addr.is_default = False
         
         # Créer la nouvelle adresse
-        new_address = {
-            'id': new_id,
-            'name': name,
-            'full_name': full_name,
-            'street': street,
-            'city': city,
-            'region': region,
-            'phone': phone,
-            'is_default': is_default
-        }
+        new_address = Address(
+            user_id=user_record.id,
+            name=name,
+            full_name=full_name,
+            street=street,
+            city=city,
+            region=region,
+            phone=phone,
+            is_default=is_default
+        )
         
-        # Si cette adresse est définie par défaut, mettre à jour les autres adresses
-        if is_default:
-            for addr in user['addresses']:
-                addr['is_default'] = False
-        
-        # Ajouter la nouvelle adresse à la liste
-        user['addresses'].append(new_address)
+        db.session.add(new_address)
+        db.session.commit()
         
         flash('Adresse ajoutée avec succès.', 'success')
-        return redirect(url_for('addresses'))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de l'ajout d'adresse: {e}")
+        flash('Erreur lors de l\'ajout de l\'adresse.', 'danger')
+    
+    return redirect(url_for('addresses'))
 
 @app.route('/set-default-address/<int:address_id>', methods=['POST'])
 @login_required
 def set_default_address(address_id):
+    """Définir une adresse comme adresse par défaut - Version multi-adresses"""
     user_email = session.get('user_email')
     
-    # **DATABASE-FIRST: Récupérer l'utilisateur depuis la base de données d'abord**
+    # Récupérer l'utilisateur depuis la base de données
     user_record = User.query.filter_by(email=user_email).first()
     
-    if user_record:
-        # Pour l'instant, avec une seule adresse (adresse principale), 
-        # cette fonction est principalement pour compatibilité
-        flash('Adresse définie comme adresse par défaut.', 'success')
-        print(f"✅ Adresse par défaut définie pour utilisateur DB: {user_email}")
+    if not user_record:
+        flash('Utilisateur non trouvé.', 'danger')
         return redirect(url_for('addresses'))
-    else:
-        # Fallback: utiliser l'ancien système
-        user = users_db.get(user_email)
+    
+    try:
+        # Récupérer l'adresse à définir par défaut
+        target_address = Address.query.filter_by(id=address_id, user_id=user_record.id).first()
         
-        if not user or 'addresses' not in user:
-            flash('Utilisateur ou adresses non trouvés.', 'danger')
+        if not target_address:
+            flash('Adresse non trouvée.', 'danger')
             return redirect(url_for('addresses'))
         
-        # Mettre à jour les statuts par défaut pour toutes les adresses
-        address_found = False
-        for addr in user['addresses']:
-            if addr['id'] == address_id:
-                addr['is_default'] = True
-                address_found = True
-            else:
-                addr['is_default'] = False
+        # Retirer le statut par défaut de toutes les autres adresses
+        other_addresses = Address.query.filter_by(user_id=user_record.id, is_default=True).all()
+        for addr in other_addresses:
+            addr.is_default = False
         
-        if not address_found:
-            flash('Adresse non trouvée.', 'danger')
-        else:
-            flash('Adresse définie comme adresse par défaut.', 'success')
-            print(f"🔄 Adresse par défaut définie pour utilisateur dictionnaire: {user_email}")
+        # Définir la nouvelle adresse par défaut
+        target_address.is_default = True
         
-        return redirect(url_for('addresses'))
+        db.session.commit()
+        flash('Adresse définie comme adresse par défaut.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de la définition de l'adresse par défaut: {e}")
+        flash('Erreur lors de la mise à jour.', 'danger')
+    
+    return redirect(url_for('addresses'))
 
 @app.route('/delete-address/<int:address_id>', methods=['POST'])
 @login_required
 def delete_address(address_id):
+    """Supprimer une adresse - Version multi-adresses"""
     user_email = session.get('user_email')
     
-    # **DATABASE-FIRST: Récupérer l'utilisateur depuis la base de données d'abord**
+    # Récupérer l'utilisateur depuis la base de données
     user_record = User.query.filter_by(email=user_email).first()
     
-    if user_record:
-        # Pour l'instant, avec une seule adresse (adresse principale),
-        # supprimer signifie vider l'adresse principale
-        try:
-            user_record.address = None
-            user_record.city = None
-            user_record.region = None
-            user_record.updated_at = datetime.utcnow()
-            
-            db.session.commit()
-            
-            # Synchroniser avec le dictionnaire si présent
-            if user_email in users_db and 'addresses' in users_db[user_email]:
-                users_db[user_email]['addresses'] = []
-                print(f"🔄 Adresse supprimée synchronisée avec dictionnaire: {user_email}")
-            
-            flash('Adresse supprimée avec succès.', 'success')
-            print(f"✅ Adresse supprimée pour utilisateur DB: {user_email}")
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"❌ Erreur lors de la suppression d'adresse DB: {str(e)}")
-            flash('Erreur lors de la suppression de l\'adresse.', 'danger')
-            
+    if not user_record:
+        flash('Utilisateur non trouvé.', 'danger')
         return redirect(url_for('addresses'))
-    else:
-        # Fallback: utiliser l'ancien système
-        user = users_db.get(user_email)
+    
+    try:
+        # Récupérer l'adresse à supprimer
+        address_to_delete = Address.query.filter_by(id=address_id, user_id=user_record.id).first()
         
-        if not user or 'addresses' not in user:
-            flash('Utilisateur ou adresses non trouvés.', 'danger')
+        if not address_to_delete:
+            flash('Adresse non trouvée.', 'danger')
             return redirect(url_for('addresses'))
         
-        # Rechercher et supprimer l'adresse
-        address_to_delete = None
-        for addr in user['addresses']:
-            if addr['id'] == address_id:
-                address_to_delete = addr
-                break
+        # Vérifier qu'il reste au moins une autre adresse si celle-ci est par défaut
+        remaining_addresses = Address.query.filter_by(user_id=user_record.id).count()
         
-        if address_to_delete:
-            # Vérifier si l'adresse à supprimer est l'adresse par défaut
-            is_default = address_to_delete.get('is_default', False)
-            # Supprimer l'adresse
-            user['addresses'].remove(address_to_delete)
-            
-            # Si l'adresse supprimée était l'adresse par défaut et qu'il reste des adresses,
-            # définir la première adresse restante comme adresse par défaut
-            if is_default and user['addresses']:
-                user['addresses'][0]['is_default'] = True
-            
-            flash('Adresse supprimée avec succès.', 'success')
-            print(f"🔄 Adresse supprimée pour utilisateur dictionnaire: {user_email}")
-        else:
-            flash('Adresse non trouvée.', 'danger')
+        if remaining_addresses <= 1:
+            flash('Vous ne pouvez pas supprimer votre dernière adresse.', 'warning')
+            return redirect(url_for('addresses'))
         
-        return redirect(url_for('addresses'))
+        was_default = address_to_delete.is_default
+        
+        # Supprimer l'adresse
+        db.session.delete(address_to_delete)
+        
+        # Si l'adresse supprimée était par défaut, définir une autre comme par défaut
+        if was_default:
+            next_address = Address.query.filter_by(user_id=user_record.id).first()
+            if next_address:
+                next_address.is_default = True
+        
+        db.session.commit()
+        flash('Adresse supprimée avec succès.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erreur lors de la suppression d'adresse: {e}")
+        flash('Erreur lors de la suppression.', 'danger')
     
     return redirect(url_for('addresses'))
 
@@ -6569,19 +6970,33 @@ def order_detail(order_id):
         }
         order_data['status_color'] = status_colors.get(order_data['status'], 'secondary')
     
+    # S'assurer que la date de commande est disponible sous le nom 'date' pour compatibilité
+    if 'date' not in order_data and 'created_at' in order_data:
+        order_data['date'] = order_data['created_at']
+    elif 'date' not in order_data:
+        order_data['date'] = '--'
+    
     # S'assurer que les dates spécifiques sont présentes
-    if 'processing_date' not in order_data:
+    if 'processing_date' not in order_data or not order_data['processing_date']:
         # Si la commande est au moins en traitement, utiliser la date de création
         if order_data['status'] in ['processing', 'shipped', 'delivered']:
-            order_data['processing_date'] = order_data.get('date', '')
+            order_data['processing_date'] = order_data.get('created_at', order_data.get('date', ''))
         else:
             order_data['processing_date'] = None
     
-    if 'shipping_date' not in order_data:
-        order_data['shipping_date'] = None
+    if 'shipping_date' not in order_data or not order_data['shipping_date']:
+        # Si la commande est au moins expédiée, utiliser la date de création ou de traitement
+        if order_data['status'] in ['shipped', 'delivered']:
+            order_data['shipping_date'] = order_data.get('created_at', order_data.get('date', ''))
+        else:
+            order_data['shipping_date'] = None
     
-    if 'delivery_date' not in order_data:
-        order_data['delivery_date'] = None
+    if 'delivery_date' not in order_data or not order_data['delivery_date']:
+        # Si la commande est livrée, utiliser la date de création
+        if order_data['status'] == 'delivered':
+            order_data['delivery_date'] = order_data.get('created_at', order_data.get('date', ''))
+        else:
+            order_data['delivery_date'] = None
     
     return render_template('order_detail.html', order=order_data)
 
@@ -7984,27 +8399,39 @@ def admin_update_withdrawal(request_id):
                 
                 db.session.commit()
                 print(f"✅ Demande de retrait {request_id} mise à jour en base de données")
+                
+                # Créer un objet compatible pour les notifications
+                withdrawal_request = {
+                    'id': withdrawal_db.request_id,
+                    'amount': withdrawal_db.amount,
+                    'method': withdrawal_db.method,
+                    'status': new_status,
+                    'notes': withdrawal_db.notes or '',
+                    'admin_notes': admin_notes,
+                    'reference': reference,
+                    'requested_at': withdrawal_db.requested_at.strftime('%Y-%m-%d %H:%M:%S') if withdrawal_db.requested_at else None,
+                    'processed_at': withdrawal_db.processed_at.strftime('%Y-%m-%d %H:%M:%S') if withdrawal_db.processed_at else None
+                }
+                
             except Exception as e:
                 db.session.rollback()
                 print(f"❌ Erreur mise à jour BDD: {str(e)}")
                 return jsonify({'success': False, 'message': f'Erreur de base de données: {str(e)}'})
         
-        # METTRE À JOUR AUSSI LE DICTIONNAIRE EN MÉMOIRE pour compatibilité
-        if withdrawal_request:
-            # Sauvegarder l'ancien statut pour la notification
-            old_status = withdrawal_request['status']
-        
-        # Mettre à jour la demande
-        withdrawal_request['status'] = new_status
-        withdrawal_request['admin_notes'] = admin_notes
-        withdrawal_request['reference'] = reference
-        
-        if new_status in ['completed', 'rejected']:
-            withdrawal_request['processed_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # METTRE À JOUR AUSSI LE DICTIONNAIRE EN MÉMOIRE pour compatibilité (si existe)
+        elif withdrawal_request:
+            # Mettre à jour la demande dans le dictionnaire
+            withdrawal_request['status'] = new_status
+            withdrawal_request['admin_notes'] = admin_notes
+            withdrawal_request['reference'] = reference
+            
+            if new_status in ['completed', 'rejected']:
+                withdrawal_request['processed_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         # Envoyer une notification email au marchand si le statut a changé
-        if old_status != new_status and merchant_email:
+        if old_status != new_status and merchant_email and withdrawal_request:
             try:
+                print(f"🔄 Envoi notification: {merchant_email}, statut {old_status} → {new_status}")
                 
                 send_merchant_withdrawal_status_notification(
                     merchant_email, 
@@ -8024,8 +8451,10 @@ def admin_update_withdrawal(request_id):
         })
         
     except Exception as e:
-        print(f"Erreur lors de la mise à jour du retrait: {e}")
-        return jsonify({'success': False, 'message': 'Une erreur est survenue'})
+        print(f"❌ ERREUR DÉTAILLÉE lors de la mise à jour du retrait: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
+        return jsonify({'success': False, 'message': f'Erreur: {str(e)}'})
 
 @app.route('/admin/withdrawal/<request_id>/details')
 @admin_required
@@ -9533,15 +9962,22 @@ def admin_order_detail(order_id):
             
             # Ajouter les items de la commande
             target_order['items'] = []
+            subtotal = 0
             for item in db_order.items:
+                item_subtotal = item.price * item.quantity
+                subtotal += item_subtotal
                 target_order['items'].append({
                     'name': item.name,
                     'quantity': item.quantity,
                     'price': item.price,
-                    'subtotal': item.price * item.quantity,
+                    'subtotal': item_subtotal,
                     'image': item.image,
-                    'variant_details': item.variant_details
+                    'variant_details': item.variant_details,
+                    'options': item.get_options()  # Ajouter les options
                 })
+            target_order['subtotal'] = subtotal
+            # Frais de livraison
+            target_order['shipping_fee'] = getattr(db_order, 'delivery_fee', 0) or 0
             
             merchant_info = {
                 'email': merchant_record.email,
@@ -9599,14 +10035,23 @@ def admin_order_detail(order_id):
             }
             
             # Ajouter les items
+            subtotal = 0
             for item in admin_order.items:
+                item_subtotal = item.price * item.quantity
+                subtotal += item_subtotal
+                # Récupérer les options si la méthode existe, sinon None
+                options = item.get_options() if hasattr(item, 'get_options') else getattr(item, 'options', None)
                 target_order['items'].append({
                     'name': item.name,
                     'quantity': item.quantity,
                     'price': item.price,
-                    'subtotal': item.price * item.quantity,
-                    'image': item.image or '/static/images/default.jpg'
+                    'subtotal': item_subtotal,
+                    'image': item.image or '/static/images/default.jpg',
+                    'options': options
                 })
+            target_order['subtotal'] = subtotal
+            # Frais de livraison
+            target_order['shipping_fee'] = getattr(admin_order, 'delivery_fee', 0) or 0
             
             merchant_info = {
                 'email': 'admin@douka-km.com',
@@ -9643,8 +10088,47 @@ def admin_order_detail(order_id):
     
     target_order['customer_info'] = customer_info
     
+    # Chercher le livreur assigné à cette commande (merchant ou admin)
+    assigned_livreur_email = None
+    assigned_livreur_info = None
+    order_type = 'merchant' if target_order.get('merchant_info', {}).get('email') != 'admin@douka-km.com' else 'admin'
+    merchant_email = target_order.get('merchant_info', {}).get('email') if order_type == 'merchant' else None
+    # Recherche dans livreur_assignments_db (même si la commande n'est plus assignée, on veut garder la trace)
+    # On va aussi regarder dans la commande elle-même si possible
+    # 1. Chercher dans les assignations en mémoire
+    for livreur_email, assignments in livreur_assignments_db.items():
+        for assignment in assignments:
+            if (str(assignment['order_id']) == str(order_id) and assignment['order_type'] == order_type):
+                if order_type == 'merchant' and merchant_email:
+                    if assignment.get('merchant_email') == merchant_email:
+                        assigned_livreur_email = livreur_email
+                        break
+                else:
+                    assigned_livreur_email = livreur_email
+                    break
+        if assigned_livreur_email:
+            break
+    # 2. Si pas trouvé, essayer de retrouver l'email du livreur dans la commande (si stocké)
+    if not assigned_livreur_email and hasattr(target_order, 'livreur_email'):
+        assigned_livreur_email = getattr(target_order, 'livreur_email', None)
+    # 3. Si pas trouvé, essayer de retrouver dans une table d'historique (à implémenter si besoin)
+    # 4. Récupérer toutes les infos du livreur si possible
+    if assigned_livreur_email:
+        user = users_db.get(assigned_livreur_email)
+        if user:
+            assigned_livreur_info = {
+                'email': assigned_livreur_email,
+                'name': f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+                'phone': user.get('phone', ''),
+                'region': user.get('region', ''),
+                'city': user.get('city', ''),
+                'address': user.get('address', ''),
+            }
+        else:
+            assigned_livreur_info = {'email': assigned_livreur_email}
     return render_template('admin/order_detail.html', 
-                          order=target_order)
+                          order=target_order,
+                          assigned_livreur=assigned_livreur_info)
 
 @app.route('/admin/orders/<order_id>/update-status', methods=['POST'])
 @admin_required
@@ -10224,6 +10708,195 @@ def admin_send_merchant_balance(merchant_id):
         flash('Erreur lors du traitement du retrait administratif', 'danger')
     
     return redirect(url_for('admin_merchant_detail', merchant_id=merchant_id))
+
+def delete_merchant_completely(merchant_id):
+    """
+    Supprime complètement un marchand et toutes ses données associées
+    
+    Args:
+        merchant_id (int): ID du marchand à supprimer
+    
+    Returns:
+        dict: Résultats de la suppression avec statistiques
+    """
+    deletion_stats = {
+        'success': False,
+        'merchant_deleted': False,
+        'products_deleted': 0,
+        'orders_deleted': 0,
+        'reviews_deleted': 0,
+        'withdrawals_deleted': 0,
+        'cart_items_deleted': 0,
+        'wishlist_items_deleted': 0,
+        'order_items_deleted': 0,
+        'errors': []
+    }
+    
+    try:
+        # Récupérer le marchand depuis la base de données
+        merchant_record = Merchant.query.get(merchant_id)
+        if not merchant_record:
+            deletion_stats['errors'].append("Marchand non trouvé")
+            return deletion_stats
+        
+        merchant_email = merchant_record.email
+        store_name = merchant_record.store_name
+        
+        print(f"🗑️ Début de suppression complète du marchand: {store_name} ({merchant_email})")
+        
+        # Récupérer d'abord tous les IDs de produits du marchand
+        product_ids = [p.id for p in Product.query.filter_by(merchant_id=merchant_id).all()]
+        products_count = len(product_ids)
+        
+        print(f"📦 Produits à supprimer: {product_ids}")
+        
+        # Étape 1: Supprimer tous les OrderItems qui référencent les produits de ce marchand
+        if product_ids:
+            order_items_to_delete = OrderItem.query.filter(OrderItem.product_id.in_(product_ids)).all()
+            for order_item in order_items_to_delete:
+                print(f"🛒 Suppression OrderItem ID {order_item.id} (product_id: {order_item.product_id})")
+                db.session.delete(order_item)
+                deletion_stats['order_items_deleted'] += 1
+            
+            # Flush pour valider cette première étape
+            db.session.flush()
+            print(f"✅ {deletion_stats['order_items_deleted']} OrderItems supprimés")
+        
+        # Étape 2: Supprimer les avis des produits
+        if product_ids:
+            reviews_to_delete = Review.query.filter(Review.product_id.in_(product_ids)).all()
+            for review in reviews_to_delete:
+                db.session.delete(review)
+                deletion_stats['reviews_deleted'] += 1
+            print(f"✅ {deletion_stats['reviews_deleted']} avis supprimés")
+        
+        # Étape 3: Supprimer les items du panier
+        if product_ids:
+            cart_items_to_delete = CartItem.query.filter(CartItem.product_id.in_(product_ids)).all()
+            for cart_item in cart_items_to_delete:
+                db.session.delete(cart_item)
+                deletion_stats['cart_items_deleted'] += 1
+            print(f"✅ {deletion_stats['cart_items_deleted']} items panier supprimés")
+        
+        # Étape 4: Supprimer les items de la wishlist
+        if product_ids:
+            wishlist_items_to_delete = WishlistItem.query.filter(WishlistItem.product_id.in_(product_ids)).all()
+            for wishlist_item in wishlist_items_to_delete:
+                db.session.delete(wishlist_item)
+                deletion_stats['wishlist_items_deleted'] += 1
+            print(f"✅ {deletion_stats['wishlist_items_deleted']} items wishlist supprimés")
+        
+        # Étape 5: Maintenant supprimer les produits du marchand
+        products_to_delete = Product.query.filter_by(merchant_id=merchant_id).all()
+        for product in products_to_delete:
+            db.session.delete(product)
+        deletion_stats['products_deleted'] = len(products_to_delete)
+        print(f"✅ {deletion_stats['products_deleted']} produits supprimés")
+        
+        # Étape 6: Supprimer les commandes vides du marchand (celles qui n'ont plus d'items)
+        orders_to_delete = Order.query.filter_by(merchant_id=merchant_id).all()
+        for order in orders_to_delete:
+            # Vérifier s'il reste des items (il ne devrait plus y en avoir)
+            remaining_items = OrderItem.query.filter_by(order_id=order.id).count()
+            if remaining_items > 0:
+                print(f"⚠️ Commande {order.id} a encore {remaining_items} items - suppression forcée")
+                # Supprimer les items restants
+                for item in OrderItem.query.filter_by(order_id=order.id).all():
+                    db.session.delete(item)
+            
+            db.session.delete(order)
+        deletion_stats['orders_deleted'] = len(orders_to_delete)
+        print(f"✅ {deletion_stats['orders_deleted']} commandes supprimées")
+        
+        # Étape 7: Supprimer toutes les demandes de retrait du marchand
+        withdrawals = WithdrawalRequest.query.filter_by(merchant_id=merchant_id).all()
+        for withdrawal in withdrawals:
+            db.session.delete(withdrawal)
+        deletion_stats['withdrawals_deleted'] = len(withdrawals)
+        print(f"✅ {deletion_stats['withdrawals_deleted']} demandes de retrait supprimées")
+        
+        # Étape 8: Supprimer le marchand lui-même
+        db.session.delete(merchant_record)
+        print(f"✅ Marchand {store_name} marqué pour suppression")
+        
+        # Étape 9: Commit final de toutes les suppressions
+        db.session.commit()
+        deletion_stats['merchant_deleted'] = True
+        deletion_stats['success'] = True
+        
+        print(f"✅ Marchand {store_name} supprimé complètement:")
+        print(f"   - Produits supprimés: {deletion_stats['products_deleted']}")
+        print(f"   - Commandes supprimées: {deletion_stats['orders_deleted']}")
+        print(f"   - OrderItems supprimés: {deletion_stats['order_items_deleted']}")
+        print(f"   - Avis supprimés: {deletion_stats['reviews_deleted']}")
+        print(f"   - Demandes de retrait supprimées: {deletion_stats['withdrawals_deleted']}")
+        print(f"   - Items panier supprimés: {deletion_stats['cart_items_deleted']}")
+        print(f"   - Items wishlist supprimés: {deletion_stats['wishlist_items_deleted']}")
+        
+        # 10. Nettoyer aussi les dictionnaires en mémoire (pour compatibilité)
+        if merchant_email in merchants_db:
+            del merchants_db[merchant_email]
+        
+        if merchant_email in withdrawal_requests_db:
+            del withdrawal_requests_db[merchant_email]
+        
+        # Nettoyer les assignations de livreur
+        for livreur_email, assignments in livreur_assignments_db.items():
+            livreur_assignments_db[livreur_email] = [
+                assignment for assignment in assignments 
+                if not (assignment.get('order_type') == 'merchant' and 
+                       assignment.get('merchant_email') == merchant_email)
+            ]
+        
+        print(f"🧹 Nettoyage des dictionnaires en mémoire terminé")
+        
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f"Erreur lors de la suppression: {str(e)}"
+        deletion_stats['errors'].append(error_msg)
+        print(f"❌ {error_msg}")
+    
+    return deletion_stats
+
+@app.route('/admin/merchants/<int:merchant_id>/delete', methods=['POST'])
+@permission_required(['super_admin', 'admin'])
+def admin_delete_merchant(merchant_id):
+    """Route pour supprimer complètement un marchand et toutes ses données"""
+    
+    # Vérifications de sécurité
+    confirmation = request.form.get('confirmation', '').strip()
+    if confirmation != 'SUPPRIMER':
+        flash('Vous devez taper "SUPPRIMER" pour confirmer la suppression', 'danger')
+        return redirect(url_for('admin_merchant_detail', merchant_id=merchant_id))
+    
+    # Récupérer les informations du marchand avant suppression
+    merchant_record = Merchant.query.get(merchant_id)
+    if not merchant_record:
+        flash('Marchand non trouvé', 'danger')
+        return redirect(url_for('admin_merchants'))
+    
+    store_name = merchant_record.store_name
+    merchant_email = merchant_record.email
+    
+    # Effectuer la suppression complète
+    deletion_result = delete_merchant_completely(merchant_id)
+    
+    if deletion_result['success']:
+        flash(f'Marchand "{store_name}" supprimé avec succès. '
+              f'Produits supprimés: {deletion_result["products_deleted"]}, '
+              f'Commandes supprimées: {deletion_result["orders_deleted"]}', 'success')
+        
+        # Log pour audit
+        print(f"🗑️ SUPPRESSION MARCHAND par {session.get('admin_email', 'unknown')}: "
+              f"{store_name} ({merchant_email}) - "
+              f"Produits: {deletion_result['products_deleted']}, "
+              f"Commandes: {deletion_result['orders_deleted']}")
+        
+        return redirect(url_for('admin_merchants'))
+    else:
+        error_messages = '; '.join(deletion_result['errors'])
+        flash(f'Erreur lors de la suppression: {error_messages}', 'danger')
+        return redirect(url_for('admin_merchant_detail', merchant_id=merchant_id))
 
 @app.route('/admin/products/<int:product_id>/edit', methods=['GET', 'POST'])
 @admin_required
@@ -11395,6 +12068,7 @@ def admin_admin_products():
 @permission_required(['super_admin', 'admin'])
 def admin_users():
     """Page d'administration pour la gestion des utilisateurs"""
+    from datetime import datetime
     
     # Paramètres de pagination et filtres
     page = request.args.get('page', 1, type=int)
@@ -11419,10 +12093,11 @@ def admin_users():
                 'first_name': user_record.first_name or '',
                 'last_name': user_record.last_name or '',
                 'phone': user_record.phone or '',
+                'address': user_record.address or '',
                 'city': user_record.city or '',
                 'region': user_record.region or '',
-                'registration_date': user_record.created_at.strftime('%Y-%m-%d') if user_record.created_at else '',
-                'last_login': user_record.last_login.strftime('%Y-%m-%d') if user_record.last_login else '',
+                'created_at': user_record.created_at,  # Garder l'objet datetime pour le template
+                'last_login': user_record.last_login,
                 'is_active': user_record.is_active,
                 'email_verified': user_record.email_verified,
                 'orders_count': user_stats['total_orders'],
@@ -11442,15 +12117,25 @@ def admin_users():
     for email, user in users_db.items():
         # Vérifier si cet utilisateur n'est pas déjà dans all_users
         if not any(u['email'] == email for u in all_users):
+            # Convertir la date string en objet datetime si possible
+            created_at = None
+            if user.get('registration_date'):
+                try:
+                    from datetime import datetime
+                    created_at = datetime.strptime(user.get('registration_date'), '%Y-%m-%d')
+                except:
+                    created_at = None
+            
             user_info = {
                 'id': user.get('id'),
                 'email': email,
                 'first_name': user.get('first_name', ''),
                 'last_name': user.get('last_name', ''),
                 'phone': user.get('phone', ''),
+                'address': user.get('address', ''),
                 'city': user.get('city', ''),
                 'region': user.get('region', ''),
-                'registration_date': user.get('registration_date', ''),
+                'created_at': created_at,  # Objet datetime pour compatibilité template
                 'last_login': user.get('last_login', ''),
                 'is_active': user.get('is_active', True),
                 'email_verified': user.get('email_verified', False),
@@ -11486,7 +12171,7 @@ def admin_users():
         all_users = [user for user in all_users if not user.get('is_active', True)]
     
     # Trier par date d'inscription (plus récents en premier)
-    all_users.sort(key=lambda x: x.get('registration_date', ''), reverse=True)
+    all_users.sort(key=lambda x: x.get('created_at') or datetime.min, reverse=True)
     
     # Pagination
     total_users = len(all_users)
@@ -11512,6 +12197,8 @@ def admin_users():
         'total_users': len(all_users),
         'active_users': len([u for u in all_users if u.get('is_active', True)]),
         'inactive_users': len([u for u in all_users if not u.get('is_active', True)]),
+        'verified_emails': len([u for u in all_users if u.get('email_verified', False)]),
+        'unverified_emails': len([u for u in all_users if not u.get('email_verified', False)]),
         'users_with_orders': len([u for u in all_users if u.get('orders_count', 0) > 0]),
         'total_revenue': sum(u.get('total_spent', 0) for u in all_users),
         'avg_orders_per_user': sum(u.get('orders_count', 0) for u in all_users) / len(all_users) if all_users else 0
@@ -11775,6 +12462,76 @@ def admin_toggle_user_status(user_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Erreur lors de la mise à jour: {str(e)}'})
 
+@app.route('/admin/users/<int:user_id>/verify-email', methods=['POST'])
+@admin_required
+def admin_verify_user_email(user_id):
+    """Vérifier manuellement l'email d'un utilisateur - Version database-first"""
+    
+    # **DATABASE-FIRST: Chercher l'utilisateur dans la base de données d'abord**
+    try:
+        user_record = User.query.filter_by(id=user_id).first()
+        
+        if user_record:
+            # Vérifier si l'email n'est pas déjà vérifié
+            if user_record.email_verified:
+                return jsonify({
+                    'success': False, 
+                    'message': 'L\'email de cet utilisateur est déjà vérifié'
+                })
+            
+            # Marquer l'email comme vérifié dans la base de données
+            user_record.email_verified = True
+            db.session.commit()
+            
+            # Synchroniser avec le dictionnaire si l'utilisateur y existe
+            if user_record.email in users_db:
+                users_db[user_record.email]['email_verified'] = True
+            
+            print(f"✅ Email de l'utilisateur {user_record.email} vérifié par l'admin dans la base de données")
+            
+            return jsonify({
+                'success': True, 
+                'message': f'Email de {user_record.first_name} {user_record.last_name} vérifié avec succès'
+            })
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la vérification de l'email en DB: {str(e)}")
+        db.session.rollback()
+    
+    # Fallback: chercher dans le dictionnaire
+    target_user = None
+    user_email = None
+    
+    for email, user in users_db.items():
+        if user.get('id') == user_id:
+            target_user = user
+            user_email = email
+            break
+    
+    if not target_user:
+        return jsonify({'success': False, 'message': 'Utilisateur non trouvé'})
+    
+    try:
+        # Vérifier si l'email n'est pas déjà vérifié
+        if target_user.get('email_verified', False):
+            return jsonify({
+                'success': False, 
+                'message': 'L\'email de cet utilisateur est déjà vérifié'
+            })
+        
+        # Marquer l'email comme vérifié dans le dictionnaire
+        users_db[user_email]['email_verified'] = True
+        
+        print(f"🔄 Email de l'utilisateur {user_email} vérifié par l'admin dans le dictionnaire (fallback)")
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Email de {target_user["first_name"]} {target_user["last_name"]} vérifié avec succès'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Erreur lors de la vérification: {str(e)}'})
+
 @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @admin_required
 def admin_delete_user(user_id):
@@ -11794,22 +12551,16 @@ def admin_delete_user(user_id):
         return jsonify({'success': False, 'message': 'Utilisateur non trouvé'})
     
     try:
-        # Vérifier s'il y a des commandes en cours dans les données mémoire
+        # Vérifier s'il y a des commandes associées à cet utilisateur
         user_orders = target_user.get('orders', [])
-        pending_orders = [o for o in user_orders if o.get('status') in ['processing', 'shipped']]
         
         # Vérifier aussi les commandes dans la base de données
-        user_db_orders = Order.query.filter_by(customer_email=user_email).filter(
-            Order.status.in_(['processing', 'shipped'])
-        ).all()
+        user_db_orders = Order.query.filter_by(customer_email=user_email).all()
         
-        total_pending = len(pending_orders) + len(user_db_orders)
+        total_orders = len(user_orders) + len(user_db_orders)
         
-        if total_pending > 0:
-            return jsonify({
-                'success': False, 
-                'message': f'Impossible de supprimer cet utilisateur car il a {total_pending} commande(s) en cours. Veuillez d\'abord traiter ces commandes.'
-            })
+        if total_orders > 0:
+            print(f"⚠️ Utilisateur {user_email} a {total_orders} commande(s) qui seront supprimées")
         
         # Supprimer l'utilisateur de la base de données SQLite
         user_record = User.query.filter_by(id=user_id).first()
@@ -11825,18 +12576,51 @@ def admin_delete_user(user_id):
                 # Supprimer les tokens de réinitialisation de mot de passe (utiliser l'email, pas user_id)
                 PasswordResetToken.query.filter_by(email=user_email).delete()
                 
-                # Anonymiser les commandes de l'utilisateur (pour conserver l'historique)
-                # plutôt que de les supprimer complètement
+                # Supprimer TOUTES les commandes de l'utilisateur et leurs éléments associés
                 user_orders_db = Order.query.filter_by(customer_email=user_email).all()
+                
+                print(f"🔄 Suppression des commandes pour l'utilisateur {user_email}")
+                
                 for order in user_orders_db:
-                    order.customer_name = "Utilisateur supprimé"
-                    order.customer_email = f"deleted_user_{user_id}@deleted.local"
-                    order.customer_phone = "N/A"
+                    print(f"   - Suppression commande #{order.id} (Status: {order.status})")
+                    
+                    # Supprimer tous les éléments de la commande (OrderItem)
+                    order_items = OrderItem.query.filter_by(order_id=order.id).all()
+                    for item in order_items:
+                        print(f"     * Suppression item: {item.name} (x{item.quantity})")
+                        db.session.delete(item)
+                    
+                    # Supprimer la commande elle-même
+                    db.session.delete(order)
+                
+                # Supprimer également les adresses de l'utilisateur
+                user_addresses = Address.query.filter_by(user_id=user_id).all()
+                for address in user_addresses:
+                    print(f"   - Suppression adresse: {address.name}")
+                    db.session.delete(address)
+                
+                # Supprimer les éléments du panier
+                user_carts = Cart.query.filter_by(user_id=user_id).all()
+                for cart in user_carts:
+                    # Supprimer les éléments du panier
+                    cart_items = CartItem.query.filter_by(cart_id=cart.id).all()
+                    for cart_item in cart_items:
+                        db.session.delete(cart_item)
+                    # Supprimer le panier lui-même
+                    db.session.delete(cart)
+                
+                # Supprimer les avis/reviews de l'utilisateur
+                user_reviews = Review.query.filter_by(user_id=user_id).all()
+                for review in user_reviews:
+                    print(f"   - Suppression avis pour produit #{review.product_id}")
+                    db.session.delete(review)
                 
                 # Supprimer l'utilisateur lui-même
                 db.session.delete(user_record)
                 db.session.commit()
-                print(f"✅ Utilisateur ID {user_id} supprimé de la base de données")
+                
+                orders_message = f" et {total_orders} commande(s)" if total_orders > 0 else ""
+                print(f"✅ Utilisateur ID {user_id} supprimé de la base de données{orders_message}")
                 
             except Exception as db_error:
                 db.session.rollback()
@@ -11847,9 +12631,11 @@ def admin_delete_user(user_id):
         user_name = f"{target_user.get('first_name', '')} {target_user.get('last_name', '')}"
         del users_db[user_email]
         
+        orders_info = f" (avec {total_orders} commandes supprimées)" if total_orders > 0 else ""
+        
         return jsonify({
             'success': True, 
-            'message': f'Utilisateur "{user_name}" supprimé avec succès'
+            'message': f'Utilisateur "{user_name}" supprimé avec succès{orders_info}'
         })
         
     except Exception as e:
@@ -11867,8 +12653,15 @@ def admin_promo_codes():
     search = request.args.get('search', '', type=str)
     status_filter = request.args.get('status', 'all', type=str)
     
-    # Récupérer tous les codes promo
-    all_codes = list(promo_codes_db.values())
+    # **MIGRATION: Récupérer tous les codes promo depuis la base de données**
+    db_codes = PromoCode.query.all()
+    all_codes = [promo.to_dict() for promo in db_codes]
+    
+    # **COMPATIBILITÉ: Synchroniser avec le dictionnaire en mémoire pour les anciens codes**
+    for code_data in all_codes:
+        code = code_data['code']
+        if code not in promo_codes_db:
+            promo_codes_db[code] = code_data
     
     # Filtrer par recherche si un terme est fourni
     if search:
@@ -11922,14 +12715,18 @@ def admin_promo_codes():
         'next_num': page + 1 if page < total_pages else None
     }
     
-    # Calculer les statistiques
+    # **MIGRATION: Calculer les statistiques depuis la base de données**
+    total_codes_db = PromoCode.query.count()
+    active_codes_db = PromoCode.query.filter_by(active=True).count()
+    expired_codes_db = PromoCode.query.filter(PromoCode.end_date < today).count()
+    total_usage_db = db.session.query(db.func.sum(PromoCode.used_count)).scalar() or 0
+    
     stats = {
-        'total_codes': len(promo_codes_db),
-        'active_codes': len([c for c in promo_codes_db.values() if c.get('active', False)]),
-        'expired_codes': len([c for c in promo_codes_db.values() 
-                             if c.get('end_date') and c.get('end_date') < today]),
-        'total_usage': sum(c.get('used_count', 0) for c in promo_codes_db.values()),
-        'avg_usage': sum(c.get('used_count', 0) for c in promo_codes_db.values()) / len(promo_codes_db) if promo_codes_db else 0
+        'total_codes': total_codes_db,
+        'active_codes': active_codes_db,
+        'expired_codes': expired_codes_db,
+        'total_usage': total_usage_db,
+        'avg_usage': total_usage_db / total_codes_db if total_codes_db > 0 else 0
     }
     
     from datetime import date
@@ -11975,7 +12772,9 @@ def admin_add_promo_code():
                 flash('Le code promo est obligatoire.', 'danger')
                 return redirect(request.url)
             
-            if code in promo_codes_db:
+            # **MIGRATION: Vérifier dans la base de données d'abord**
+            existing_promo = PromoCode.query.filter_by(code=code).first()
+            if existing_promo or code in promo_codes_db:
                 flash('Ce code promo existe déjà.', 'danger')
                 return redirect(request.url)
             
@@ -12006,40 +12805,94 @@ def admin_add_promo_code():
                     flash('Veuillez sélectionner au moins un marchand.', 'danger')
                     return redirect(request.url)
             
-            # Générer un ID unique
-            new_id = max([c.get('id', 0) for c in promo_codes_db.values()], default=0) + 1
-            
-            # Créer le nouveau code promo
-            new_promo = {
-                'id': new_id,
-                'code': code,
-                'name': name,
-                'description': description,
-                'type': type_discount,
-                'value': value,
-                'min_amount': min_amount,
-                'max_discount': float(max_discount) if max_discount else None,
-                'usage_limit': int(usage_limit) if usage_limit else None,
-                'used_count': 0,
-                'user_limit': int(user_limit) if user_limit else None,
-                'start_date': start_date if start_date else None,
-                'end_date': end_date if end_date else None,
-                'active': active,
-                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'created_by': session.get('admin_email', 'admin'),
-                'applicable_to': applicable_to,
-                'applicable_categories': [int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()],
-                'applicable_subcategories': [int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()],
-                'applicable_products': [int(prod_id) for prod_id in applicable_products if prod_id.isdigit()],
-                'applicable_merchants': applicable_merchants,
-                'used_by': {}
-            }
-            
-            # Ajouter à la base de données
-            promo_codes_db[code] = new_promo
-            
-            flash(f'Code promo "{code}" créé avec succès.', 'success')
-            return redirect(url_for('admin_promo_codes'))
+            # **NOUVELLE VERSION: Créer le code promo en base de données**
+            try:
+                import json
+                
+                # Convertir les listes en chaînes JSON pour la base de données
+                applicable_categories_json = json.dumps([int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()])
+                applicable_subcategories_json = json.dumps([int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()])
+                applicable_products_json = json.dumps([int(prod_id) for prod_id in applicable_products if prod_id.isdigit()])
+                applicable_merchants_json = json.dumps(applicable_merchants)
+                
+                new_promo = PromoCode(
+                    code=code,
+                    name=name,
+                    description=description,
+                    type=type_discount,
+                    value=value,
+                    min_amount=min_amount,
+                    max_discount=float(max_discount) if max_discount else None,
+                    usage_limit=int(usage_limit) if usage_limit else None,
+                    used_count=0,
+                    user_limit=int(user_limit) if user_limit else None,
+                    start_date=datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None,
+                    end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None,
+                    active=active,
+                    public_display=True,  # Par défaut, les codes sont publics
+                    display_priority=0,
+                    applicable_to=applicable_to,
+                    applicable_categories=applicable_categories_json,
+                    applicable_subcategories=applicable_subcategories_json,
+                    applicable_products=applicable_products_json,
+                    applicable_merchants=applicable_merchants_json,
+                    used_by='{}',  # JSON vide pour les utilisations
+                    created_at=datetime.utcnow(),
+                    created_by=session.get('admin_email', 'admin')
+                )
+                
+                db.session.add(new_promo)
+                db.session.commit()
+                
+                # **COMPATIBILITÉ: Synchroniser avec le dictionnaire en mémoire**
+                promo_dict = new_promo.to_dict()
+                promo_codes_db[code] = promo_dict
+                
+                flash(f'Code promo "{code}" créé avec succès.', 'success')
+                print(f"✅ Code promo {code} sauvegardé en base de données et en mémoire")
+                return redirect(url_for('admin_promo_codes'))
+                
+            except Exception as db_error:
+                db.session.rollback()
+                print(f"❌ Erreur DB lors de création du code promo: {str(db_error)}")
+                
+                # **FALLBACK: Utiliser l'ancien système en cas d'erreur**
+                # Générer un ID unique
+                new_id = max([c.get('id', 0) for c in promo_codes_db.values()], default=0) + 1
+                
+                # Créer le nouveau code promo
+                new_promo = {
+                    'id': new_id,
+                    'code': code,
+                    'name': name,
+                    'description': description,
+                    'type': type_discount,
+                    'value': value,
+                    'min_amount': min_amount,
+                    'max_discount': float(max_discount) if max_discount else None,
+                    'usage_limit': int(usage_limit) if usage_limit else None,
+                    'used_count': 0,
+                    'user_limit': int(user_limit) if user_limit else None,
+                    'start_date': start_date if start_date else None,
+                    'end_date': end_date if end_date else None,
+                    'active': active,
+                    'public_display': True,
+                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'created_by': session.get('admin_email', 'admin'),
+                    'applicable_to': applicable_to,
+                    'applicable_categories': [int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()],
+                    'applicable_subcategories': [int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()],
+                    'applicable_products': [int(prod_id) for prod_id in applicable_products if prod_id.isdigit()],
+                    'applicable_merchants': applicable_merchants,
+                    'used_by': {}
+                }
+                
+                # Ajouter au dictionnaire en mémoire (fallback)
+                promo_codes_db[code] = new_promo
+                print(f"⚠️ Code promo {code} créé en mémoire (fallback)")
+                
+                flash(f'Code promo "{code}" créé avec succès.', 'success')
+                return redirect(url_for('admin_promo_codes'))
             
         except ValueError:
             flash('Erreur dans les valeurs numériques. Veuillez vérifier vos saisies.', 'danger')
@@ -12073,11 +12926,14 @@ def admin_add_promo_code():
 def admin_edit_promo_code(code):
     """Modifier un code promo existant"""
     
-    if code not in promo_codes_db:
+    # Chercher dans la base de données d'abord
+    promo_record = PromoCode.query.filter_by(code=code).first()
+    promo_in_memory = code in promo_codes_db
+    if not promo_record and not promo_in_memory:
         flash('Code promo non trouvé.', 'danger')
         return redirect(url_for('admin_promo_codes'))
-    
-    promo = promo_codes_db[code]
+    # Utiliser l'objet en mémoire pour le formulaire, mais on mettra à jour les deux si besoin
+    promo = promo_codes_db[code] if promo_in_memory else (promo_record.to_dict() if promo_record else {})
     
     if request.method == 'POST':
         try:
@@ -12092,28 +12948,42 @@ def admin_edit_promo_code(code):
             user_limit = request.form.get('user_limit', '')
             start_date = request.form.get('start_date', '')
             end_date = request.form.get('end_date', '')
+            # Conversion en date
+            from datetime import datetime
+            start_date_obj = None
+            end_date_obj = None
+            if start_date:
+                try:
+                    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+                except Exception:
+                    start_date_obj = None
+            if end_date:
+                try:
+                    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+                except Exception:
+                    end_date_obj = None
             active = 'active' in request.form
-            
+
             # Nouvelles données pour les restrictions
             applicable_to = request.form.get('applicable_to', 'all')
             applicable_categories = request.form.getlist('applicable_categories')
             applicable_subcategories = request.form.getlist('applicable_subcategories')
             applicable_products = request.form.getlist('applicable_products')
             applicable_merchants = request.form.getlist('applicable_merchants')
-            
+
             # Validation
             if not name:
                 flash('Le nom du code promo est obligatoire.', 'danger')
                 return redirect(request.url)
-            
+
             if value <= 0:
                 flash('La valeur de remise doit être positive.', 'danger')
                 return redirect(request.url)
-            
+
             if type_discount == 'percentage' and value > 100:
                 flash('Le pourcentage de remise ne peut pas dépasser 100%.', 'danger')
                 return redirect(request.url)
-            
+
             # Validation des restrictions
             if applicable_to != 'all':
                 if applicable_to == 'categories' and not applicable_categories:
@@ -12128,32 +12998,55 @@ def admin_edit_promo_code(code):
                 elif applicable_to == 'merchants' and not applicable_merchants:
                     flash('Veuillez sélectionner au moins un marchand.', 'danger')
                     return redirect(request.url)
-            
-            # Mettre à jour le code promo
-            promo.update({
-                'name': name,
-                'description': description,
-                'type': type_discount,
-                'value': value,
-                'min_amount': min_amount,
-                'max_discount': float(max_discount) if max_discount else None,
-                'usage_limit': int(usage_limit) if usage_limit else None,
-                'user_limit': int(user_limit) if user_limit else None,
-                'start_date': start_date if start_date else None,
-                'end_date': end_date if end_date else None,
-                'active': active,
-                'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'updated_by': session.get('admin_email', 'admin'),
-                'applicable_to': applicable_to,
-                'applicable_categories': [int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()],
-                'applicable_subcategories': [int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()],
-                'applicable_products': [int(prod_id) for prod_id in applicable_products if prod_id.isdigit()],
-                'applicable_merchants': applicable_merchants
-            })
-            
+
+            # Mettre à jour le code promo en mémoire
+            if promo_in_memory:
+                promo.update({
+                    'name': name,
+                    'description': description,
+                    'type': type_discount,
+                    'value': value,
+                    'min_amount': min_amount,
+                    'max_discount': float(max_discount) if max_discount else None,
+                    'usage_limit': int(usage_limit) if usage_limit else None,
+                    'user_limit': int(user_limit) if user_limit else None,
+                    'start_date': start_date if start_date else None,
+                    'end_date': end_date if end_date else None,
+                    'active': active,
+                    'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': session.get('admin_email', 'admin'),
+                    'applicable_to': applicable_to,
+                    'applicable_categories': [int(cat_id) for cat_id in applicable_categories if cat_id.isdigit()],
+                    'applicable_subcategories': [int(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()],
+                    'applicable_products': [int(prod_id) for prod_id in applicable_products if prod_id.isdigit()],
+                    'applicable_merchants': applicable_merchants
+                })
+
+            # Mettre à jour le code promo en base de données si présent
+            if promo_record:
+                promo_record.name = name
+                promo_record.description = description
+                promo_record.type = type_discount
+                promo_record.value = value
+                promo_record.min_order_amount = min_amount
+                promo_record.max_discount = float(max_discount) if max_discount else None
+                promo_record.usage_limit = int(usage_limit) if usage_limit else None
+                promo_record.user_limit = int(user_limit) if user_limit else None
+                promo_record.start_date = start_date_obj
+                promo_record.end_date = end_date_obj
+                promo_record.active = active
+                promo_record.updated_at = datetime.now()
+                promo_record.updated_by = session.get('admin_email', 'admin')
+                promo_record.applicable_to = applicable_to
+                promo_record.applicable_categories = ','.join([str(cat_id) for cat_id in applicable_categories if cat_id.isdigit()])
+                promo_record.applicable_subcategories = ','.join([str(sub_id) for sub_id in applicable_subcategories if sub_id.isdigit()])
+                promo_record.applicable_products = ','.join([str(prod_id) for prod_id in applicable_products if prod_id.isdigit()])
+                promo_record.applicable_merchants = ','.join(applicable_merchants)
+                db.session.commit()
+
             flash(f'Code promo "{code}" mis à jour avec succès.', 'success')
             return redirect(url_for('admin_promo_codes'))
-            
+
         except ValueError:
             flash('Erreur dans les valeurs numériques. Veuillez vérifier vos saisies.', 'danger')
         except Exception as e:
@@ -12174,6 +13067,31 @@ def admin_edit_promo_code(code):
     all_products = get_all_products()
     merchants = list(merchants_db.values())
     
+    # Correction robustesse : forcer les champs à être des listes
+    def ensure_list(val):
+        if isinstance(val, list):
+            return val
+        if val is None:
+            return []
+        if isinstance(val, str):
+            # Si c'est une string de type '1,2,3' ou '[1,2,3]'
+            try:
+                # Essayer de parser JSON
+                import json
+                parsed = json.loads(val)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                # Split par virgule si besoin
+                return [int(x) if x.isdigit() else x for x in val.split(',') if x]
+        if isinstance(val, int):
+            return [val]
+        return list(val) if hasattr(val, '__iter__') else [val]
+
+    for key in ['applicable_categories', 'applicable_subcategories', 'applicable_products', 'applicable_merchants']:
+        if key in promo:
+            promo[key] = ensure_list(promo[key])
+
     return render_template('admin/promo_code_form.html', 
                           promo=promo, 
                           edit_mode=True,
@@ -12187,21 +13105,32 @@ def admin_edit_promo_code(code):
 def admin_delete_promo_code(code):
     """Supprimer un code promo"""
     
-    if code not in promo_codes_db:
+    # **MIGRATION: Vérifier dans la base de données d'abord**
+    promo_record = PromoCode.query.filter_by(code=code).first()
+    promo_in_memory = code in promo_codes_db
+    
+    if not promo_record and not promo_in_memory:
         return jsonify({'success': False, 'message': 'Code promo non trouvé'})
     
     try:
-        promo_name = promo_codes_db[code].get('name', code)
+        # Obtenir le nom pour le message
+        if promo_record:
+            promo_name = promo_record.name
+        elif promo_in_memory:
+            promo_name = promo_codes_db[code].get('name', code)
+        else:
+            promo_name = code
         
-        # Supprimer de la base de données SQLite
-        promo_record = PromoCode.query.filter_by(code=code).first()
+        # **NOUVEAU: Supprimer de la base de données en priorité**
         if promo_record:
             db.session.delete(promo_record)
             db.session.commit()
             print(f"✅ Code promo {code} supprimé de la base de données")
         
-        # Supprimer du dictionnaire en mémoire
-        del promo_codes_db[code]
+        # **COMPATIBILITÉ: Supprimer du dictionnaire en mémoire si présent**
+        if promo_in_memory:
+            del promo_codes_db[code]
+            print(f"✅ Code promo {code} supprimé du dictionnaire en mémoire")
         
         return jsonify({
             'success': True,
@@ -13736,8 +14665,13 @@ def add_withdrawal_request(merchant_email, amount, method='bank_transfer', notes
             print(f"❌ Marchand non trouvé: {merchant_email}")
             return None
         
+        # Générer un ID de demande unique
+        import uuid
+        request_id = f"WR{datetime.now().strftime('%Y%m%d')}{str(uuid.uuid4())[:8].upper()}"
+        
         # Créer la demande de retrait dans la base de données
         withdrawal_request = WithdrawalRequest(
+            request_id=request_id,
             merchant_id=merchant_record.id,
             amount=float(amount),
             method=method,
@@ -13757,7 +14691,7 @@ def add_withdrawal_request(merchant_email, amount, method='bank_transfer', notes
             withdrawal_requests_db[merchant_email] = []
         withdrawal_requests_db[merchant_email].append(withdrawal_dict)
         
-        print(f"✅ Demande de retrait créée en base: ID {withdrawal_request.id} pour {merchant_email}")
+        print(f"✅ Demande de retrait créée en base: ID {withdrawal_request.request_id} pour {merchant_email}")
         return withdrawal_dict
         
     except Exception as e:
@@ -13821,7 +14755,8 @@ def merchant_payments():
         withdrawal_requests = []
         for db_withdrawal in db_withdrawals:
             withdrawal_requests.append({
-                'id': db_withdrawal.request_id,  # ← Utiliser request_id au lieu de id
+                'id': db_withdrawal.request_id,  # Utiliser request_id pour l'affichage
+                'db_id': db_withdrawal.id,  # Garder l'ID de base pour les opérations
                 'requested_at': db_withdrawal.requested_at.strftime('%Y-%m-%d %H:%M:%S'),
                 'amount': db_withdrawal.amount,
                 'method': db_withdrawal.method,
@@ -14698,11 +15633,7 @@ def merchant_product_add():
         return redirect(url_for('merchant_products'))
     
     # Préparer les catégories pour le template
-    categories_list = [
-        {'id': cat_id, 'name': cat['name']} 
-        for cat_id, cat in admin_categories_db.items() 
-        if cat.get('active', True)  # Seulement les catégories actives
-    ]
+    categories_list = get_categories_with_subcategories()
     
     return render_template('merchant/product_add.html', merchant=merchant, categories=categories_list)
 
@@ -14799,15 +15730,24 @@ def merchant_register():
             store_banner=store_banner if store_banner else 'static/img/merchants/store_banner_default.jpg',
             store_verified=False,
             balance=0,
-            bank_info=bank_info_json,
             latitude=lat_value,
             longitude=lon_value
         )
+        
+        # Sérialiser les informations bancaires en JSON
+        new_merchant.set_bank_info(bank_info_json)
         
         try:
             db.session.add(new_merchant)
             db.session.commit()
             print(f"✅ Marchand {email} sauvegardé dans la base de données")
+            
+            # **NOUVELLE FONCTIONNALITÉ: Envoyer notification à l'admin**
+            try:
+                send_admin_notification_new_merchant(new_merchant)
+            except Exception as e:
+                print(f"⚠️ Erreur notification admin pour nouveau marchand: {str(e)}")
+                
         except Exception as e:
             print(f"❌ Erreur lors de la sauvegarde marchand: {e}")
             db.session.rollback()
@@ -14904,20 +15844,20 @@ def merchant_product_edit(product_id):
             
         except ValueError:
             flash('Le prix, le stock et les catégories doivent être des nombres valides.', 'danger')
-            categories_list = list(get_active_categories().items())
+            categories_list = get_categories_with_subcategories()
             merchant_data = merchant_record.to_dict()
             return render_template('merchant/product_edit.html', merchant=merchant_data, product=product, categories=categories_list)
         
         # Validation des données
         if not new_name:
             flash('Le nom du produit est obligatoire.', 'danger')
-            categories_list = list(get_active_categories().items())
+            categories_list = get_categories_with_subcategories()
             merchant_data = merchant_record.to_dict()
             return render_template('merchant/product_edit.html', merchant=merchant_data, product=product, categories=categories_list)
         
         if new_price <= 0:
             flash('Le prix doit être supérieur à zéro.', 'danger')
-            categories_list = list(get_active_categories().items())
+            categories_list = get_categories_with_subcategories()
             merchant_data = merchant_record.to_dict()
             return render_template('merchant/product_edit.html', merchant=merchant_data, product=product, categories=categories_list)
         
@@ -14944,7 +15884,7 @@ def merchant_product_edit(product_id):
             flash('Erreur lors de la modification du produit.', 'danger')
     
     # Préparer les données pour le template
-    categories_list = list(get_active_categories().items())
+    categories_list = get_categories_with_subcategories()
     merchant_data = merchant_record.to_dict()
     
     return render_template('merchant/product_edit.html', merchant=merchant_data, product=product, categories=categories_list)
@@ -15080,7 +16020,8 @@ def merchant_orders():
                     'quantity': item.quantity,
                     'price': item.price,
                     'image': item.image,
-                    'variant_details': item.variant_details
+                    'variant_details': item.variant_details,
+                    'options': item.get_options()  # Ajouter les options
                 })
             
             # Récupérer l'adresse de livraison depuis le JSON
@@ -15144,8 +16085,10 @@ def merchant_order_detail(order_id):
             'name': item.name,
             'quantity': item.quantity,
             'price': item.price,
+            'subtotal': item.subtotal,
             'image': item.image,
-            'variant_details': item.variant_details
+            'variant_details': item.variant_details,
+            'options': item.get_options()  # Récupérer les options formatées
         })
     
     # Récupérer l'adresse de livraison depuis le JSON
@@ -15171,6 +16114,7 @@ def merchant_order_detail(order_id):
         'customer_email': db_order.customer_email,
         'customer_phone': db_order.customer_phone,
         'items': order_items,
+        'products': order_items,  # Alias pour compatibilité template
         'total': db_order.total,
         'status': db_order.status,
         'status_text': db_order.status_text,
@@ -16044,12 +16988,12 @@ def fix_logo_urgent():
         if not logo_url_setting:
             logo_url_setting = SiteSettings(
                 key='logo_url',
-                value='/static/img/logo.png',
+                value='/static/img/logo.svg',
                 description='URL du logo du site'
             )
             db.session.add(logo_url_setting)
         elif not logo_url_setting.value or logo_url_setting.value.strip() == '':
-            logo_url_setting.value = '/static/img/logo.png'
+            logo_url_setting.value = '/static/img/logo.svg'
         
         # Vérifier si logo_alt_text existe
         logo_alt_setting = SiteSettings.query.filter_by(key='logo_alt_text').first()
@@ -16132,6 +17076,81 @@ def serve_static_image(filename):
         print(f"Erreur lors du service de l'image {filename}: {e}")
         return "Error serving image", 500
 
+@app.route('/logo')
+def serve_logo():
+    """Route directe pour servir le logo DOUKA KM"""
+    try:
+        # Chemin vers le logo
+        img_folder = os.path.join(app.static_folder, 'img')
+        logo_path = os.path.join(img_folder, 'logo.png')
+        
+        if os.path.exists(logo_path):
+            return send_from_directory(img_folder, 'logo.png', mimetype='image/png')
+        else:
+            # Si le logo n'existe pas, retourner une image par défaut ou générer une réponse
+            return "Logo not found", 404
+            
+    except Exception as e:
+        print(f"Erreur lors du service du logo: {e}")
+        return "Error serving logo", 500
+
+@app.route('/debug/logo-test')
+def debug_logo_test():
+    """Route de debug pour tester l'accès au logo"""
+    try:
+        # Tester différents chemins pour le logo
+        static_folder = app.static_folder or 'static'
+        logo_path = os.path.join(static_folder, 'img', 'logo.png')
+        
+        # Vérifications
+        results = {
+            'static_folder': static_folder,
+            'logo_path': logo_path,
+            'logo_exists': os.path.exists(logo_path),
+            'static_folder_exists': os.path.exists(static_folder),
+            'img_folder_exists': os.path.exists(os.path.join(static_folder, 'img')),
+            'current_directory': os.getcwd(),
+            'app_static_folder': app.static_folder,
+            'url_for_logo': url_for('static', filename='img/logo.svg'),
+            'render_env': os.environ.get('RENDER', 'Not set'),
+        }
+        
+        # Tenter de lire le fichier
+        if os.path.exists(logo_path):
+            try:
+                file_size = os.path.getsize(logo_path)
+                results['logo_size'] = f"{file_size} bytes"
+            except Exception as e:
+                results['logo_size_error'] = str(e)
+        
+        # Lister le contenu du dossier img
+        img_dir = os.path.join(static_folder, 'img')
+        if os.path.exists(img_dir):
+            try:
+                results['img_files'] = os.listdir(img_dir)
+            except Exception as e:
+                results['img_files_error'] = str(e)
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'message': 'Erreur lors du test du logo'
+        }), 500
+
+@app.route('/sitemap.xml')
+def sitemap():
+    return send_from_directory(app.root_path, 'sitemap.xml', mimetype='application/xml')
+
+@app.route('/robots.txt')
+def robots():
+    return send_from_directory(app.static_folder, 'robots.txt', mimetype='text/plain')
+
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory(app.static_folder, 'manifest.json', mimetype='application/json')
+
 # =============================================
 # LANCEMENT DE L'APPLICATION
 # =============================================
@@ -16188,10 +17207,10 @@ if __name__ == '__main__':
         
         print("🚀 Application DOUKA KM COMPLÈTE avec base de données SQLite démarrée!")
         print("📁 Base de données: douka_km.db")
-        print("🌐 URL: http://localhost:5001")
+        print("🌐 URL: http://localhost:5002")
         print("="*60)
         
-        # Lancer le serveur Flask avec le mode debug activé sur le port 5002
+        # Lancer le serveur Flask avec le mode debug activé sur le port 5003
         app.run(debug=True, host='0.0.0.0', port=5002)
         
     except Exception as e:

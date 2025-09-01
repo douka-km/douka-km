@@ -103,6 +103,14 @@
                                         <a href="{{ url_for('admin_merchant_detail', merchant_id=merchant.id) }}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-eye me-1"></i> Détails
                                         </a>
+                                        
+                                        {% if session.admin_role == 'super_admin' %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger ms-1" 
+                                                onclick="showQuickDeleteModal('{{ merchant.id }}', '{{ merchant.store_name }}', '{{ merchant.email }}')"
+                                                title="Supprimer définitivement">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -136,4 +144,92 @@
             </div>
         {% endif %}
     </div>
+
+<!-- Modal de suppression rapide -->
+<div class="modal fade" id="quickDeleteModal" tabindex="-1" aria-labelledby="quickDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="quickDeleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Supprimer le marchand
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle me-1"></i> ATTENTION</h6>
+                    <p class="mb-0">Cette action supprimera <strong>définitivement</strong> le marchand et toutes ses données.</p>
+                </div>
+                
+                <p><strong>Marchand à supprimer :</strong></p>
+                <p class="mb-1"><strong id="merchantStoreName"></strong></p>
+                <p class="mb-3" id="merchantEmail"></p>
+                
+                <form method="POST" id="quickDeleteForm">
+                    <div class="mb-3">
+                        <label for="quickConfirmationInput" class="form-label">
+                            <strong>Pour confirmer, tapez : <code>SUPPRIMER</code></strong>
+                        </label>
+                        <input type="text" class="form-control" id="quickConfirmationInput" name="confirmation" 
+                               placeholder="Tapez SUPPRIMER pour confirmer" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Annuler
+                </button>
+                <button type="submit" form="quickDeleteForm" class="btn btn-danger" id="quickConfirmDeleteBtn" disabled>
+                    <i class="fas fa-trash-alt me-1"></i> Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fonction pour afficher le modal de suppression rapide
+    function showQuickDeleteModal(merchantId, storeName, email) {
+        // Remplir les informations du marchand
+        document.getElementById('merchantStoreName').textContent = storeName;
+        document.getElementById('merchantEmail').textContent = email;
+        
+        // Configurer l'action du formulaire
+        const form = document.getElementById('quickDeleteForm');
+        form.action = `/admin/merchants/${merchantId}/delete`;
+        
+        // Réinitialiser le champ de confirmation
+        const confirmationInput = document.getElementById('quickConfirmationInput');
+        confirmationInput.value = '';
+        
+        // Désactiver le bouton de confirmation
+        const confirmBtn = document.getElementById('quickConfirmDeleteBtn');
+        confirmBtn.disabled = true;
+        
+        // Afficher le modal
+        const modal = new bootstrap.Modal(document.getElementById('quickDeleteModal'));
+        modal.show();
+    }
+    
+    // Validation du champ de confirmation pour la suppression rapide
+    document.addEventListener('DOMContentLoaded', function() {
+        const quickConfirmationInput = document.getElementById('quickConfirmationInput');
+        const quickConfirmDeleteBtn = document.getElementById('quickConfirmDeleteBtn');
+        
+        if (quickConfirmationInput && quickConfirmDeleteBtn) {
+            quickConfirmationInput.addEventListener('input', function() {
+                if (this.value === 'SUPPRIMER') {
+                    quickConfirmDeleteBtn.disabled = false;
+                    quickConfirmDeleteBtn.classList.remove('btn-danger');
+                    quickConfirmDeleteBtn.classList.add('btn-outline-danger');
+                } else {
+                    quickConfirmDeleteBtn.disabled = true;
+                    quickConfirmDeleteBtn.classList.remove('btn-outline-danger');
+                    quickConfirmDeleteBtn.classList.add('btn-danger');
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

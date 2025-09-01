@@ -24,21 +24,61 @@
                      onerror="this.src='https://via.placeholder.com/600x400?text=Image+non+disponible'">
                 
                 {% if product.images and product.images|length > 1 %}
-                <div class="row thumbnail-images">
-                    {% for image_url in product.images[:4] %}
-                    <div class="col-3">
-                        <img src="{{ image_url }}" alt="Thumbnail {{ loop.index }}" 
-                             class="img-thumbnail{% if loop.first %} active{% endif %}"
-                             onerror="this.src='https://via.placeholder.com/150x150?text=Image+{{ loop.index }}'">
+                <div class="image-gallery-container">
+                    <!-- Affichage dynamique de toutes les images -->
+                    <div class="row thumbnail-images" id="thumbnailContainer">
+                        {% for image_url in product.images %}
+                        <div class="col-3 col-md-2 col-lg-3 mb-2">
+                            <img src="{{ image_url }}" alt="Image {{ loop.index }}" 
+                                 class="img-thumbnail{% if loop.first %} active{% endif %}"
+                                 data-image-index="{{ loop.index0 }}"
+                                 onerror="this.src='https://via.placeholder.com/150x150?text=Image+{{ loop.index }}'">
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
                     
-                    <!-- Remplir avec des placeholders si moins de 4 images -->
-                    {% for i in range(product.images|length, 4) %}
-                    <div class="col-3">
-                        <img src="https://via.placeholder.com/150x150?text=Image+{{ i + 1 }}" alt="Placeholder {{ i + 1 }}" class="img-thumbnail" style="opacity: 0.3;">
+                    <!-- Navigation pour la galerie si plus de 4 images -->
+                    {% if product.images|length > 4 %}
+                    <div class="gallery-navigation text-center mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary me-2" id="prevImages" disabled>
+                            <i class="fas fa-chevron-left"></i> Précédent
+                        </button>
+                        <span class="gallery-counter">
+                            <span id="currentStart">1</span>-<span id="currentEnd">{{ [4, product.images|length]|min }}</span> 
+                            sur {{ product.images|length }} images
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="nextImages" 
+                                {% if product.images|length <= 4 %}disabled{% endif %}>
+                            Suivant <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
-                    {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Modal pour affichage en grand -->
+                    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Galerie d'images - {{ product.name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <img id="modalImage" src="" alt="Image agrandie" class="img-fluid rounded">
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-outline-secondary me-2" id="modalPrev">
+                                            <i class="fas fa-chevron-left"></i> Précédente
+                                        </button>
+                                        <span class="modal-counter">
+                                            <span id="modalCurrent">1</span> / {{ product.images|length }}
+                                        </span>
+                                        <button type="button" class="btn btn-outline-secondary ms-2" id="modalNext">
+                                            Suivante <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -98,6 +138,17 @@
                             Rupture de stock
                         </span>
                     {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Informations du marchand -->
+                {% if product.merchant_name %}
+                <div class="merchant-info mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-store me-2 text-primary"></i>
+                        <span class="text-muted">Vendu par:</span>
+                        <strong class="ms-2">{{ product.merchant_name }}</strong>
+                    </div>
                 </div>
                 {% endif %}
                 
@@ -722,11 +773,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mettre à jour les options du formulaire initial
     updateFormOptions();
     
-    // Thumbnail image selection
+    // Thumbnail image selection et galerie d'images
     const thumbnails = document.querySelectorAll('.thumbnail-images img');
     const mainImage = document.querySelector('.main-image');
+    const allImages = {{ product.images|default([])|tojson }};
     
-    thumbnails.forEach(thumbnail => {
+    // Variables pour la pagination des images
+    let currentImagePage = 0;
+    const imagesPerPage = 4;
+    const totalImages = allImages.length;
+    const totalPages = Math.ceil(totalImages / imagesPerPage);
+    
+    // Gestion des clics sur les miniatures
+    thumbnails.forEach((thumbnail, index) => {
         thumbnail.addEventListener('click', function() {
             // Remove active class from all thumbnails
             thumbnails.forEach(t => t.classList.remove('active'));
@@ -736,8 +795,138 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update main image source
             mainImage.src = this.src;
+            
+            // Ouvrir le modal en cliquant sur une miniature (optionnel)
+            // openImageModal(parseInt(this.dataset.imageIndex));
+        });
+        
+        // Double-clic pour ouvrir le modal
+        thumbnail.addEventListener('dblclick', function() {
+            openImageModal(parseInt(this.dataset.imageIndex));
         });
     });
+    
+    // Fonction pour afficher les images selon la page
+    function displayImagesForPage(page) {
+        const start = page * imagesPerPage;
+        const end = start + imagesPerPage;
+        
+        // Masquer toutes les miniatures
+        thumbnails.forEach(thumbnail => {
+            thumbnail.parentElement.style.display = 'none';
+        });
+        
+        // Afficher seulement les miniatures de la page actuelle
+        for (let i = start; i < end && i < totalImages; i++) {
+            if (thumbnails[i]) {
+                thumbnails[i].parentElement.style.display = 'block';
+            }
+        }
+        
+        // Mettre à jour les compteurs
+        const currentStart = document.getElementById('currentStart');
+        const currentEnd = document.getElementById('currentEnd');
+        
+        if (currentStart && currentEnd) {
+            currentStart.textContent = start + 1;
+            currentEnd.textContent = Math.min(end, totalImages);
+        }
+        
+        // Mettre à jour l'état des boutons
+        const prevBtn = document.getElementById('prevImages');
+        const nextBtn = document.getElementById('nextImages');
+        
+        if (prevBtn) prevBtn.disabled = page === 0;
+        if (nextBtn) nextBtn.disabled = page >= totalPages - 1;
+    }
+    
+    // Gestion de la navigation des images
+    const prevImagesBtn = document.getElementById('prevImages');
+    const nextImagesBtn = document.getElementById('nextImages');
+    
+    if (prevImagesBtn) {
+        prevImagesBtn.addEventListener('click', function() {
+            if (currentImagePage > 0) {
+                currentImagePage--;
+                displayImagesForPage(currentImagePage);
+            }
+        });
+    }
+    
+    if (nextImagesBtn) {
+        nextImagesBtn.addEventListener('click', function() {
+            if (currentImagePage < totalPages - 1) {
+                currentImagePage++;
+                displayImagesForPage(currentImagePage);
+            }
+        });
+    }
+    
+    // Gestion du modal d'images
+    let currentModalImageIndex = 0;
+    
+    function openImageModal(imageIndex = 0) {
+        currentModalImageIndex = imageIndex;
+        updateModalImage();
+        
+        const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        imageModal.show();
+    }
+    
+    function updateModalImage() {
+        const modalImage = document.getElementById('modalImage');
+        const modalCurrent = document.getElementById('modalCurrent');
+        const modalPrev = document.getElementById('modalPrev');
+        const modalNext = document.getElementById('modalNext');
+        
+        if (modalImage && allImages[currentModalImageIndex]) {
+            modalImage.src = allImages[currentModalImageIndex];
+            modalCurrent.textContent = currentModalImageIndex + 1;
+            
+            modalPrev.disabled = currentModalImageIndex === 0;
+            modalNext.disabled = currentModalImageIndex === allImages.length - 1;
+        }
+    }
+    
+    // Navigation dans le modal
+    const modalPrevBtn = document.getElementById('modalPrev');
+    const modalNextBtn = document.getElementById('modalNext');
+    
+    if (modalPrevBtn) {
+        modalPrevBtn.addEventListener('click', function() {
+            if (currentModalImageIndex > 0) {
+                currentModalImageIndex--;
+                updateModalImage();
+            }
+        });
+    }
+    
+    if (modalNextBtn) {
+        modalNextBtn.addEventListener('click', function() {
+            if (currentModalImageIndex < allImages.length - 1) {
+                currentModalImageIndex++;
+                updateModalImage();
+            }
+        });
+    }
+    
+    // Clic sur l'image principale pour ouvrir le modal
+    if (mainImage) {
+        mainImage.addEventListener('click', function() {
+            const activeThumb = document.querySelector('.thumbnail-images img.active');
+            const imageIndex = activeThumb ? parseInt(activeThumb.dataset.imageIndex) : 0;
+            openImageModal(imageIndex);
+        });
+        
+        // Ajouter un curseur pointer pour indiquer que l'image est cliquable
+        mainImage.style.cursor = 'pointer';
+        mainImage.title = 'Cliquez pour agrandir';
+    }
+    
+    // Initialiser l'affichage des images au chargement
+    if (totalImages > imagesPerPage) {
+        displayImagesForPage(0);
+    }
     
     // Star rating functionality
     const starInputs = document.querySelectorAll('.rating input');
@@ -1465,6 +1654,192 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .thumbnail-images .img-thumbnail.active {
         border-color: #0d6efd;
+    }
+    
+    /* Styles pour la galerie d'images dynamique */
+    .image-gallery-container {
+        width: 100%;
+    }
+    
+    .gallery-navigation {
+        margin-top: 15px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .gallery-counter {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .thumbnail-images {
+        max-height: none;
+        overflow: visible;
+    }
+    
+    .thumbnail-images .col-3,
+    .thumbnail-images .col-md-2,
+    .thumbnail-images .col-lg-3 {
+        transition: all 0.3s ease;
+    }
+    
+    .thumbnail-images img {
+        width: 100%;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    
+    .thumbnail-images img:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    /* Modal pour les images agrandies */
+    #imageModal .modal-dialog {
+        max-width: 90%;
+    }
+    
+    #modalImage {
+        max-height: 70vh;
+        object-fit: contain;
+        cursor: zoom-in;
+    }
+    
+    .modal-counter {
+        font-size: 1rem;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 0 15px;
+    }
+    
+    /* Indicateur cliquable sur l'image principale */
+    .main-image {
+        transition: transform 0.2s ease;
+        border-radius: 8px;
+    }
+    
+    .main-image:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    
+    /* Badge "Voir toutes" pour indiquer qu'il y a plus d'images */
+    .more-images-badge {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .more-images-badge:hover {
+        background: rgba(0,0,0,0.9);
+        transform: scale(1.05);
+    }
+    
+    /* Responsive pour la galerie */
+    @media (max-width: 768px) {
+        .thumbnail-images img {
+            height: 60px;
+        }
+        
+        .gallery-navigation {
+            padding: 8px;
+            margin-top: 10px;
+        }
+        
+        .gallery-counter {
+            font-size: 0.8rem;
+        }
+        
+        #imageModal .modal-dialog {
+            max-width: 95%;
+        }
+        
+        #modalImage {
+            max-height: 60vh;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .thumbnail-images {
+            margin: 0 -5px;
+        }
+        
+        .thumbnail-images .col-3 {
+            padding: 0 5px;
+        }
+        
+        .thumbnail-images img {
+            height: 50px;
+            border-radius: 4px;
+        }
+        
+        .gallery-navigation .btn-sm {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .gallery-counter {
+            font-size: 0.75rem;
+        }
+    }
+    
+    /* Animation pour l'apparition des nouvelles images */
+    .thumbnail-images .col-3,
+    .thumbnail-images .col-md-2,
+    .thumbnail-images .col-lg-3 {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .thumbnail-images .col-3.fade-in,
+    .thumbnail-images .col-md-2.fade-in,
+    .thumbnail-images .col-lg-3.fade-in {
+        animation: fadeInUp 0.3s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Loader pour le chargement des images */
+    .image-loading {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .image-loading::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+        animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
     }
     
     /* Styles pour le système d'évaluation */

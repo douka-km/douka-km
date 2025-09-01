@@ -159,8 +159,16 @@
                         </div>
                         <div class="mb-3">
                             <label for="categoryIcon" class="form-label">Icône (FontAwesome)</label>
-                            <input type="text" class="form-control" id="categoryIcon" name="icon" placeholder="fas fa-box" value="fas fa-box">
-                            <small class="text-muted">Exemple: fas fa-box, fas fa-tshirt, fas fa-utensils</small>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i id="categoryIconPreview" class="fas fa-box"></i>
+                                </span>
+                                <input type="text" class="form-control" id="categoryIcon" name="icon" placeholder="fas fa-box" value="fas fa-box">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#iconSelectorModal">
+                                    <i class="fas fa-search"></i> Choisir
+                                </button>
+                            </div>
+                            <small class="text-muted">Tapez ou choisissez une icône FontAwesome</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -192,8 +200,16 @@
                         </div>
                         <div class="mb-3">
                             <label for="editCategoryIcon" class="form-label">Icône (FontAwesome)</label>
-                            <input type="text" class="form-control" id="editCategoryIcon" name="icon">
-                            <small class="text-muted">Exemple: fas fa-box, fas fa-tshirt, fas fa-utensils</small>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i id="editCategoryIconPreview" class="fas fa-box"></i>
+                                </span>
+                                <input type="text" class="form-control" id="editCategoryIcon" name="icon">
+                                <button type="button" class="btn btn-outline-secondary" onclick="openIconSelector('edit')">
+                                    <i class="fas fa-search"></i> Choisir
+                                </button>
+                            </div>
+                            <small class="text-muted">Tapez ou choisissez une icône FontAwesome</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -204,14 +220,720 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de sélection d'icônes -->
+    <div class="modal fade" id="iconSelectorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Choisir une icône FontAwesome</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Recherche d'icônes -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="iconSearch" placeholder="Rechercher une icône..." onkeyup="filterIcons()">
+                        </div>
+                    </div>
+                    
+                    <!-- Catégories d'icônes -->
+                    <ul class="nav nav-tabs mb-3" id="iconCategoryTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#popularIcons">Populaires</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#businessIcons">Commerce</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#foodIcons">Alimentation</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#fashionIcons">Mode</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#techIcons">Technologie</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#generalIcons">Général</a>
+                        </li>
+                    </ul>
+                    
+                    <!-- Contenu des onglets -->
+                    <div class="tab-content" id="iconTabContent">
+                        <!-- Icônes populaires -->
+                        <div class="tab-pane fade show active" id="popularIcons">
+                            <div class="row g-2" id="popularIconsGrid">
+                                <!-- Les icônes seront ajoutées dynamiquement -->
+                            </div>
+                        </div>
+                        
+                        <!-- Icônes commerce -->
+                        <div class="tab-pane fade" id="businessIcons">
+                            <div class="row g-2" id="businessIconsGrid">
+                                <!-- Les icônes seront ajoutées dynamiquement -->
+                            </div>
+                        </div>
+                        
+                        <!-- Icônes alimentation -->
+                        <div class="tab-pane fade" id="foodIcons">
+                            <div class="row g-2" id="foodIconsGrid">
+                                <!-- Les icônes seront ajoutées dynamiquement -->
+                            </div>
+                        </div>
+                        
+                        <!-- Icônes mode -->
+                        <div class="tab-pane fade" id="fashionIcons">
+                            <div class="row g-2" id="fashionIconsGrid">
+                                <!-- Les icônes seront ajoutées dynamiquement -->
+                            </div>
+                        </div>
+                        
+                        <!-- Icônes technologie -->
+                        <div class="tab-pane fade" id="techIcons">
+                            <div class="row g-2" id="techIconsGrid">
+                                <!-- Les icônes seront ajoutées dynamiquement -->
+                            </div>
+                        </div>
+                        
+                        <!-- Icônes générales -->
+                        <div class="tab-pane fade" id="generalIcons">
+                            <div class="row g-2" id="generalIconsGrid">
+                                <!-- Les icônes seront ajoutées dynamiquement -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Aperçu de l'icône sélectionnée -->
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <i id="selectedIconPreview" class="fas fa-box fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <strong>Icône sélectionnée:</strong>
+                                <code id="selectedIconCode">fas fa-box</code>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Suggestions intelligentes -->
+                    <div class="mt-3" id="smartSuggestions" style="display: none;">
+                        <h6 class="mb-2">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>
+                            Suggestions pour "<span id="suggestionCategoryName"></span>"
+                        </h6>
+                        <div class="row g-2" id="suggestedIconsGrid">
+                            <!-- Les suggestions seront ajoutées ici -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" onclick="selectIcon()">Utiliser cette icône</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Base de données d'icônes FontAwesome organisées par catégorie
+const iconDatabase = {
+    popular: [
+        'fas fa-box', 'fas fa-shopping-cart', 'fas fa-store', 'fas fa-tag', 'fas fa-tags',
+        'fas fa-heart', 'fas fa-star', 'fas fa-user', 'fas fa-users', 'fas fa-home',
+        'fas fa-phone', 'fas fa-envelope', 'fas fa-globe', 'fas fa-search', 'fas fa-cog'
+    ],
+    business: [
+        'fas fa-store', 'fas fa-shopping-cart', 'fas fa-shopping-bag', 'fas fa-cash-register',
+        'fas fa-credit-card', 'fas fa-money-bill-wave', 'fas fa-coins', 'fas fa-receipt',
+        'fas fa-handshake', 'fas fa-chart-line', 'fas fa-briefcase', 'fas fa-building',
+        'fas fa-warehouse', 'fas fa-truck', 'fas fa-shipping-fast', 'fas fa-clipboard-list'
+    ],
+    food: [
+        'fas fa-utensils', 'fas fa-hamburger', 'fas fa-pizza-slice', 'fas fa-coffee',
+        'fas fa-wine-glass', 'fas fa-beer', 'fas fa-cookie-bite', 'fas fa-ice-cream',
+        'fas fa-apple-alt', 'fas fa-carrot', 'fas fa-fish', 'fas fa-egg',
+        'fas fa-bread-slice', 'fas fa-cheese', 'fas fa-birthday-cake', 'fas fa-seedling'
+    ],
+    fashion: [
+        'fas fa-tshirt', 'fas fa-hat-cowboy', 'fas fa-glasses', 'fas fa-gem',
+        'fas fa-ring', 'fas fa-shoe-prints', 'fas fa-socks', 'fas fa-mitten',
+        'fas fa-crown', 'fas fa-tie', 'fas fa-vest', 'fas fa-user-tie',
+        'fas fa-shopping-bag', 'fas fa-tags', 'fas fa-palette', 'fas fa-cut'
+    ],
+    tech: [
+        'fas fa-laptop', 'fas fa-mobile-alt', 'fas fa-tablet-alt', 'fas fa-desktop',
+        'fas fa-keyboard', 'fas fa-mouse', 'fas fa-headphones', 'fas fa-microchip',
+        'fas fa-wifi', 'fas fa-bluetooth', 'fas fa-camera', 'fas fa-video',
+        'fas fa-gamepad', 'fas fa-tv', 'fas fa-plug', 'fas fa-battery-full'
+    ],
+    general: [
+        'fas fa-home', 'fas fa-car', 'fas fa-plane', 'fas fa-bicycle',
+        'fas fa-book', 'fas fa-music', 'fas fa-film', 'fas fa-paint-brush',
+        'fas fa-tools', 'fas fa-wrench', 'fas fa-hammer', 'fas fa-leaf',
+        'fas fa-paw', 'fas fa-baby', 'fas fa-graduation-cap', 'fas fa-dumbbell'
+    ]
+};
+
+// Suggestions intelligentes d'icônes
+const iconSuggestions = {
+    keywordMapping: {
+        // Commerce et vente
+        'commerce': 'fas fa-store', 'vente': 'fas fa-shopping-cart', 'magasin': 'fas fa-store-alt',
+        'boutique': 'fas fa-shopping-bag', 'achat': 'fas fa-credit-card', 'paiement': 'fas fa-money-bill-wave',
+        
+        // Électronique
+        'électronique': 'fas fa-microchip', 'electronique': 'fas fa-microchip', 'tech': 'fas fa-laptop',
+        'technologie': 'fas fa-laptop', 'ordinateur': 'fas fa-desktop', 'téléphone': 'fas fa-mobile-alt',
+        'smartphone': 'fas fa-mobile-alt', 'tablette': 'fas fa-tablet-alt',
+        
+        // Mode et vêtements
+        'mode': 'fas fa-tshirt', 'vêtement': 'fas fa-tshirt', 'vetement': 'fas fa-tshirt',
+        'fashion': 'fas fa-tshirt', 'chaussure': 'fas fa-shoe-prints', 'accessoire': 'fas fa-gem',
+        'bijou': 'fas fa-ring', 'sac': 'fas fa-shopping-bag', 'chapeau': 'fas fa-hat-cowboy',
+        
+        // Alimentation
+        'alimentation': 'fas fa-utensils', 'nourriture': 'fas fa-hamburger', 'food': 'fas fa-utensils',
+        'restaurant': 'fas fa-utensils', 'cuisine': 'fas fa-utensils', 'boisson': 'fas fa-coffee',
+        'épicerie': 'fas fa-shopping-cart', 'fruits': 'fas fa-apple-alt', 'légumes': 'fas fa-carrot',
+        
+        // Santé et beauté
+        'santé': 'fas fa-heartbeat', 'sante': 'fas fa-heartbeat', 'health': 'fas fa-heartbeat',
+        'beauté': 'fas fa-palette', 'beaute': 'fas fa-palette', 'beauty': 'fas fa-palette',
+        'cosmétique': 'fas fa-palette', 'parfum': 'fas fa-spray-can', 'maquillage': 'fas fa-paint-brush',
+        
+        // Maison et jardin
+        'maison': 'fas fa-home', 'home': 'fas fa-home', 'jardin': 'fas fa-seedling',
+        'garden': 'fas fa-seedling', 'décoration': 'fas fa-paint-brush', 'meuble': 'fas fa-couch',
+        'électroménager': 'fas fa-blender', 'bricolage': 'fas fa-tools',
+        
+        // Sport
+        'sport': 'fas fa-dumbbell', 'fitness': 'fas fa-dumbbell', 'gym': 'fas fa-dumbbell',
+        'course': 'fas fa-running', 'natation': 'fas fa-swimmer', 'football': 'fas fa-football-ball',
+        
+        // Bébé et enfants
+        'bébé': 'fas fa-baby', 'bebe': 'fas fa-baby', 'baby': 'fas fa-baby',
+        'enfant': 'fas fa-baby', 'kids': 'fas fa-baby', 'jouet': 'fas fa-gamepad',
+        
+        // Automobile
+        'auto': 'fas fa-car', 'automobile': 'fas fa-car', 'voiture': 'fas fa-car',
+        'moto': 'fas fa-motorcycle', 'vélo': 'fas fa-bicycle', 'transport': 'fas fa-truck',
+        
+        // Animaux
+        'animal': 'fas fa-paw', 'pet': 'fas fa-paw', 'chien': 'fas fa-dog',
+        'chat': 'fas fa-cat', 'poisson': 'fas fa-fish', 'oiseau': 'fas fa-dove',
+        
+        // Livres et éducation
+        'livre': 'fas fa-book', 'book': 'fas fa-book', 'éducation': 'fas fa-graduation-cap',
+        'education': 'fas fa-graduation-cap', 'école': 'fas fa-school', 'université': 'fas fa-university',
+        
+        // Artisanat
+        'artisanat': 'fas fa-palette', 'art': 'fas fa-paint-brush', 'craft': 'fas fa-palette',
+        'traditionnel': 'fas fa-palette', 'local': 'fas fa-map-marker-alt', 'fait main': 'fas fa-hand-paper'
+    },
+    
+    suggest: function(categoryName) {
+        if (!categoryName || categoryName.length < 2) return 'fas fa-box';
+        
+        const name = categoryName.toLowerCase().trim();
+        console.log('🔍 Recherche suggestion pour:', name);
+        
+        // Recherche exacte d'abord
+        if (this.keywordMapping[name]) {
+            console.log('✅ Correspondance exacte trouvée:', this.keywordMapping[name]);
+            return this.keywordMapping[name];
+        }
+        
+        // Recherche par inclusion de mots-clés (plus flexible)
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        for (const keyword in this.keywordMapping) {
+            let score = 0;
+            
+            // Score élevé si le nom contient le mot-clé
+            if (name.includes(keyword)) {
+                score = keyword.length; // Plus le mot-clé est long, plus le score est élevé
+            }
+            // Score moyen si le mot-clé contient le nom
+            else if (keyword.includes(name)) {
+                score = name.length * 0.7;
+            }
+            // Score faible pour correspondances partielles
+            else if (this.partialMatch(name, keyword)) {
+                score = Math.min(name.length, keyword.length) * 0.3;
+            }
+            
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = this.keywordMapping[keyword];
+            }
+        }
+        
+        if (bestMatch) {
+            console.log('✅ Meilleure correspondance trouvée:', bestMatch, 'avec score:', bestScore);
+            return bestMatch;
+        }
+        
+        console.log('❌ Aucune correspondance, utilisation de l\'icône par défaut');
+        return 'fas fa-box';
+    },
+    
+    // Fonction pour détecter des correspondances partielles
+    partialMatch: function(str1, str2) {
+        // Vérifier si les chaînes partagent des sous-chaînes de 3+ caractères
+        if (str1.length < 3 || str2.length < 3) return false;
+        
+        for (let i = 0; i <= str1.length - 3; i++) {
+            const substr = str1.substring(i, i + 3);
+            if (str2.includes(substr)) {
+                return true;
+            }
+        }
+        return false;
+    },
+    
+    getMultipleSuggestions: function(categoryName) {
+        const suggestions = [];
+        const name = categoryName.toLowerCase().trim();
+        
+        if (!name || name.length < 2) {
+            return ['fas fa-box', 'fas fa-tag', 'fas fa-star', 'fas fa-heart', 'fas fa-gem', 'fas fa-check-circle'];
+        }
+        
+        console.log('🔍 Génération de suggestions multiples pour:', name);
+        
+        // Ajouter l'icône principale suggérée
+        const mainSuggestion = this.suggest(categoryName);
+        suggestions.push(mainSuggestion);
+        
+        // Scores pour toutes les correspondances
+        const matches = [];
+        
+        Object.keys(this.keywordMapping).forEach(keyword => {
+            let score = 0;
+            
+            if (name.includes(keyword)) {
+                score = keyword.length * 2; // Score élevé pour inclusion
+            } else if (keyword.includes(name)) {
+                score = name.length * 1.5; // Score moyen pour inclusion inverse
+            } else if (this.partialMatch(name, keyword)) {
+                score = Math.min(name.length, keyword.length); // Score faible pour correspondances partielles
+            }
+            
+            if (score > 0) {
+                matches.push({
+                    keyword: keyword,
+                    icon: this.keywordMapping[keyword],
+                    score: score
+                });
+            }
+        });
+        
+        // Trier par score décroissant
+        matches.sort((a, b) => b.score - a.score);
+        
+        // Ajouter les meilleures correspondances (en évitant les doublons)
+        matches.forEach(match => {
+            if (suggestions.length < 6 && !suggestions.includes(match.icon)) {
+                suggestions.push(match.icon);
+            }
+        });
+        
+        // Si pas assez de suggestions, ajouter des icônes populaires
+        const popularIcons = [
+            'fas fa-star', 'fas fa-heart', 'fas fa-check-circle', 'fas fa-gem', 
+            'fas fa-award', 'fas fa-crown', 'fas fa-fire', 'fas fa-bolt'
+        ];
+        
+        popularIcons.forEach(icon => {
+            if (suggestions.length < 6 && !suggestions.includes(icon)) {
+                suggestions.push(icon);
+            }
+        });
+        
+        console.log('✅ Suggestions générées:', suggestions);
+        return suggestions.slice(0, 6);
+    }
+};
+
+let currentMode = 'add'; // 'add' ou 'edit'
+let selectedIcon = 'fas fa-box';
+
+// Initialiser le sélecteur d'icônes
+function initIconSelector() {
+    // Remplir chaque catégorie d'icônes
+    Object.keys(iconDatabase).forEach(category => {
+        const gridId = category + 'IconsGrid';
+        const grid = document.getElementById(gridId);
+        if (grid) {
+            grid.innerHTML = '';
+            iconDatabase[category].forEach(icon => {
+                const iconElement = createIconElement(icon);
+                grid.appendChild(iconElement);
+            });
+        }
+    });
+}
+
+// Créer un élément d'icône cliquable
+function createIconElement(iconClass) {
+    const col = document.createElement('div');
+    col.className = 'col-2 col-sm-1';
+    
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-outline-secondary w-100 icon-btn';
+    button.style.aspectRatio = '1';
+    button.setAttribute('data-icon', iconClass);
+    button.title = iconClass;
+    button.onclick = function() { previewIcon(iconClass); };
+    
+    const icon = document.createElement('i');
+    icon.className = iconClass;
+    
+    button.appendChild(icon);
+    col.appendChild(button);
+    
+    return col;
+}
+
+// Prévisualiser une icône
+function previewIcon(iconClass) {
+    selectedIcon = iconClass;
+    
+    // Mettre à jour l'aperçu dans le modal
+    const preview = document.getElementById('selectedIconPreview');
+    const code = document.getElementById('selectedIconCode');
+    
+    if (preview && code) {
+        preview.className = iconClass + ' fa-2x text-primary';
+        code.textContent = iconClass;
+    }
+    
+    // Mettre en surbrillance l'icône sélectionnée
+    document.querySelectorAll('.icon-btn').forEach(btn => {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-secondary');
+    });
+    
+    const selectedBtn = document.querySelector(`[data-icon="${iconClass}"]`);
+    if (selectedBtn) {
+        selectedBtn.classList.remove('btn-outline-secondary');
+        selectedBtn.classList.add('btn-primary');
+    }
+}
+
+// Filtrer les icônes par recherche
+function filterIcons() {
+    const searchTerm = document.getElementById('iconSearch').value.toLowerCase();
+    
+    if (searchTerm.length === 0) {
+        // Réinitialiser l'affichage normal
+        initIconSelector();
+        return;
+    }
+    
+    // Rechercher dans toutes les catégories
+    const allIcons = Object.values(iconDatabase).flat();
+    const filteredIcons = allIcons.filter(icon => 
+        icon.toLowerCase().includes(searchTerm) ||
+        icon.replace('fas fa-', '').replace('-', ' ').toLowerCase().includes(searchTerm)
+    );
+    
+    // Afficher les résultats dans l'onglet actif
+    const activeTab = document.querySelector('.tab-pane.active .row');
+    if (activeTab) {
+        activeTab.innerHTML = '';
+        filteredIcons.forEach(icon => {
+            const iconElement = createIconElement(icon);
+            activeTab.appendChild(iconElement);
+        });
+    }
+}
+
+// Ouvrir le sélecteur d'icônes
+function openIconSelector(mode) {
+    currentMode = mode;
+    
+    // Récupérer l'icône actuelle
+    let currentIcon = 'fas fa-box';
+    let categoryName = '';
+    
+    if (mode === 'edit') {
+        currentIcon = document.getElementById('editCategoryIcon').value || 'fas fa-box';
+        categoryName = document.getElementById('editCategoryName').value || '';
+    } else {
+        currentIcon = document.getElementById('categoryIcon').value || 'fas fa-box';
+        categoryName = document.getElementById('categoryName').value || '';
+    }
+    
+    // Afficher les suggestions intelligentes si un nom de catégorie est fourni
+    if (categoryName.trim()) {
+        showSmartSuggestions(categoryName);
+    } else {
+        hideSmartSuggestions();
+    }
+    
+    // Prévisualiser l'icône actuelle
+    previewIcon(currentIcon);
+    
+    // Ouvrir le modal
+    new bootstrap.Modal(document.getElementById('iconSelectorModal')).show();
+}
+
+// Afficher les suggestions intelligentes
+function showSmartSuggestions(categoryName) {
+    const suggestionsContainer = document.getElementById('smartSuggestions');
+    const categoryNameSpan = document.getElementById('suggestionCategoryName');
+    const suggestedGrid = document.getElementById('suggestedIconsGrid');
+    
+    if (!suggestionsContainer || !suggestedGrid || !categoryName || categoryName.length < 2) {
+        hideSmartSuggestions();
+        return;
+    }
+    
+    console.log('🎯 Affichage des suggestions pour:', categoryName);
+    
+    // Obtenir les suggestions
+    const suggestions = iconSuggestions.getMultipleSuggestions(categoryName);
+    
+    if (suggestions.length === 0) {
+        hideSmartSuggestions();
+        return;
+    }
+    
+    // Mettre à jour le nom de la catégorie
+    if (categoryNameSpan) {
+        categoryNameSpan.textContent = categoryName;
+    }
+    
+    // Vider la grille de suggestions
+    suggestedGrid.innerHTML = '';
+    
+    // Ajouter les icônes suggérées
+    suggestions.forEach((iconClass, index) => {
+        const iconElement = createSuggestionIconElement(iconClass, index === 0);
+        suggestedGrid.appendChild(iconElement);
+    });
+    
+    // Afficher le conteneur de suggestions
+    suggestionsContainer.style.display = 'block';
+    
+    console.log('✅ Suggestions affichées:', suggestions);
+}
+
+// Créer un élément d'icône spécial pour les suggestions
+function createSuggestionIconElement(iconClass, isRecommended = false) {
+    const col = document.createElement('div');
+    col.className = 'col-2';
+    
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `btn ${isRecommended ? 'btn-primary' : 'btn-outline-primary'} w-100 suggestion-icon-btn`;
+    button.style.aspectRatio = '1';
+    button.style.position = 'relative';
+    button.setAttribute('data-icon', iconClass);
+    button.title = iconClass + (isRecommended ? ' (Recommandé)' : '');
+    button.onclick = function() { 
+        previewIcon(iconClass); 
+        // Mettre en surbrillance cette suggestion
+        document.querySelectorAll('.suggestion-icon-btn').forEach(btn => {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+        });
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-primary');
+    };
+    
+    const icon = document.createElement('i');
+    icon.className = iconClass;
+    icon.style.fontSize = '1.2rem';
+    
+    button.appendChild(icon);
+    
+    // Ajouter un badge "Recommandé" pour la première suggestion
+    if (isRecommended) {
+        const badge = document.createElement('span');
+        badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success';
+        badge.style.fontSize = '0.6rem';
+        badge.textContent = '★';
+        button.appendChild(badge);
+    }
+    
+    col.appendChild(button);
+    
+    return col;
+}
+
+// Masquer les suggestions intelligentes
+function hideSmartSuggestions() {
+    const suggestionsContainer = document.getElementById('smartSuggestions');
+    if (suggestionsContainer) {
+        suggestionsContainer.style.display = 'none';
+    }
+}
+
+// Mettre à jour les suggestions en temps réel quand l'utilisateur tape un nom
+function setupSmartSuggestions() {
+    // Pour le formulaire d'ajout
+    const addNameInput = document.getElementById('categoryName');
+    if (addNameInput) {
+        addNameInput.addEventListener('input', function() {
+            const nameValue = this.value.trim();
+            console.log('🔍 Nom saisi:', nameValue);
+            
+            if (nameValue.length >= 2) {
+                // Suggérer automatiquement une icône
+                const suggestedIcon = iconSuggestions.suggest(nameValue);
+                const iconInput = document.getElementById('categoryIcon');
+                const iconPreview = document.getElementById('categoryIconPreview');
+                
+                console.log('💡 Icône suggérée:', suggestedIcon);
+                
+                // Mettre à jour l'icône suggérée
+                if (iconInput) {
+                    iconInput.value = suggestedIcon;
+                    // Déclencher l'événement input pour mettre à jour l'aperçu
+                    iconInput.dispatchEvent(new Event('input'));
+                }
+                
+                if (iconPreview) {
+                    iconPreview.className = suggestedIcon;
+                }
+                
+                // Afficher un petit indicateur de suggestion
+                showSuggestionIndicator(nameValue, suggestedIcon);
+            } else {
+                // Remettre l'icône par défaut si le nom est trop court
+                const iconInput = document.getElementById('categoryIcon');
+                const iconPreview = document.getElementById('categoryIconPreview');
+                
+                if (iconInput && iconInput.value !== 'fas fa-box') {
+                    iconInput.value = 'fas fa-box';
+                    iconInput.dispatchEvent(new Event('input'));
+                }
+                
+                if (iconPreview) {
+                    iconPreview.className = 'fas fa-box';
+                }
+                
+                hideSuggestionIndicator();
+            }
+        });
+    }
+    
+    // Pour le formulaire d'édition
+    const editNameInput = document.getElementById('editCategoryName');
+    if (editNameInput) {
+        editNameInput.addEventListener('input', function() {
+            const nameValue = this.value.trim();
+            console.log('🔍 Nom modifié:', nameValue);
+            
+            if (nameValue.length >= 2) {
+                // Suggérer automatiquement une icône
+                const suggestedIcon = iconSuggestions.suggest(nameValue);
+                const iconInput = document.getElementById('editCategoryIcon');
+                const iconPreview = document.getElementById('editCategoryIconPreview');
+                
+                console.log('💡 Icône suggérée pour édition:', suggestedIcon);
+                
+                // Mettre à jour l'icône suggérée
+                if (iconInput) {
+                    iconInput.value = suggestedIcon;
+                    iconInput.dispatchEvent(new Event('input'));
+                }
+                
+                if (iconPreview) {
+                    iconPreview.className = suggestedIcon;
+                }
+            }
+        });
+    }
+}
+
+// Afficher un indicateur de suggestion
+function showSuggestionIndicator(categoryName, suggestedIcon) {
+    // Chercher s'il y a déjà un indicateur
+    let indicator = document.getElementById('suggestionIndicator');
+    
+    if (!indicator) {
+        // Créer l'indicateur
+        indicator = document.createElement('div');
+        indicator.id = 'suggestionIndicator';
+        indicator.className = 'alert alert-info alert-dismissible fade show mt-2';
+        indicator.style.fontSize = '0.85rem';
+        
+        // Insérer après le champ nom de catégorie
+        const nameField = document.getElementById('categoryName') || document.getElementById('editCategoryName');
+        if (nameField && nameField.parentElement) {
+            nameField.parentElement.appendChild(indicator);
+        }
+    }
+    
+    indicator.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="${suggestedIcon} me-2 text-primary"></i>
+            <span><strong>Suggestion:</strong> Icône "${suggestedIcon}" pour "${categoryName}"</span>
+            <button type="button" class="btn-close btn-close-sm ms-auto" onclick="hideSuggestionIndicator()"></button>
+        </div>
+    `;
+}
+
+// Masquer l'indicateur de suggestion
+function hideSuggestionIndicator() {
+    const indicator = document.getElementById('suggestionIndicator');
+    if (indicator) {
+        indicator.remove();
+    }
+}
+
+// Sélectionner l'icône et fermer le modal
+function selectIcon() {
+    const targetInput = currentMode === 'edit' ? 'editCategoryIcon' : 'categoryIcon';
+    const targetPreview = currentMode === 'edit' ? 'editCategoryIconPreview' : 'categoryIconPreview';
+    
+    // Mettre à jour l'input
+    document.getElementById(targetInput).value = selectedIcon;
+    
+    // Mettre à jour l'aperçu
+    const preview = document.getElementById(targetPreview);
+    if (preview) {
+        preview.className = selectedIcon;
+    }
+    
+    // Fermer le modal
+    bootstrap.Modal.getInstance(document.getElementById('iconSelectorModal')).hide();
+}
+
+// Mettre à jour l'aperçu en temps réel lors de la frappe
+function updateIconPreview(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    
+    if (input && preview) {
+        input.addEventListener('input', function() {
+            const iconClass = this.value || 'fas fa-box';
+            preview.className = iconClass;
+        });
+    }
+}
+
 function editCategory(id, name, description, icon) {
     document.getElementById('editCategoryName').value = name;
     document.getElementById('editCategoryDescription').value = description;
     document.getElementById('editCategoryIcon').value = icon;
+    
+    // Mettre à jour l'aperçu de l'icône
+    const preview = document.getElementById('editCategoryIconPreview');
+    if (preview) {
+        preview.className = icon || 'fas fa-box';
+    }
+    
     document.getElementById('editCategoryForm').action = `/admin/categories/${id}/edit`;
     new bootstrap.Modal(document.getElementById('editCategoryModal')).show();
 }
@@ -294,6 +1016,16 @@ function showAlert(message, type) {
 
 // Event listeners pour les boutons
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser le sélecteur d'icônes
+    initIconSelector();
+    
+    // Mettre à jour les aperçus en temps réel
+    updateIconPreview('categoryIcon', 'categoryIconPreview');
+    updateIconPreview('editCategoryIcon', 'editCategoryIconPreview');
+    
+    // Configurer les suggestions intelligentes
+    setupSmartSuggestions();
+    
     // Boutons d'édition
     document.querySelectorAll('.edit-category-btn').forEach(button => {
         button.addEventListener('click', function() {
@@ -313,6 +1045,14 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleCategory(id, !isActive);
         });
     });
+    
+    // Bouton d'ouverture du sélecteur d'icônes pour l'ajout
+    const addIconSelectorBtn = document.querySelector('[data-bs-target="#iconSelectorModal"]');
+    if (addIconSelectorBtn) {
+        addIconSelectorBtn.addEventListener('click', function() {
+            openIconSelector('add');
+        });
+    }
 });
 </script>
 {% endblock %}

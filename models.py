@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Models - Modèles de base de données pour DOUKA KM
-Utilise SQLAlchemy pour la gestion de la base de données
+Utilise SQLAlchemy 2.0+ pour la gestion de la base de données
+Compatible Python 3.13
 """
 
 from flask_sqlalchemy import SQLAlchemy
@@ -36,6 +37,7 @@ class User(db.Model):
     reviews = db.relationship('Review', backref='user', lazy=True)
     wishlist_items = db.relationship('WishlistItem', backref='user', lazy=True)
     carts = db.relationship('Cart', backref='user', lazy=True)
+    addresses = db.relationship('Address', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -58,6 +60,37 @@ class User(db.Model):
             'is_active': self.is_active,
             'last_login': self.last_login.strftime('%Y-%m-%d %H:%M:%S') if self.last_login else None,
             'created_at': self.created_at.strftime('%Y-%m-%d') if self.created_at else None
+        }
+
+class Address(db.Model):
+    """Modèle pour les adresses de livraison des utilisateurs"""
+    __tablename__ = 'addresses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # ex: "Domicile", "Bureau"
+    full_name = db.Column(db.String(200), nullable=False)  # Nom complet du destinataire
+    street = db.Column(db.Text, nullable=False)  # Rue/Adresse
+    city = db.Column(db.String(100), nullable=False)  # Ville
+    region = db.Column(db.String(50), nullable=False)  # Région
+    phone = db.Column(db.String(20), nullable=False)  # Téléphone
+    is_default = db.Column(db.Boolean, default=False)  # Adresse par défaut
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'full_name': self.full_name,
+            'street': self.street,
+            'city': self.city,
+            'region': self.region,
+            'phone': self.phone,
+            'is_default': self.is_default,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
+            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M:%S') if self.updated_at else None
         }
 
 class Merchant(db.Model):

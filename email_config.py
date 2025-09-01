@@ -35,7 +35,7 @@ CURRENT_EMAIL_CONFIG = {
     'FROM_NAME': 'DOUKA-KM',
     'USERNAME': 'ledouka.km@gmail.com',
     'PASSWORD': 'eiwk xhhy qhhf vmjp',  # Votre mot de passe d'application
-    'VERIFICATION_URL_BASE': os.environ.get('VERIFICATION_URL_BASE') or ('https://douka-km.onrender.com' if os.environ.get('RENDER') else 'http://localhost:5002')
+    'VERIFICATION_URL_BASE': os.environ.get('VERIFICATION_URL_BASE') or ('https://doukakm.com' if os.environ.get('RENDER') else 'http://localhost:5002')
 }
 
 # Debug: afficher la configuration au chargement

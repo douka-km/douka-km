@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+<!-- created with Free Online Sitemap Generator www.xml-sitemaps.com -->
+
+
+<url>
+  <loc>https://www.doukakm.com/</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>1.00</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/contact</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/cart</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/login</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/register</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/about</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=1</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=1&amp;subcategory_filter=2</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=1&amp;sort=popular</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=1&amp;sort=recent</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=1&amp;sort=price_asc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=4</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=5</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=6</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=6&amp;subcategory_filter=11</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=6&amp;subcategory_filter=10</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=6&amp;subcategory_filter=12</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=6&amp;sort=popular</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=6&amp;sort=recent</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=6&amp;sort=price_asc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=7</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=7&amp;subcategory_filter=13</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=7&amp;sort=popular</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=7&amp;sort=recent</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=7&amp;sort=price_asc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=3</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=3&amp;subcategory_filter=1</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=3&amp;sort=popular</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=3&amp;sort=recent</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=3&amp;sort=price_asc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=8</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=8&amp;subcategory_filter=14</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=8&amp;sort=popular</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=8&amp;sort=recent</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=8&amp;sort=price_asc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?category_filter=2</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/product/25</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/product/11</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/product/10</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/product/9</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/product/6</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/privacy-policy</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/terms-of-service</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/legal-notice</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?sort=newest</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?sort=oldest</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?sort=price_asc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?sort=price_desc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?sort=name_asc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/products?sort=name_desc</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/forgot-password</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/merchant/register</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/merchant/login</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.51</priority>
+</url>
+<url>
+  <loc>https://www.doukakm.com/merchant/forgot-password</loc>
+  <lastmod>2025-08-20T18:50:21+00:00</lastmod>
+  <priority>0.41</priority>
+</url>
+
+
+</urlset>

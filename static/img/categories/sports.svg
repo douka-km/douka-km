@@ -1,0 +1,67 @@
+<!-- Placeholder SVG pour la catégorie Sport -->
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arrière-plan dégradé bleu/vert sport -->
+  <defs>
+    <linearGradient id="sportGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00BFFF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#32CD32;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#228B22;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Arrière-plan -->
+  <rect width="400" height="300" fill="url(#sportGradient)"/>
+  
+  <!-- Lignes de vitesse -->
+  <g stroke="#FFFFFF" stroke-width="3" opacity="0.6">
+    <line x1="50" y1="50" x2="80" y2="50"/>
+    <line x1="60" y1="70" x2="100" y2="70"/>
+    <line x1="320" y1="200" x2="350" y2="200"/>
+    <line x1="310" y1="220" x2="340" y2="220"/>
+  </g>
+  
+  <!-- Ballon de foot -->
+  <g transform="translate(80, 100)">
+    <circle cx="0" cy="0" r="35" fill="#FFFFFF" stroke="#000" stroke-width="2"/>
+    <!-- Pentagones noirs -->
+    <polygon points="-8,-15 8,-15 13,0 0,12 -13,0" fill="#000"/>
+    <polygon points="-25,-8 -15,-25 0,-20 -10,-3 -20,5" fill="#000"/>
+    <polygon points="25,-8 15,-25 0,-20 10,-3 20,5" fill="#000"/>
+  </g>
+  
+  <!-- Haltère -->
+  <g transform="translate(250, 120)">
+    <!-- Barre -->
+    <rect x="-40" y="-3" width="80" height="6" fill="#C0C0C0"/>
+    <!-- Poids gauche -->
+    <circle cx="-35" cy="0" r="15" fill="#2F4F4F"/>
+    <circle cx="-35" cy="0" r="12" fill="#696969"/>
+    <!-- Poids droit -->
+    <circle cx="35" cy="0" r="15" fill="#2F4F4F"/>
+    <circle cx="35" cy="0" r="12" fill="#696969"/>
+  </g>
+  
+  <!-- Chaussure de sport -->
+  <g transform="translate(150, 180)">
+    <!-- Semelle -->
+    <ellipse cx="0" cy="10" rx="50" ry="12" fill="#000"/>
+    <!-- Chaussure -->
+    <path d="M -40,10 Q -45,0 -30,-10 L 30,-10 Q 45,-5 40,10 Z" fill="#FF4500"/>
+    <!-- Lacets -->
+    <g stroke="#FFFFFF" stroke-width="2">
+      <line x1="-20" y1="-5" x2="20" y2="-5"/>
+      <line x1="-15" y1="0" x2="15" y2="0"/>
+    </g>
+    <!-- Logo -->
+    <path d="M 15,-5 Q 25,-2 20,5" stroke="#FFFFFF" stroke-width="3" fill="none"/>
+  </g>
+  
+  <!-- Étoiles de mouvement -->
+  <g fill="#FFFF00" opacity="0.8">
+    <polygon points="60,200 62,205 67,205 63,209 65,214 60,211 55,214 57,209 53,205 58,205" />
+    <polygon points="340,80 342,85 347,85 343,89 345,94 340,91 335,94 337,89 333,85 338,85" />
+  </g>
+  
+  <!-- Texte -->
+  <text x="200" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#FFFFFF">Sport & Fitness</text>
+</svg>

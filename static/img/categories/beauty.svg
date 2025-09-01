@@ -1,0 +1,62 @@
+<!-- Placeholder SVG pour la catégorie Beauté -->
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arrière-plan dégradé rose/violet -->
+  <defs>
+    <linearGradient id="beautyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF69B4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#DDA0DD;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E6E6FA;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Arrière-plan -->
+  <rect width="400" height="300" fill="url(#beautyGradient)"/>
+  
+  <!-- Sparkles -->
+  <g fill="#FFD700" opacity="0.8">
+    <circle cx="50" cy="50" r="2"/>
+    <circle cx="350" cy="60" r="1.5"/>
+    <circle cx="80" cy="200" r="2"/>
+    <circle cx="320" cy="220" r="1.5"/>
+    <polygon points="120,40 122,45 127,45 123,49 125,54 120,51 115,54 117,49 113,45 118,45" />
+    <polygon points="280,180 282,185 287,185 283,189 285,194 280,191 275,194 277,189 273,185 278,185" />
+  </g>
+  
+  <!-- Tube de rouge à lèvres -->
+  <g transform="translate(120, 100)">
+    <!-- Base du tube -->
+    <rect x="0" y="80" width="30" height="80" rx="5" fill="#C0C0C0"/>
+    <!-- Corps du tube -->
+    <rect x="2" y="60" width="26" height="100" rx="3" fill="#FFB6C1"/>
+    <!-- Rouge à lèvres -->
+    <ellipse cx="15" cy="55" rx="8" ry="20" fill="#DC143C"/>
+    <!-- Reflet -->
+    <ellipse cx="12" cy="50" rx="2" ry="8" fill="#FF1493" opacity="0.7"/>
+  </g>
+  
+  <!-- Miroir -->
+  <g transform="translate(220, 80)">
+    <!-- Poignée -->
+    <rect x="45" y="100" width="10" height="60" rx="5" fill="#8B4513"/>
+    <!-- Miroir -->
+    <circle cx="50" cy="50" r="45" fill="#E6E6FA" stroke="#C0C0C0" stroke-width="3"/>
+    <circle cx="50" cy="50" r="40" fill="#F0F8FF" opacity="0.9"/>
+    <!-- Reflet -->
+    <ellipse cx="35" cy="35" rx="15" ry="20" fill="#FFFFFF" opacity="0.6"/>
+  </g>
+  
+  <!-- Flacon de parfum -->
+  <g transform="translate(60, 120)">
+    <!-- Base -->
+    <rect x="0" y="40" width="40" height="60" rx="5" fill="#DDA0DD" opacity="0.8"/>
+    <!-- Bouchon -->
+    <rect x="10" y="20" width="20" height="25" rx="10" fill="#DAA520"/>
+    <!-- Étiquette -->
+    <rect x="5" y="60" width="30" height="20" fill="#FFFFFF" opacity="0.9"/>
+    <!-- Brillance -->
+    <rect x="5" y="45" width="8" height="40" fill="#FFFFFF" opacity="0.4"/>
+  </g>
+  
+  <!-- Texte -->
+  <text x="200" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#8B008B">Beauté & Cosmétiques</text>
+</svg>
