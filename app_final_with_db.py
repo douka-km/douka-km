@@ -12724,18 +12724,21 @@ def admin_promo_codes():
         ]
     
     # Filtrer par statut
-    today = datetime.now().strftime('%Y-%m-%d')
+    # Obtenir la date actuelle comme objet date pour les comparaisons SQL
+    today = datetime.now().date()
+    # Aussi comme string pour les comparaisons avec les données JSON
+    today_str = datetime.now().strftime('%Y-%m-%d')
     
     if status_filter == 'active':
         all_codes = [
             code for code in all_codes
             if (code.get('active', False) and
-                (not code.get('end_date') or code.get('end_date') >= today))
+                (not code.get('end_date') or code.get('end_date') >= today_str))
         ]
     elif status_filter == 'expired':
         all_codes = [
             code for code in all_codes
-            if (code.get('end_date') and code.get('end_date') < today)
+            if (code.get('end_date') and code.get('end_date') < today_str)
         ]
     elif status_filter == 'inactive':
         all_codes = [
