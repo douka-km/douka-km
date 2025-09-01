@@ -197,7 +197,12 @@ if os.environ.get('RENDER'):
     if database_url:
         # Adapter l'URL pour la version de psycopg utilisée
         if database_url.startswith('postgres://'):
-            database_url = database_url.replace('postgres://', 'postgresql://')
+            database_url = database_url.replace('postgres://', 'postgresql+psycopg://')
+        # S'assurer que l'URL utilise psycopg v3
+        elif database_url.startswith('postgresql://') and '+psycopg' not in database_url:
+            database_url = database_url.replace('postgresql://', 'postgresql+psycopg://')
+        
+        print(f"🔗 Database URL configurée: {database_url[:50]}...")
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///douka_km.db'

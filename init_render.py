@@ -11,8 +11,21 @@ import traceback
 os.environ['RENDER'] = '1'
 
 def check_compatibility():
-    """Vérifie la compatibilité Python/SQLAlchemy"""
+    """Vérifie la compatibilité Python/SQLAlchemy/psycopg"""
     print(f"Python version: {sys.version}")
+    
+    # Test psycopg v3 d'abord
+    try:
+        import psycopg
+        print(f"✅ psycopg v3 version: {psycopg.__version__}")
+    except ImportError:
+        print("❌ psycopg v3 non disponible")
+        try:
+            import psycopg2
+            print(f"⚠️  psycopg2 version: {psycopg2.__version__} (compatible mais non recommandé)")
+        except ImportError:
+            print("❌ Aucun adaptateur PostgreSQL disponible")
+            return False
     
     try:
         import sqlalchemy
@@ -21,6 +34,25 @@ def check_compatibility():
         # Tester l'importation problématique
         from sqlalchemy.sql.elements import SQLCoreOperations
         print("SQLAlchemy imports OK")
+        
+        # Test de la création d'engine avec psycopg
+        try:
+            database_url = os.environ.get('DATABASE_URL')
+            if database_url:
+                # S'assurer qu'on utilise psycopg v3
+                if '+psycopg' not in database_url:
+                    if database_url.startswith('postgres://'):
+                        database_url = database_url.replace('postgres://', 'postgresql+psycopg://')
+                    elif database_url.startswith('postgresql://'):
+                        database_url = database_url.replace('postgresql://', 'postgresql+psycopg://')
+                
+                from sqlalchemy import create_engine
+                engine = create_engine(database_url, echo=False)
+                print(f"✅ Engine PostgreSQL+psycopg créé avec succès")
+                engine.dispose()
+        except Exception as engine_error:
+            print(f"⚠️  Problème création engine: {engine_error}")
+        
         return True
     except Exception as e:
         print(f"Problème SQLAlchemy: {e}")
