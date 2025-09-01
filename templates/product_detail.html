@@ -470,7 +470,7 @@
                             </h5>
                             <p class="mb-3">Nous livrons sur toutes les îles des Comores :</p>
                             <ul>
-                                {% for location, time in shipping_info.delivery_times.regions.items() %}
+                                {% for location, time in shipping_info.delivery_times.items() %}
                                 <li><strong>{{ location }}:</strong> Livraison sous {{ time }}</li>
                                 {% endfor %}
                             </ul>
@@ -489,9 +489,9 @@
                                             <i class="fas fa-truck me-2"></i>Livraison Standard
                                         </div>
                                         <div class="card-body">
-                                            <h5 class="card-title text-primary">{{ shipping_info.standard_rate|format_number }} KMF</h5>
+                                            <h5 class="card-title text-primary">{{ shipping_info.shipping_fee|format_number }} KMF</h5>
                                             <p class="card-text">
-                                                <i class="fas fa-clock me-1"></i>{{ shipping_info.delivery_times.standard }}
+                                                <i class="fas fa-clock me-1"></i>Délai standard de livraison
                                             </p>
                                         </div>
                                     </div>

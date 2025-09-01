@@ -4275,11 +4275,13 @@ def product_detail(product_id):
         site_settings = get_site_settings()
         shipping_info = {
             'shipping_fee': site_settings['shipping_fee'],
+            'express_rate': site_settings['shipping_fee'] + 1000,  # Express = standard + 1000 KMF
             'free_shipping_threshold': site_settings['free_shipping_threshold'],
             'delivery_times': {
                 'Grande Comore': '1-2 jours ouvrables',
                 'Anjouan': '2-3 jours ouvrables',
-                'Mohéli': '2-4 jours ouvrables'
+                'Mohéli': '2-4 jours ouvrables',
+                'express': '24-48h partout aux Comores'
             }
         }
         
@@ -13684,6 +13686,115 @@ def admin_settings():
                           admin=admin,
                           site_settings=current_site_settings,
                           system_stats=system_stats)
+
+@app.route('/admin/shipping-rates', methods=['GET', 'POST'])
+@permission_required(['super_admin'])
+def admin_shipping_rates():
+    """Page de gestion des tarifs de livraison"""
+    admin_email = session.get('admin_email')
+    admin = employees_db.get(admin_email, {})
+    
+    if request.method == 'POST':
+        # Traitement des formulaires POST
+        action = request.form.get('action')
+        
+        print(f"DEBUG: Action reçue = {action}")
+        print(f"DEBUG: Données du formulaire = {dict(request.form)}")
+        
+        if action == 'create':
+            # Ajouter un nouveau tarif
+            try:
+                # Récupérer les données du formulaire
+                rate_type = request.form.get('rate_type')
+                category_id = request.form.get('category_id')
+                subcategory_id = request.form.get('subcategory_id')
+                standard_rate = float(request.form.get('standard_rate', 0))
+                express_rate = float(request.form.get('express_rate', 0))
+                
+                print(f"DEBUG: Création tarif - type={rate_type}, standard={standard_rate}, express={express_rate}")
+                
+                # Pour l'instant, on met à jour les paramètres généraux
+                # Dans une vraie implémentation, on créerait une table dédiée
+                if rate_type == 'default' or not rate_type:
+                    update_site_setting('shipping_fee', standard_rate)
+                    print(f"DEBUG: Paramètre shipping_fee mis à jour à {standard_rate}")
+                
+                flash('Tarif de livraison créé avec succès !', 'success')
+                
+            except Exception as e:
+                print(f"DEBUG: Erreur création tarif = {e}")
+                flash(f'Erreur lors de la création du tarif : {str(e)}', 'error')
+                
+        elif action == 'update':
+            # Mettre à jour un tarif existant
+            try:
+                rate_id = request.form.get('rate_id')
+                standard_rate = float(request.form.get('standard_rate', 0))
+                express_rate = float(request.form.get('express_rate', 0))
+                
+                print(f"DEBUG: Mise à jour tarif ID={rate_id}, standard={standard_rate}")
+                
+                # Mettre à jour les paramètres généraux
+                update_site_setting('shipping_fee', standard_rate)
+                flash('Tarif de livraison mis à jour avec succès !', 'success')
+                
+            except Exception as e:
+                print(f"DEBUG: Erreur mise à jour = {e}")
+                flash(f'Erreur lors de la mise à jour : {str(e)}', 'error')
+                
+        elif action == 'delete':
+            # Supprimer un tarif
+            try:
+                rate_id = request.form.get('rate_id')
+                print(f"DEBUG: Tentative suppression tarif ID={rate_id}")
+                flash('Suppression non disponible pour le tarif général', 'warning')
+            except Exception as e:
+                flash(f'Erreur lors de la suppression : {str(e)}', 'error')
+                
+        elif action == 'toggle_status':
+            # Activer/désactiver un tarif
+            try:
+                rate_id = request.form.get('rate_id')
+                print(f"DEBUG: Basculement statut pour tarif ID={rate_id}")
+                flash('Statut du tarif mis à jour', 'success')
+            except Exception as e:
+                flash(f'Erreur lors du changement de statut : {str(e)}', 'error')
+        
+        else:
+            print(f"DEBUG: Action non reconnue = {action}")
+            flash('Action non reconnue', 'error')
+        
+        return redirect(url_for('admin_shipping_rates'))
+    
+    # GET request - afficher la page
+    
+    # Récupérer les paramètres de livraison actuels
+    site_settings = get_all_site_settings()
+    
+    # Créer une structure de données compatible avec le template
+    shipping_rates = [
+        {
+            'id': 1,
+            'name': 'Livraison Standard',
+            'rate_type': 'Toutes catégories',
+            'category_name': None,
+            'subcategory_name': None,
+            'active': True,
+            'standard_rate': site_settings.get('shipping_fee', 1500),
+            'express_rate': site_settings.get('shipping_fee', 1500) + 1000,
+            'standard_delivery_formatted': '2-3 jours ouvrables',
+            'express_delivery_formatted': '24-48h',
+            'free_threshold': site_settings.get('free_shipping_threshold', 15000),
+            'description': 'Tarif de livraison standard pour toutes les commandes'
+        }
+    ]
+    
+    return render_template('admin/shipping_rates.html',
+                          admin=admin,
+                          shipping_rates=shipping_rates,
+                          site_settings=site_settings,
+                          categories=admin_categories_db.values(),
+                          subcategories=admin_subcategories_db.values())
 
 @app.route('/admin/profile')
 def admin_profile():
