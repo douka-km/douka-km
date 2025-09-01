@@ -470,7 +470,7 @@
                             </h5>
                             <p class="mb-3">Nous livrons sur toutes les îles des Comores :</p>
                             <ul>
-                                {% for location, time in shipping_info.delivery_times.items() %}
+                                {% for location, time in shipping_info.delivery_times.regions.items() %}
                                 <li><strong>{{ location }}:</strong> Livraison sous {{ time }}</li>
                                 {% endfor %}
                             </ul>
@@ -480,10 +480,43 @@
                             <h5>
                                 <i class="fas fa-money-bill-wave"></i>Frais de livraison
                             </h5>
-                            <ul>
-                                <li>{{ shipping_info.shipping_fee|format_number }} KMF pour les commandes inférieures à {{ shipping_info.free_shipping_threshold|format_number }} KMF</li>
-                                <li><strong>Gratuite</strong> pour les commandes supérieures à {{ shipping_info.free_shipping_threshold|format_number }} KMF</li>
-                            </ul>
+                            
+                            <!-- Tarifs de livraison selon le type -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card border-primary mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <i class="fas fa-truck me-2"></i>Livraison Standard
+                                        </div>
+                                        <div class="card-body">
+                                            <h5 class="card-title text-primary">{{ shipping_info.standard_rate|format_number }} KMF</h5>
+                                            <p class="card-text">
+                                                <i class="fas fa-clock me-1"></i>{{ shipping_info.delivery_times.standard }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="card border-info mb-3">
+                                        <div class="card-header bg-info text-white">
+                                            <i class="fas fa-bolt me-2"></i>Livraison Express
+                                        </div>
+                                        <div class="card-body">
+                                            <h5 class="card-title text-info">{{ shipping_info.express_rate|format_number }} KMF</h5>
+                                            <p class="card-text">
+                                                <i class="fas fa-bolt me-1"></i>{{ shipping_info.delivery_times.express }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Information sur la livraison gratuite -->
+                            <div class="alert alert-success">
+                                <i class="fas fa-gift me-2"></i>
+                                <strong>Livraison gratuite</strong> pour les commandes supérieures à {{ shipping_info.free_shipping_threshold|format_number }} KMF
+                            </div>
                         </div>
                         
                         <div class="alert alert-success border-0 shadow-sm">

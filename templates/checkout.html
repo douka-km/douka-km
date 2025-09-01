@@ -147,11 +147,29 @@
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="radio" name="shipping_method" id="shipping{{ option.id }}" value="{{ option.name }}" {% if loop.first %}checked{% endif %}>
                                 <label class="form-check-label d-flex justify-content-between" for="shipping{{ option.id }}">
-                                    <div>{{ option.name }}</div>
+                                    <div>
+                                        <div class="fw-bold">{{ option.name }}</div>
+                                        {% if option.description %}
+                                            <small class="text-muted">{{ option.description }}</small>
+                                        {% endif %}
+                                    </div>
                                     <div class="fw-bold">{{ option.price|format_number }} KMF</div>
                                 </label>
                             </div>
                             {% endfor %}
+                            
+                            <!-- Informations sur le calcul des frais -->
+                            {% if shipping_breakdown %}
+                            <div class="mt-3 p-3 bg-light rounded">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Frais calculés selon {{ shipping_breakdown.calculation_method }}
+                                    {% if shipping_breakdown.applied_rates %}
+                                        <br>Tarifs appliqués: {{ shipping_breakdown.applied_rates|length }} catégorie(s)
+                                    {% endif %}
+                                </small>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -488,14 +506,7 @@
                     }
                     
                     // Afficher des informations sur le système de prix utilisé
-                    if (data.price_ranges_enabled) {
-                        console.log('Système de tranches de prix activé');
-                        if (data.price_range_used) {
-                            console.log('Tranche utilisée:', data.price_range_used.range_text);
-                        }
-                    } else {
-                        console.log('Système de tarifs régionaux utilisé pour la région:', selectedRegion);
-                    }
+                    console.log('Système de tarifs régionaux utilisé pour la région:', selectedRegion);
                 } else {
                     console.error('Erreur lors de la récupération des tarifs:', data.error);
                     // Fallback aux tarifs statiques

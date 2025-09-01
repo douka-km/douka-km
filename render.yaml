@@ -16,7 +16,10 @@ services:
       export RENDER=1
       export PYTHONPATH=/opt/render/project/src:$PYTHONPATH
       export PYTHONWARNINGS=ignore
-      gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --preload --log-level info
+      echo "🎯 Initialisation avec init_render.py..."
+      python init_render.py
+      echo "🚀 Démarrage du serveur Gunicorn avec configuration optimisée..."
+      gunicorn wsgi:app --config gunicorn_config.py --log-level info
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.0

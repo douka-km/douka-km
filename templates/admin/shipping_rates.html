@@ -1,0 +1,524 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Tarifs de Livraison par Catégorie - Administration{% endblock %}
+
+{% block admin_content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-shipping-fast me-2"></i>Tarifs de Livraison par Catégorie
+            </h1>
+            <p class="text-muted">Configurez des tarifs de livraison spécifiques selon les catégories et sous-catégories de produits</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRateModal">
+                <i class="fas fa-plus me-1"></i>Ajouter un Tarif
+            </button>
+            <a href="{{ url_for('admin_settings') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Retour aux Paramètres
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Liste des Tarifs -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Tarifs Configurés</h5>
+            <span class="badge bg-info">{{ shipping_rates|length }} tarif(s)</span>
+        </div>
+        <div class="card-body">
+            {% if shipping_rates %}
+                <div class="row">
+                    {% for rate in shipping_rates %}
+                        <div class="col-lg-6 col-xl-4 mb-3">
+                            <div class="card border-left-primary">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-primary">{{ rate.name }}</h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-tag me-1"></i>{{ rate.rate_type }}
+                                            {% if rate.category_name %}
+                                                <br><i class="fas fa-folder me-1"></i>{{ rate.category_name }}
+                                                {% if rate.subcategory_name %}
+                                                    → {{ rate.subcategory_name }}
+                                                {% endif %}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div>
+                                        {% if rate.active %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Actif
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-pause me-1"></i>Inactif
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <div class="border-end">
+                                                <div class="fs-5 fw-bold text-primary">{{ "%.0f"|format(rate.standard_rate) }} KMF</div>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-truck me-1"></i>Standard<br>
+                                                    <span class="badge bg-light text-dark">{{ rate.standard_delivery_formatted or "3 jours" }}</span>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="fs-5 fw-bold text-info">{{ "%.0f"|format(rate.express_rate) }} KMF</div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-bolt me-1"></i>Express<br>
+                                                <span class="badge bg-light text-dark">{{ rate.express_delivery_formatted or "1 jour" }}</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if rate.priority and rate.priority > 0 %}
+                                        <div class="mt-3 pt-3 border-top">
+                                            <small class="text-muted">
+                                                <i class="fas fa-star me-1"></i>Priorité: {{ rate.priority }}
+                                            </small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="btn-group w-100" role="group">
+                                        <!-- Bouton Modifier -->
+                                        <button type="button" class="btn btn-outline-primary btn-sm edit-rate-btn" 
+                                                data-rate-id="{{ rate.id }}"
+                                                data-rate-name="{{ rate.name }}"
+                                                data-rate-type="{{ rate.rate_type }}"
+                                                data-standard-rate="{{ rate.standard_rate }}"
+                                                data-express-rate="{{ rate.express_rate }}"
+                                                data-standard-days="{{ rate.standard_delivery_days or 3 }}"
+                                                data-standard-hours="{{ rate.standard_delivery_hours or 0 }}"
+                                                data-express-days="{{ rate.express_delivery_days or 1 }}"
+                                                data-express-hours="{{ rate.express_delivery_hours or 0 }}"
+                                                data-priority="{{ rate.priority or 0 }}"
+                                                data-active="{{ rate.active|lower }}"
+                                                data-category-id="{{ rate.category_id or '' }}"
+                                                data-bs-toggle="modal" data-bs-target="#editRateModal">
+                                            <i class="fas fa-edit me-1"></i>Modifier
+                                        </button>
+                                        
+                                        <!-- Bouton Activer/Désactiver -->
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="action" value="toggle_status">
+                                            <input type="hidden" name="rate_id" value="{{ rate.id }}">
+                                            <button type="submit" class="btn btn-outline-{{ 'warning' if rate.active else 'success' }} btn-sm">
+                                                <i class="fas fa-{{ 'pause' if rate.active else 'play' }} me-1"></i>
+                                                {{ 'Désactiver' if rate.active else 'Activer' }}
+                                            </button>
+                                        </form>
+                                        
+                                        <!-- Bouton Supprimer -->
+                                        <button type="button" class="btn btn-outline-danger btn-sm delete-rate-btn"
+                                                data-rate-id="{{ rate.id }}"
+                                                data-rate-name="{{ rate.name }}"
+                                                data-bs-toggle="modal" data-bs-target="#deleteRateModal">
+                                            <i class="fas fa-trash me-1"></i>Supprimer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-shipping-fast fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun tarif configuré</h5>
+                    <p class="text-muted">Commencez par ajouter un tarif par défaut.</p>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRateModal">
+                        <i class="fas fa-plus me-1"></i>Ajouter le premier tarif
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'ajout/modification -->
+<div class="modal fade" id="addRateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="{{ url_for('admin_shipping_rates') }}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ajouter un Tarif de Livraison</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="create">
+                    
+                    <div class="mb-3">
+                        <label for="rateType" class="form-label">Type de tarif *</label>
+                        <select class="form-select" name="rate_type" id="rateType" required onchange="toggleCategorySelectors()">
+                            <option value="">-- Sélectionner un type --</option>
+                            <option value="default">Tarif par défaut (global)</option>
+                            <option value="category">Par catégorie</option>
+                            <option value="subcategory">Par sous-catégorie</option>
+                        </select>
+                        <div class="form-text">Le tarif par défaut s'applique quand aucun tarif spécifique n'est défini.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="rateName" class="form-label">Nom du tarif *</label>
+                        <input type="text" class="form-control" name="name" id="rateName" 
+                               placeholder="Ex: Tarif électronique, Tarif vêtements..." required>
+                    </div>
+                    
+                    <!-- Sélecteur de catégorie (masqué par défaut) -->
+                    <div id="categorySelector" class="mb-3" style="display: none;">
+                        <label for="categorySelect" class="form-label">Catégorie *</label>
+                        <select class="form-select" name="category_id" id="categorySelect" onchange="loadSubcategories()">
+                            <option value="">-- Sélectionner une catégorie --</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Sélecteur de sous-catégorie (masqué par défaut) -->
+                    <div id="subcategorySelector" class="mb-3" style="display: none;">
+                        <label for="subcategorySelect" class="form-label">Sous-catégorie *</label>
+                        <select class="form-select" name="subcategory_id" id="subcategorySelect">
+                            <option value="">-- D'abord sélectionner une catégorie --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tarif Standard (KMF) *</label>
+                                <input type="number" class="form-control" name="standard_rate" value="2000" min="0" step="100" required>
+                                <div class="form-text">Livraison normale</div>
+                            </div>
+                            
+                            <!-- Délais Standard -->
+                            <div class="mb-3">
+                                <label class="form-label">Délai Standard</label>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="standard_delivery_days" value="3" min="0" max="30">
+                                            <span class="input-group-text">jour(s)</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="standard_delivery_hours" value="0" min="0" max="23">
+                                            <span class="input-group-text">h</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-text">Ex: 3 jours et 6 heures</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tarif Express (KMF) *</label>
+                                <input type="number" class="form-control" name="express_rate" value="4000" min="0" step="100" required>
+                                <div class="form-text">Livraison rapide</div>
+                            </div>
+                            
+                            <!-- Délais Express -->
+                            <div class="mb-3">
+                                <label class="form-label">Délai Express</label>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="express_delivery_days" value="1" min="0" max="30">
+                                            <span class="input-group-text">jour(s)</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="express_delivery_hours" value="0" min="0" max="23">
+                                            <span class="input-group-text">h</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-text">Ex: 0 jour et 12 heures (livraison le jour même)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priorité</label>
+                        <input type="number" class="form-control" name="priority" id="priority" value="0" min="0" max="100">
+                        <div class="form-text">Plus le nombre est élevé, plus la priorité est haute (0 = priorité normale)</div>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="active" id="rateActive" checked>
+                        <label class="form-check-label" for="rateActive">
+                            Tarif actif
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer le tarif</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleCategorySelectors() {
+    const rateType = document.getElementById('rateType').value;
+    const categorySelector = document.getElementById('categorySelector');
+    const subcategorySelector = document.getElementById('subcategorySelector');
+    const categorySelect = document.getElementById('categorySelect');
+    const subcategorySelect = document.getElementById('subcategorySelect');
+    
+    // Réinitialiser les sélections
+    categorySelect.value = '';
+    subcategorySelect.innerHTML = '<option value="">-- D\'abord sélectionner une catégorie --</option>';
+    
+    if (rateType === 'category') {
+        categorySelector.style.display = 'block';
+        subcategorySelector.style.display = 'none';
+        categorySelect.required = true;
+        subcategorySelect.required = false;
+    } else if (rateType === 'subcategory') {
+        categorySelector.style.display = 'block';
+        subcategorySelector.style.display = 'block';
+        categorySelect.required = true;
+        subcategorySelect.required = true;
+    } else {
+        categorySelector.style.display = 'none';
+        subcategorySelector.style.display = 'none';
+        categorySelect.required = false;
+        subcategorySelect.required = false;
+    }
+}
+
+function loadSubcategories() {
+    const categoryId = document.getElementById('categorySelect').value;
+    const subcategorySelect = document.getElementById('subcategorySelect');
+    
+    if (!categoryId) {
+        subcategorySelect.innerHTML = '<option value="">-- D\'abord sélectionner une catégorie --</option>';
+        return;
+    }
+    
+    // Pour l'instant, on met un placeholder car nous n'avons pas de sous-catégories dans les données
+    subcategorySelect.innerHTML = '<option value="">-- Aucune sous-catégorie disponible --</option>';
+    
+    // TODO: Ici on pourrait faire un appel AJAX pour charger les sous-catégories de la catégorie sélectionnée
+}
+
+// Event listeners pour les boutons d'action
+document.addEventListener('DOMContentLoaded', function() {
+    // Boutons de modification
+    document.querySelectorAll('.edit-rate-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.dataset.rateId;
+            const name = this.dataset.rateName;
+            const type = this.dataset.rateType;
+            const standardRate = this.dataset.standardRate;
+            const expressRate = this.dataset.expressRate;
+            const standardDays = this.dataset.standardDays;
+            const standardHours = this.dataset.standardHours;
+            const expressDays = this.dataset.expressDays;
+            const expressHours = this.dataset.expressHours;
+            const priority = this.dataset.priority;
+            const active = this.dataset.active === 'true';
+            const categoryId = this.dataset.categoryId;
+            
+            document.getElementById('editRateId').value = id;
+            document.getElementById('editRateName').value = name;
+            document.getElementById('editRateType').value = type;
+            document.getElementById('editStandardRate').value = standardRate;
+            document.getElementById('editExpressRate').value = expressRate;
+            document.getElementById('editStandardDays').value = standardDays;
+            document.getElementById('editStandardHours').value = standardHours;
+            document.getElementById('editExpressDays').value = expressDays;
+            document.getElementById('editExpressHours').value = expressHours;
+            document.getElementById('editPriority').value = priority;
+            document.getElementById('editRateActive').checked = active;
+            
+            if (categoryId) {
+                document.getElementById('editCategorySelect').value = categoryId;
+            }
+        });
+    });
+    
+    // Boutons de suppression
+    document.querySelectorAll('.delete-rate-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.dataset.rateId;
+            const name = this.dataset.rateName;
+            
+            document.getElementById('deleteRateId').value = id;
+            document.getElementById('deleteRateName').textContent = name;
+        });
+    });
+});
+</script>
+
+<!-- Modal de modification -->
+<div class="modal fade" id="editRateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="{{ url_for('admin_shipping_rates') }}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Modifier le Tarif de Livraison</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="update">
+                    <input type="hidden" name="rate_id" id="editRateId">
+                    
+                    <div class="mb-3">
+                        <label for="editRateName" class="form-label">Nom du tarif *</label>
+                        <input type="text" class="form-control" name="name" id="editRateName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editRateType" class="form-label">Type de tarif *</label>
+                        <select class="form-select" name="rate_type" id="editRateType" required>
+                            <option value="default">Tarif par défaut (global)</option>
+                            <option value="category">Par catégorie</option>
+                            <option value="subcategory">Par sous-catégorie</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editCategorySelect" class="form-label">Catégorie</label>
+                        <select class="form-select" name="category_id" id="editCategorySelect">
+                            <option value="">-- Aucune catégorie --</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tarif Standard (KMF) *</label>
+                                <input type="number" class="form-control" name="standard_rate" id="editStandardRate" min="0" step="100" required>
+                            </div>
+                            
+                            <!-- Délais Standard -->
+                            <div class="mb-3">
+                                <label class="form-label">Délai Standard</label>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="standard_delivery_days" id="editStandardDays" min="0" max="30">
+                                            <span class="input-group-text">jour(s)</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="standard_delivery_hours" id="editStandardHours" min="0" max="23">
+                                            <span class="input-group-text">h</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Tarif Express (KMF) *</label>
+                                <input type="number" class="form-control" name="express_rate" id="editExpressRate" min="0" step="100" required>
+                            </div>
+                            
+                            <!-- Délais Express -->
+                            <div class="mb-3">
+                                <label class="form-label">Délai Express</label>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="express_delivery_days" id="editExpressDays" min="0" max="30">
+                                            <span class="input-group-text">jour(s)</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="express_delivery_hours" id="editExpressHours" min="0" max="23">
+                                            <span class="input-group-text">h</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editPriority" class="form-label">Priorité</label>
+                        <input type="number" class="form-control" name="priority" id="editPriority" min="0" max="100">
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="active" id="editRateActive">
+                        <label class="form-check-label" for="editRateActive">
+                            Tarif actif
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Sauvegarder les modifications</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de suppression -->
+<div class="modal fade" id="deleteRateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('admin_shipping_rates') }}" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="rate_id" id="deleteRateId">
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Attention !</strong> Cette action est irréversible.
+                    </div>
+                    
+                    <p>Êtes-vous sûr de vouloir supprimer le tarif :</p>
+                    <p class="fw-bold text-primary" id="deleteRateName"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Supprimer définitivement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

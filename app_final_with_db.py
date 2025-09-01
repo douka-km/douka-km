@@ -249,22 +249,38 @@ def initialize_db_proxies():
     is_production = os.environ.get('RENDER') == '1'
     
     if is_production:
-        print("🚀 MODE PRODUCTION: Chargement uniquement depuis la base de données")
+        print("MODE PRODUCTION: Chargement uniquement depuis la base de données")
     else:
-        print("🔧 MODE DÉVELOPPEMENT: Chargement avec données de test")
+        print("MODE DÉVELOPPEMENT: Chargement avec données de test")
     
     try:
+        # S'assurer que la session est propre
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+            
         # En production, ne pas charger les données de test du code
         if is_production:
-            # PRODUCTION: Charger uniquement depuis la base de données
-            users_db_from_db = {}
-            users = User.query.all()
-            for user in users:
-                users_db_from_db[user.email] = user.to_dict()
-            
-            # Remplacer complètement users_db avec les données de la DB
-            users_db.clear()
-            users_db.update(users_db_from_db)
+            # PRODUCTION: Charger uniquement depuis la base de données avec gestion d'erreur
+            try:
+                users_db_from_db = {}
+                users = User.query.all()
+                for user in users:
+                    users_db_from_db[user.email] = user.to_dict()
+                
+                # Remplacer complètement users_db avec les données de la DB
+                users_db.clear()
+                users_db.update(users_db_from_db)
+                print(f"Utilisateurs chargés: {len(users_db)}")
+                
+            except Exception as users_error:
+                print(f"Erreur lors du chargement des utilisateurs: {users_error}")
+                # Rollback et continuer
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
             
         else:
             # DÉVELOPPEMENT: Conserver les utilisateurs définis dans le code
@@ -16959,8 +16975,9 @@ def initialize_production_db():
         raise
 
 # Initialiser automatiquement en production
-if os.environ.get('RENDER'):
-    initialize_production_db()
+# DÉSACTIVÉ: L'initialisation se fait maintenant via init_render.py pour éviter les doubles appels
+# if os.environ.get('RENDER'):
+#     initialize_production_db()
 
 # =============================================
 # GESTION D'ERREURS

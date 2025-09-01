@@ -300,7 +300,7 @@ def create_order(customer_id, merchant_id, items_data, shipping_address=None, **
     
     # Exclure les paramètres déjà utilisés et filtrer les paramètres valides pour éviter les conflits
     valid_order_fields = [
-        'status', 'payment_status', 'payment_method', 
+        'status', 'payment_status', 'payment_method', 'shipping_method',
         'promo_code_used', 'processing_date', 'shipping_date', 
         'delivery_date', 'cancelled_at'
     ]
@@ -1133,7 +1133,50 @@ def update_user_order_status(order_id, new_status, notes=None):
         return False, f"Erreur lors de la mise à jour: {str(e)}"
 def get_all_merchant_orders():
     """Récupérer toutes les commandes de tous les marchands"""
-    return Order.query.filter(Order.merchant_id.is_not(None)).order_by(Order.created_at.desc()).all()
+    try:
+        return Order.query.filter(Order.merchant_id.is_not(None)).order_by(Order.created_at.desc()).all()
+    except Exception as e:
+        if "does not exist" in str(e) or "UndefinedColumn" in str(e):
+            print(f"⚠️ Erreur de schéma détectée dans get_all_merchant_orders: {e}")
+            print("🔄 Tentative de récupération des commandes avec schéma partiel...")
+            try:
+                # Utiliser une requête SQL brute pour éviter les colonnes manquantes
+                from sqlalchemy import text
+                result = db.session.execute(text("""
+                    SELECT id, order_number, customer_id, merchant_id, total, 
+                           status, payment_status, customer_name, customer_email, 
+                           customer_phone, created_at
+                    FROM orders 
+                    WHERE merchant_id IS NOT NULL 
+                    ORDER BY created_at DESC
+                """))
+                
+                # Convertir en objets Order partiels
+                orders = []
+                for row in result:
+                    order = Order()
+                    order.id = row[0]
+                    order.order_number = row[1]
+                    order.customer_id = row[2]
+                    order.merchant_id = row[3]
+                    order.total = row[4]
+                    order.status = row[5]
+                    order.payment_status = row[6]
+                    order.customer_name = row[7]
+                    order.customer_email = row[8]
+                    order.customer_phone = row[9]
+                    order.created_at = row[10]
+                    orders.append(order)
+                
+                print(f"✅ Récupéré {len(orders)} commandes avec schéma partiel")
+                return orders
+                
+            except Exception as fallback_error:
+                print(f"❌ Erreur lors du fallback: {fallback_error}")
+                return []
+        else:
+            print(f"❌ Erreur inattendue dans get_all_merchant_orders: {e}")
+            return []
 
 def get_merchant_orders(merchant_id):
     """Récupérer toutes les commandes d'un marchand spécifique"""

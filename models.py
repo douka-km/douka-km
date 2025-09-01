@@ -414,6 +414,7 @@ class Order(db.Model):
     status = db.Column(db.String(50), default='pending')  # pending, confirmed, processing, shipped, delivered, cancelled
     payment_status = db.Column(db.String(50), default='pending')  # pending, completed, failed
     payment_method = db.Column(db.String(100), nullable=True)  # cash, mvola, holo, bank_transfer, etc.
+    shipping_method = db.Column(db.String(100), default='Standard')  # Standard, Express, etc.
     
     # Adresse de livraison (JSON)
     shipping_address = db.Column(db.Text, nullable=True)
@@ -945,3 +946,259 @@ class SiteSettings(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class ShippingRate(db.Model):
+    """Modèle pour les tarifs de livraison par catégorie/sous-catégorie"""
+    __tablename__ = 'shipping_rates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Type de tarification
+    rate_type = db.Column(db.String(20), nullable=False)  # 'category', 'subcategory', 'default'
+    
+    # Référence à la catégorie/sous-catégorie (optionnel pour le tarif par défaut)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
+    subcategory_id = db.Column(db.Integer, db.ForeignKey('subcategories.id'), nullable=True)
+    
+    # Nom pour affichage (pratique pour les cas default ou si catégorie supprimée)
+    name = db.Column(db.String(200), nullable=False)
+    
+    # Tarifs
+    standard_rate = db.Column(db.Float, nullable=False, default=2000.0)
+    express_rate = db.Column(db.Float, nullable=False, default=4000.0)
+    
+    # Délais de livraison Standard
+    standard_delivery_days = db.Column(db.Integer, nullable=False, default=3)  # Nombre de jours
+    standard_delivery_hours = db.Column(db.Integer, nullable=True, default=0)  # Heures supplémentaires
+    
+    # Délais de livraison Express
+    express_delivery_days = db.Column(db.Integer, nullable=False, default=1)   # Nombre de jours
+    express_delivery_hours = db.Column(db.Integer, nullable=True, default=0)   # Heures supplémentaires
+    
+    # Statut
+    active = db.Column(db.Boolean, default=True)
+    
+    # Priorité (pour résoudre les conflits si un produit a plusieurs catégories)
+    priority = db.Column(db.Integer, default=0)
+    
+    # Informations sur la création/modification
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = db.Column(db.String(120), nullable=True)
+    
+    # Relations
+    category = db.relationship('Category', backref='shipping_rates', lazy=True)
+    subcategory = db.relationship('Subcategory', backref='shipping_rates', lazy=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'rate_type': self.rate_type,
+            'category_id': self.category_id,
+            'subcategory_id': self.subcategory_id,
+            'name': self.name,
+            'category_name': self.category.name if self.category else None,
+            'subcategory_name': self.subcategory.name if self.subcategory else None,
+            'standard_rate': self.standard_rate,
+            'express_rate': self.express_rate,
+            'standard_delivery_days': self.standard_delivery_days,
+            'standard_delivery_hours': self.standard_delivery_hours,
+            'express_delivery_days': self.express_delivery_days,
+            'express_delivery_hours': self.express_delivery_hours,
+            'standard_delivery_formatted': self.get_formatted_delivery_time('standard'),
+            'express_delivery_formatted': self.get_formatted_delivery_time('express'),
+            'active': self.active,
+            'priority': self.priority,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
+            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M:%S') if self.updated_at else None,
+            'created_by': self.created_by
+        }
+    
+    def get_formatted_delivery_time(self, delivery_type='standard'):
+        """
+        Formate les délais de livraison en texte lisible
+        """
+        if delivery_type == 'standard':
+            days = self.standard_delivery_days if self.standard_delivery_days is not None else 3
+            hours = self.standard_delivery_hours if self.standard_delivery_hours is not None else 0
+        else:  # express
+            days = self.express_delivery_days if self.express_delivery_days is not None else 1
+            hours = self.express_delivery_hours if self.express_delivery_hours is not None else 0
+        
+        # Construire le texte
+        parts = []
+        
+        if days > 0:
+            if days == 1:
+                parts.append("1 jour")
+            else:
+                parts.append(f"{days} jours")
+        
+        if hours > 0:
+            if hours == 1:
+                parts.append("1 heure")
+            else:
+                parts.append(f"{hours} heures")
+        
+        # Si aucune partie n'est définie ou si tout est à 0
+        if not parts:
+            if days == 0 and hours == 0:
+                return "Immédiat"
+            else:
+                return "Non défini"
+        
+        if len(parts) == 1:
+            return parts[0]
+        else:
+            return " et ".join(parts)
+    
+    @staticmethod
+    def get_shipping_rate_for_product(product, shipping_type='standard'):
+        """
+        Retourne le tarif de livraison pour un produit donné
+        Priorité : sous-catégorie > catégorie > défaut
+        """
+        rate = None
+        
+        # Gérer les objets Product et les dictionnaires
+        if isinstance(product, dict):
+            subcategory_id = product.get('subcategory_id')
+            category_id = product.get('category_id')
+        else:
+            subcategory_id = getattr(product, 'subcategory_id', None)
+            category_id = getattr(product, 'category_id', None)
+        
+        # 1. Chercher d'abord par sous-catégorie (priorité la plus haute)
+        if subcategory_id:
+            rate = ShippingRate.query.filter_by(
+                rate_type='subcategory',
+                subcategory_id=subcategory_id,
+                active=True
+            ).order_by(ShippingRate.priority.desc()).first()
+        
+        # 2. Sinon chercher par catégorie
+        if not rate and category_id:
+            rate = ShippingRate.query.filter_by(
+                rate_type='category',
+                category_id=category_id,
+                active=True
+            ).order_by(ShippingRate.priority.desc()).first()
+        
+        # 3. Sinon utiliser le tarif par défaut
+        if not rate:
+            rate = ShippingRate.query.filter_by(
+                rate_type='default',
+                active=True
+            ).order_by(ShippingRate.priority.desc()).first()
+        
+        # 4. Si aucun tarif configuré, retourner None
+        return rate
+    
+    @staticmethod
+    def get_shipping_price_for_product(product, shipping_type='standard'):
+        """
+        Retourne le prix de livraison pour un produit donné
+        """
+        rate = ShippingRate.get_shipping_rate_for_product(product)
+        
+        if not rate:
+            return 2000.0 if shipping_type == 'standard' else 4000.0
+        
+        return rate.standard_rate if shipping_type == 'standard' else rate.express_rate
+    
+    @staticmethod
+    def calculate_shipping_for_cart(cart_items, shipping_type='standard'):
+        """
+        Calcule les frais de livraison pour un panier
+        Retourne le tarif le plus élevé parmi tous les produits
+        """
+        max_rate = 0.0
+        
+        for item in cart_items:
+            if hasattr(item, 'product') and item.product:
+                product_rate = ShippingRate.get_shipping_price_for_product(item.product, shipping_type)
+                max_rate = max(max_rate, product_rate)
+        
+        return max_rate
+    
+    @staticmethod
+    def get_shipping_info_for_cart(cart_items):
+        """
+        Calcule les informations complètes de livraison pour un panier
+        Retourne un dictionnaire avec tous les détails de livraison
+        """
+        max_standard_rate = 0.0
+        max_express_rate = 0.0
+        applied_rate = None
+        
+        # Trouver le tarif le plus élevé parmi tous les produits
+        for item in cart_items:
+            product = None
+            
+            # Gérer différents types d'objets panier
+            if hasattr(item, 'product') and item.product:
+                # Objet CartItem avec attribut product
+                product = item.product
+            elif isinstance(item, dict) and 'product_id' in item:
+                # Dictionnaire avec product_id - récupérer le produit depuis la DB
+                from app_final_with_db import get_product_by_id
+                product_id = item.get('original_product_id', item['product_id'])
+                try:
+                    if isinstance(product_id, str) and product_id.isdigit():
+                        product_id = int(product_id)
+                    elif isinstance(product_id, str):
+                        product_id = int(product_id.split('_')[0])
+                except (ValueError, AttributeError):
+                    product_id = item['product_id']
+                
+                product_data = get_product_by_id(product_id)
+                if product_data:
+                    # Créer un objet temporaire avec les attributs nécessaires
+                    class TempProduct:
+                        def __init__(self, data):
+                            if isinstance(data, dict):
+                                self.category_id = data.get('category_id')
+                                self.subcategory_id = data.get('subcategory_id')
+                                self.name = data.get('name', 'Unknown')
+                            else:
+                                self.category_id = getattr(data, 'category_id', None)
+                                self.subcategory_id = getattr(data, 'subcategory_id', None)
+                                self.name = getattr(data, 'name', 'Unknown')
+                    
+                    product = TempProduct(product_data)
+            
+            if product:
+                rate = ShippingRate.get_shipping_rate_for_product(product)
+                if rate:
+                    max_standard_rate = max(max_standard_rate, rate.standard_rate)
+                    max_express_rate = max(max_express_rate, rate.express_rate)
+                    applied_rate = rate
+                else:
+                    # Tarifs par défaut si aucun tarif spécifique
+                    max_standard_rate = max(max_standard_rate, 2000.0)
+                    max_express_rate = max(max_express_rate, 4000.0)
+        
+        # Si aucun tarif trouvé, utiliser les tarifs par défaut
+        if max_standard_rate == 0.0:
+            max_standard_rate = 2000.0
+            max_express_rate = 4000.0
+        
+        return {
+            'standard_rate': max_standard_rate,
+            'express_rate': max_express_rate,
+            'free_shipping_threshold': 50000.0,
+            'delivery_times': {
+                'standard': applied_rate.get_formatted_delivery_time('standard') if applied_rate else '3 jours',
+                'express': applied_rate.get_formatted_delivery_time('express') if applied_rate else '1 jour',
+                'regions': {
+                    'Grande Comore': '2-3 jours',
+                    'Anjouan': '3-4 jours', 
+                    'Mohéli': '4-5 jours'
+                }
+            },
+            'rate_info': {
+                'name': applied_rate.name if applied_rate else 'Tarif standard',
+                'category_based': applied_rate is not None,
+                'description': f'Tarif de livraison: {applied_rate.name}' if applied_rate else 'Tarif de livraison standard'
+            }
+        }

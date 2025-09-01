@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Requête Invalide - DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="error-page">
+                <h1 class="display-1 text-info">400</h1>
+                <h2 class="mb-4">Requête Invalide</h2>
+                <p class="lead mb-4">
+                    La requête envoyée n'est pas valide ou contient des données incorrectes.
+                </p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Veuillez vérifier les informations saisies et réessayer.
+                </div>
+                <div class="mt-4">
+                    <a href="{{ url_for('home') }}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-home me-2"></i>Retour à l'accueil
+                    </a>
+                    <button onclick="history.back()" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    padding: 50px 0;
+}
+
+.error-page h1 {
+    font-size: 6rem;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.error-page h2 {
+    color: #333;
+    font-weight: 600;
+}
+
+.error-page p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .error-page h1 {
+        font-size: 4rem;
+    }
+    
+    .error-page {
+        padding: 30px 0;
+    }
+}
+</style>
+{% endblock %}

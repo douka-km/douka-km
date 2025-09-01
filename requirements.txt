@@ -13,4 +13,3 @@ python-dotenv==1.0.1
 
 # Packages de compatibilité Python 3.13
 typing-extensions==4.12.2
-greenlet==3.1.1

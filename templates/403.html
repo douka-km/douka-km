@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Accès Interdit - DOUKA KM{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="error-page">
+                <h1 class="display-1 text-warning">403</h1>
+                <h2 class="mb-4">Accès Interdit</h2>
+                <p class="lead mb-4">
+                    Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Si vous pensez qu'il s'agit d'une erreur, veuillez vous connecter avec un compte autorisé.
+                </div>
+                <div class="mt-4">
+                    <a href="{{ url_for('home') }}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-home me-2"></i>Retour à l'accueil
+                    </a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    padding: 50px 0;
+}
+
+.error-page h1 {
+    font-size: 6rem;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.error-page h2 {
+    color: #333;
+    font-weight: 600;
+}
+
+.error-page p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .error-page h1 {
+        font-size: 4rem;
+    }
+    
+    .error-page {
+        padding: 30px 0;
+    }
+}
+</style>
+{% endblock %}
