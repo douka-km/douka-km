@@ -118,7 +118,8 @@
                                             <i class="fas fa-edit me-1"></i>Modifier
                                         </button>
                                         
-                                        <!-- Bouton Activer/Désactiver -->
+                                        <!-- Bouton Activer/Désactiver (seulement pour les tarifs non-système) -->
+                                        {% if rate.rate_type != 'Tarif par défaut' %}
                                         <form method="post" class="d-inline">
                                             <input type="hidden" name="action" value="toggle_status">
                                             <input type="hidden" name="rate_id" value="{{ rate.id }}">
@@ -127,14 +128,25 @@
                                                 {{ 'Désactiver' if rate.active else 'Activer' }}
                                             </button>
                                         </form>
+                                        {% else %}
+                                        <span class="btn btn-outline-success btn-sm disabled" title="Le tarif par défaut est toujours actif">
+                                            <i class="fas fa-check me-1"></i>Toujours actif
+                                        </span>
+                                        {% endif %}
                                         
-                                        <!-- Bouton Supprimer -->
+                                        <!-- Bouton Supprimer (seulement pour les tarifs non-système) -->
+                                        {% if rate.rate_type != 'Tarif par défaut' %}
                                         <button type="button" class="btn btn-outline-danger btn-sm delete-rate-btn"
                                                 data-rate-id="{{ rate.id }}"
                                                 data-rate-name="{{ rate.name }}"
                                                 data-bs-toggle="modal" data-bs-target="#deleteRateModal">
                                             <i class="fas fa-trash me-1"></i>Supprimer
                                         </button>
+                                        {% else %}
+                                        <span class="btn btn-outline-secondary btn-sm disabled" title="Le tarif par défaut ne peut pas être supprimé">
+                                            <i class="fas fa-lock me-1"></i>Protégé
+                                        </span>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
