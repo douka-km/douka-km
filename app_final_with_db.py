@@ -386,11 +386,23 @@ def initialize_db_proxies():
         # Simulation de admin_categories_db
         admin_categories_db = {}
         try:
+            # S'assurer que la session est propre
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            
             categories = Category.query.all()
             for category in categories:
                 admin_categories_db[category.id] = category.to_dict()
+            print(f"Catégories chargées: {len(admin_categories_db)}")
         except Exception as e:
-            print(f"⚠️ Erreur lors du chargement des catégories (colonnes manquantes?) : {e}")
+            print(f"⚠️ Erreur lors du chargement des catégories: {e}")
+            # Rollback en cas d'erreur de transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             print("💡 Les catégories seront chargées après la correction de la base de données")
 
         # Simulation de admin_subcategories_db
@@ -399,15 +411,28 @@ def initialize_db_proxies():
             subcategories = Subcategory.query.all()
             for subcat in subcategories:
                 admin_subcategories_db[subcat.id] = subcat.to_dict()
+            print(f"Sous-catégories chargées: {len(admin_subcategories_db)}")
         except Exception as e:
-            print(f"⚠️ Erreur lors du chargement des sous-catégories (colonnes manquantes?) : {e}")
+            print(f"⚠️ Erreur lors du chargement des sous-catégories: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
             print("💡 Les sous-catégories seront chargées après la correction de la base de données")
         
         # Simulation de promo_codes_db
         promo_codes_db = {}
-        promo_codes = PromoCode.query.all()
-        for promo in promo_codes:
-            promo_codes_db[promo.code] = promo.to_dict()
+        try:
+            promo_codes = PromoCode.query.all()
+            for promo in promo_codes:
+                promo_codes_db[promo.code] = promo.to_dict()
+            print(f"Codes promo chargés: {len(promo_codes_db)}")
+        except Exception as e:
+            print(f"⚠️ Erreur lors du chargement des codes promo: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
         
         # Simulation de site_settings
         site_settings = get_all_site_settings()
@@ -16843,6 +16868,86 @@ def admin_session_check():
 # INITIALISATION POUR LA PRODUCTION
 # =============================================
 
+def migrate_database_schema():
+    """Gère les migrations de schéma pour ajouter les colonnes manquantes avec gestion robuste des transactions"""
+    try:
+        print("🔄 Vérification et migration du schéma de base de données...")
+        
+        # S'assurer que la session est propre avant de commencer
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        
+        # Liste des colonnes à vérifier/ajouter
+        migrations = [
+            {
+                'table': 'orders',
+                'column': 'shipping_method',
+                'definition': 'VARCHAR(100) DEFAULT \'Standard\'',
+                'description': 'Méthode de livraison'
+            }
+        ]
+        
+        for migration in migrations:
+            table = migration['table']
+            column = migration['column']
+            definition = migration['definition']
+            description = migration['description']
+            
+            try:
+                # Tester si la colonne existe avec une requête simple
+                test_query = f"SELECT {column} FROM {table} LIMIT 1"
+                db.session.execute(db.text(test_query))
+                print(f"✅ Colonne {table}.{column} existe déjà")
+                
+            except Exception as e:
+                error_str = str(e).lower()
+                if "does not exist" in error_str or "no such column" in error_str:
+                    print(f"❌ Colonne {table}.{column} manquante, ajout en cours...")
+                    
+                    try:
+                        # Nettoyer toute transaction en cours
+                        db.session.rollback()
+                        
+                        # Ajouter la colonne avec une nouvelle transaction
+                        alter_query = f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+                        db.session.execute(db.text(alter_query))
+                        db.session.commit()
+                        
+                        print(f"✅ Colonne {table}.{column} ajoutée avec succès ({description})")
+                        
+                    except Exception as add_error:
+                        print(f"❌ Erreur lors de l'ajout de {column}: {add_error}")
+                        # Rollback en cas d'erreur
+                        try:
+                            db.session.rollback()
+                        except Exception:
+                            pass
+                        
+                        # Si c'est une erreur de transaction fermée, on continue
+                        if "current transaction is aborted" in str(add_error):
+                            print("⚠️ Transaction fermée, on continue sans cette migration")
+                            continue
+                        else:
+                            raise add_error
+                else:
+                    print(f"⚠️ Erreur inattendue lors du test de {table}.{column}: {e}")
+                    # Rollback et continuer
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+        
+        print("✅ Migration du schéma terminée")
+        
+    except Exception as e:
+        print(f"❌ Erreur générale lors de la migration: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
 def initialize_production_db():
     """Initialiser la base de données pour la production"""
     try:
@@ -16852,6 +16957,9 @@ def initialize_production_db():
             # Créer toutes les tables
             db.create_all()
             print("✅ Tables de base de données créées")
+            
+            # **NOUVEAU: Gestion des migrations de schéma**
+            migrate_database_schema()
             
             # **AMÉLIORATION: Debugging des variables d'environnement**
             print("🔍 Vérification des variables d'environnement admin...")
