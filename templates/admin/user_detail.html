@@ -55,10 +55,16 @@
                         <div class="mb-3">
                             <label class="form-label text-muted">Email vérifié</label>
                             <p class="fw-bold">
+                                <!-- Debug info (à supprimer en production) -->
+                                <!-- user.email_verified = {{ user.email_verified }} -->
+                                
                                 {% if user.email_verified %}
                                     <span class="badge bg-success">
                                         <i class="fas fa-check-circle me-1"></i>Vérifié
                                     </span>
+                                    <small class="text-muted ms-2">
+                                        <i class="fas fa-clock me-1"></i>Email confirmé
+                                    </small>
                                 {% else %}
                                     <span class="badge bg-warning">
                                         <i class="fas fa-exclamation-triangle me-1"></i>Non vérifié
@@ -293,10 +299,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('Email vérifié avec succès !');
-                        location.reload();
+                        // Affichage plus informatif
+                        alert('✅ Email vérifié avec succès ! La page va se recharger pour afficher les modifications.');
+                        console.log('Vérification d\'email réussie:', data);
+                        
+                        // Recharger la page pour afficher les nouvelles données
+                        setTimeout(() => {
+                            location.reload(true); // Force le rechargement sans cache
+                        }, 1000);
                     } else {
-                        alert('Erreur: ' + data.message);
+                        alert('❌ Erreur: ' + data.message);
                         // Réactiver le bouton en cas d'erreur
                         this.disabled = false;
                         this.innerHTML = '<i class="fas fa-envelope-check me-1"></i>Vérifier maintenant';

@@ -443,8 +443,16 @@ class Order(db.Model):
     # Historique des statuts (JSON)
     status_history = db.Column(db.Text, nullable=True)
     
+    # Informations du livreur (pour historique permanent)
+    delivery_employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=True)
+    delivery_employee_email = db.Column(db.String(120), nullable=True)
+    delivery_employee_name = db.Column(db.String(200), nullable=True)
+    delivery_employee_phone = db.Column(db.String(20), nullable=True)
+    assigned_at = db.Column(db.DateTime, nullable=True)
+    
     # Relations
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')
+    delivery_employee = db.relationship('Employee', foreign_keys=[delivery_employee_id], backref='delivered_orders')
     
     def get_shipping_address(self):
         if self.shipping_address:
@@ -546,6 +554,7 @@ class Order(db.Model):
             'status_color': self.status_color,
             'payment_status': self.payment_status,
             'payment_method': self.payment_method,
+            'shipping_method': self.shipping_method,
             'shipping_address': self.get_shipping_address(),
             'promo_code_used': self.promo_code_used,
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,

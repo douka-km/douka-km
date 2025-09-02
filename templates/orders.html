@@ -93,8 +93,14 @@
                                         <h5>Informations de paiement</h5>
                                         <p><strong>Méthode:</strong> {{ order['payment_method'] }}</p>
                                         <p><strong>Statut:</strong> 
-                                            <span class="badge bg-{% if order['payment_status'] == 'completed' %}success{% else %}warning{% endif %}">
-                                                {{ 'Payé' if order['payment_status'] == 'completed' else 'En attente' }}
+                                            <span class="badge bg-{% if order['payment_status'] == 'completed' %}success{% elif order['payment_status'] == 'cancelled' %}danger{% else %}warning{% endif %}">
+                                                {% if order['payment_status'] == 'completed' %}
+                                                    Payé
+                                                {% elif order['payment_status'] == 'cancelled' %}
+                                                    Annulé
+                                                {% else %}
+                                                    En attente
+                                                {% endif %}
                                             </span>
                                         </p>
                                         <p><strong>Mode de livraison:</strong> {{ order['shipping_method'] }}</p>

@@ -52,8 +52,14 @@
                     <div class="row mb-2">
                         <div class="col-md-5 fw-bold">Statut du paiement:</div>
                         <div class="col-md-7">
-                            <span class="badge {% if order.payment_status == 'completed' %}bg-success{% else %}bg-warning{% endif %}">
-                                {{ 'Payé' if order.payment_status == 'completed' else 'En attente' }}
+                            <span class="badge {% if order.payment_status == 'completed' %}bg-success{% elif order.payment_status == 'cancelled' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {% if order.payment_status == 'completed' %}
+                                    Payé
+                                {% elif order.payment_status == 'cancelled' %}
+                                    Annulé
+                                {% else %}
+                                    En attente
+                                {% endif %}
                             </span>
                         </div>
                     </div>

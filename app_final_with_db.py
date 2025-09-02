@@ -1893,6 +1893,40 @@ def format_number(value):
     except (ValueError, TypeError):
         return value
 
+# Ajout du filtre clean_shipping_method pour nettoyer l'affichage du mode de livraison
+@app.template_filter('clean_shipping_method')
+def clean_shipping_method(value):
+    """Nettoie et standardise l'affichage du mode de livraison"""
+    if not value:
+        return "Standard (3 jours)"
+    
+    value = str(value).strip()
+    
+    # Cas des anciens formats "Livraison Standard" ou "Livraison Express"
+    if "Livraison Standard" in value:
+        if "1" in value:
+            return "Standard (24h)"
+        elif "3" in value:
+            return "Standard (3 jours)"
+        else:
+            return "Standard (3 jours)"
+    
+    elif "Livraison Express" in value:
+        if "même jour" in value:
+            return "Express (même jour)"
+        elif "24-48h" in value:
+            return "Express (24-48h)"
+        else:
+            return "Express (24-48h)"
+    
+    # Si c'est déjà au bon format (commence par Express ou Standard)
+    elif value.startswith('Express') or value.startswith('Standard'):
+        return value
+    
+    # Fallback par défaut
+    else:
+        return "Standard (3 jours)"
+
 # Variables globales pour stocker les catégories et sous-catégories dynamiques
 admin_categories_db = {}
 
@@ -2691,6 +2725,117 @@ def calculate_merchant_balance(merchant_email):
     }
 
 # Fonction pour calculer les frais de livraison dynamiques
+def calculate_dynamic_shipping_fee(cart_items, cart_total, region=None, shipping_type='standard'):
+    """
+    Calcule les frais de livraison basés sur les tarifs dynamiques par catégorie
+    
+    Args:
+        cart_items (list): Liste des articles du panier
+        cart_total (float): Montant total du panier
+        region (str): Région de livraison (optionnel)
+        shipping_type (str): Type de livraison ('standard' ou 'express')
+    
+    Returns:
+        dict: Dictionnaire contenant les détails des frais de livraison
+    """
+    import json
+    
+    # Récupérer les paramètres de base
+    site_settings = get_all_site_settings()
+    free_shipping_threshold = site_settings.get('free_shipping_threshold', 15000)
+    
+    # Récupérer les tarifs personnalisés
+    try:
+        custom_rates_json = get_site_setting('custom_shipping_rates', '[]')
+        custom_rates = json.loads(custom_rates_json) if custom_rates_json else []
+    except:
+        custom_rates = []
+    
+    # Analyser les catégories des produits dans le panier
+    categories_in_cart = set()
+    subcategories_in_cart = set()
+    
+    for item in cart_items:
+        # Récupérer l'ID du produit
+        if 'original_product_id' in item:
+            product_id = item['original_product_id']
+        else:
+            product_id = item['product_id']
+        
+        # Récupérer le produit pour obtenir sa catégorie
+        product = get_product_by_id(product_id)
+        if product:
+            if product.get('category_id'):
+                categories_in_cart.add(product['category_id'])
+            if product.get('subcategory_id'):
+                subcategories_in_cart.add(product['subcategory_id'])
+    
+    # Trouver le tarif le plus approprié avec priorité:
+    # 1. Sous-catégorie spécifique (priorité la plus haute)
+    # 2. Catégorie
+    # 3. Tarif par défaut
+    
+    selected_rate = None
+    rate_priority = 0  # Plus le chiffre est élevé, plus la priorité est haute
+    
+    for rate in custom_rates:
+        if not rate.get('active', True):
+            continue
+            
+        current_priority = 0
+        matches = False
+        
+        # Vérifier les sous-catégories (priorité la plus haute)
+        if rate.get('rate_type') == 'subcategory' and rate.get('subcategory_id'):
+            if rate['subcategory_id'] in subcategories_in_cart:
+                current_priority = 3
+                matches = True
+        
+        # Vérifier les catégories
+        elif rate.get('rate_type') == 'category' and rate.get('category_id'):
+            if rate['category_id'] in categories_in_cart:
+                current_priority = 2
+                matches = True
+        
+        # Tarif par défaut (système)
+        elif rate.get('is_system_default', False):
+            current_priority = 1
+            matches = True
+        
+        # Prendre le tarif avec la plus haute priorité
+        if matches and current_priority > rate_priority:
+            selected_rate = rate
+            rate_priority = current_priority
+    
+    # Si aucun tarif trouvé, utiliser les paramètres par défaut
+    if not selected_rate:
+        default_shipping_fee = site_settings.get('shipping_fee', 1500)
+        shipping_fee = default_shipping_fee + (1000 if shipping_type == 'express' else 0)
+    else:
+        # Utiliser le tarif sélectionné
+        if shipping_type == 'express':
+            shipping_fee = selected_rate.get('express_rate', selected_rate['standard_rate'] + 1000)
+        else:
+            shipping_fee = selected_rate['standard_rate']
+    
+    # Vérifier si la livraison est gratuite selon le seuil global
+    is_free_shipping = cart_total >= free_shipping_threshold
+    final_shipping_fee = 0 if is_free_shipping else shipping_fee
+    
+    return {
+        'shipping_fee': final_shipping_fee,
+        'base_shipping_fee': shipping_fee,  # Prix avant application du seuil gratuit
+        'is_free_shipping': is_free_shipping,
+        'free_shipping_threshold': free_shipping_threshold,
+        'amount_needed_for_free_shipping': max(0, free_shipping_threshold - cart_total) if not is_free_shipping else 0,
+        'region': region,
+        'shipping_type': shipping_type,
+        'selected_rate': selected_rate,
+        'categories_analyzed': list(categories_in_cart),
+        'subcategories_analyzed': list(subcategories_in_cart),
+        'rate_priority': rate_priority
+    }
+
 def calculate_shipping_fee(cart_total, region=None, shipping_type='standard'):
     """
     Calcule les frais de livraison basés sur les paramètres globaux
@@ -3163,7 +3308,7 @@ def get_user_permissions():
         'super_admin': ['all'],
         'admin': ['manage_orders', 'manage_merchants', 'view_dashboard', 'view_users'],
         'manager': ['manage_orders', 'view_dashboard', 'view_merchants'],
-        'livreur': ['view_orders', 'update_order_status', 'view_dashboard']
+        'livreur': ['view_orders', 'update_order_status', 'view_dashboard', 'view_history']
     }
     
     return role_permissions.get(user_role, [])
@@ -3367,6 +3512,35 @@ def assign_order_to_livreur(order_id, order_type, livreur_email, merchant_email=
     is_assigned, assigned_to = is_order_assigned(order_id, order_type, merchant_email)
     if is_assigned:
         return False, f"Cette commande est déjà assignée au livreur {assigned_to}"
+    
+    # Récupérer les informations du livreur pour l'historique permanent
+    from models import Employee
+    employee = Employee.query.filter_by(email=livreur_email, role='livreur').first()
+    
+    # Sauvegarder dans la base de données pour historique permanent
+    try:
+        if order_type == 'merchant':
+            from db_helpers import get_order_by_id
+            db_order = get_order_by_id(order_id)
+            if db_order and employee:
+                db_order.delivery_employee_id = employee.id
+                db_order.delivery_employee_email = employee.email
+                db_order.delivery_employee_name = f"{employee.first_name} {employee.last_name}"
+                db_order.delivery_employee_phone = employee.phone
+                db_order.assigned_at = datetime.now()
+                db.session.commit()
+        elif order_type == 'admin':
+            from db_helpers import get_admin_order_by_id
+            admin_order = get_admin_order_by_id(order_id)
+            if admin_order and employee:
+                admin_order.delivery_employee_id = employee.id
+                admin_order.delivery_employee_email = employee.email
+                admin_order.delivery_employee_name = f"{employee.first_name} {employee.last_name}"
+                admin_order.delivery_employee_phone = employee.phone
+                admin_order.assigned_at = datetime.now()
+                db.session.commit()
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde de l'assignation en DB: {e}")
     
     # Initialiser la liste d'assignations pour ce livreur si elle n'existe pas
     if livreur_email not in livreur_assignments_db:
@@ -5679,17 +5853,57 @@ def checkout():
         'express': site_settings['shipping_fee'] * 2
     })
     
-    # Options de livraison avec prix dynamiques (prix par défaut)
+    # Récupérer les informations de livraison dynamiques pour le panier
+    cart_items = []
+    for product in products:
+        cart_items.append({
+            'product_id': product['id'],  # Utiliser 'product_id' au lieu de 'id'
+            'category_id': product.get('category_id'),
+            'subcategory_id': product.get('subcategory_id'),
+            'quantity': product['quantity'],
+            'price': product['price']
+        })
+    
+    # Calculer le total du panier
+    cart_total = sum(product['price'] * product['quantity'] for product in products)
+    
+    # Calculer les tarifs dynamiques pour le panier
+    shipping_info = calculate_dynamic_shipping_fee(cart_items, cart_total, '', 'standard')
+    
+    # Créer les options de livraison avec les informations dynamiques
+    if shipping_info.get('selected_rate'):
+        rate_data = shipping_info['selected_rate']
+        standard_days = rate_data.get('standard_delivery_days', 3)
+        express_days = rate_data.get('express_delivery_days', 1)
+        
+        # Formatage des durées pour l'affichage
+        if standard_days == 1:
+            standard_label = "Standard (24h)"
+        else:
+            standard_label = f"Standard ({standard_days} jours)"
+            
+        if express_days == 0:
+            express_label = "Express (même jour)"
+        elif express_days == 1:
+            express_label = "Express (24-48h)"
+        else:
+            express_label = f"Express ({express_days} jours)"
+    else:
+        # Valeurs par défaut si aucun tarif personnalisé
+        standard_label = "Standard (3 jours)"
+        express_label = "Express (24-48h)"
+    
+    # Options de livraison avec prix et durées dynamiques
     shipping_options = [
         {
             'id': 1, 
-            'name': 'Standard (3-5 jours)', 
+            'name': standard_label, 
             'type': 'standard',
             'price': default_rates.get('standard', site_settings['shipping_fee'])
         },
         {
             'id': 2, 
-            'name': 'Express (1-2 jours)', 
+            'name': express_label, 
             'type': 'express',
             'price': default_rates.get('express', site_settings['shipping_fee'] * 2)
         }
@@ -5726,9 +5940,13 @@ def api_shipping_rates():
         cart_total = float(data.get('cart_total', 0))
         shipping_type = data.get('shipping_type', 'standard')
         
-        # Calculer les frais pour les deux types de livraison
-        standard_info = calculate_shipping_fee(cart_total, region, 'standard')
-        express_info = calculate_shipping_fee(cart_total, region, 'express')
+        # Récupérer les items du panier pour analyser les catégories
+        checkout_cart = session.get('checkout_cart', [])
+        cart_items = checkout_cart if checkout_cart else get_cart()
+        
+        # Calculer les frais pour les deux types de livraison avec analyse des catégories
+        standard_info = calculate_dynamic_shipping_fee(cart_items, cart_total, region, 'standard')
+        express_info = calculate_dynamic_shipping_fee(cart_items, cart_total, region, 'express')
         
         # Obtenir les tarifs de base pour information
         site_settings = get_site_settings()
@@ -5837,7 +6055,7 @@ def complete_order():
     # Stock réservé avec succès, continuer le traitement
     
     # Récupérer les informations sur la livraison et le paiement
-    shipping_method = request.form.get('shipping_method', 'Standard')
+    shipping_method_raw = request.form.get('shipping_method', 'Standard')
     payment_method = request.form.get('payment_method', 'Paiement à la livraison')
     address_id = request.form.get('address_id')
     
@@ -5845,7 +6063,7 @@ def complete_order():
     delivery_region = request.form.get('region', 'default')
     
     # Déterminer le type de livraison (standard ou express) depuis shipping_method
-    if 'express' in shipping_method.lower() or 'rapide' in shipping_method.lower():
+    if 'express' in shipping_method_raw.lower() or 'rapide' in shipping_method_raw.lower():
         shipping_type = 'express'
     else:
         shipping_type = 'standard'
@@ -6061,18 +6279,43 @@ def complete_order():
     # Debug: Total du panier avant application du code promo
     
     # Utiliser la nouvelle fonction de calcul des frais de livraison dynamiques
-    # avec la région de livraison et le type de livraison corrects
+    # avec analyse des catégories des produits dans le panier
     shipping_region = shipping_address.get('region', 'default')
-    shipping_info = calculate_shipping_fee(cart_total, shipping_region, shipping_type)
+    shipping_info = calculate_dynamic_shipping_fee(checkout_cart, cart_total, shipping_region, shipping_type)
     shipping_fee = shipping_info['shipping_fee']
     
     # Debug: Afficher les informations de livraison calculées
     print(f"DEBUG SHIPPING: Total panier={cart_total}, Région={shipping_region}, Type={shipping_type}")
     print(f"DEBUG SHIPPING: Frais calculés={shipping_fee}, Livraison gratuite={shipping_info['is_free_shipping']}")
-    if shipping_info.get('price_range_used'):
-        print(f"DEBUG SHIPPING: Tranche de prix utilisée: {shipping_info['price_range_used']['range_text']}")
+    print(f"DEBUG SHIPPING: Catégories analysées={shipping_info['categories_analyzed']}")
+    print(f"DEBUG SHIPPING: Sous-catégories analysées={shipping_info['subcategories_analyzed']}")
+    if shipping_info.get('selected_rate'):
+        print(f"DEBUG SHIPPING: Tarif sélectionné: {shipping_info['selected_rate'].get('name', 'N/A')} (priorité: {shipping_info['rate_priority']})")
     else:
-        print(f"DEBUG SHIPPING: Tarifs régionaux utilisés")
+        print(f"DEBUG SHIPPING: Utilisation des tarifs par défaut système")
+    
+    # Créer un shipping_method descriptif basé sur les informations calculées
+    if shipping_info.get('selected_rate'):
+        if shipping_type == 'express':
+            delivery_time = shipping_info['selected_rate'].get('express_delivery_days', 1)
+            if delivery_time == 0:
+                shipping_method = "Express (même jour)"
+            elif delivery_time == 1:
+                shipping_method = "Express (24-48h)"
+            else:
+                shipping_method = f"Express ({delivery_time} jours)"
+        else:
+            delivery_time = shipping_info['selected_rate'].get('standard_delivery_days', 3)
+            if delivery_time == 1:
+                shipping_method = "Standard (24h)"
+            else:
+                shipping_method = f"Standard ({delivery_time} jours)"
+    else:
+        # Utilisation des tarifs par défaut
+        if shipping_type == 'express':
+            shipping_method = "Express (24-48h)"
+        else:
+            shipping_method = "Standard (3 jours)"
     
     # Debug: Afficher les groupes de marchands
     for merchant_email, products in merchant_groups.items():
@@ -7422,6 +7665,14 @@ def inject_admin():
         if email in admins_db:
             admin = admins_db[email]
             admin['email'] = email  # Ajouter l'email dans le dictionnaire
+        
+        # Toujours ajouter le rôle depuis la session, même si admin n'est pas dans admins_db
+        admin_role = session.get('admin_role')
+        if admin_role:
+            if admin is None:
+                admin = {}
+            admin['role'] = admin_role
+    
     return {'admin': admin}
 
 # Ajouter un contexte processor pour la date/heure actuelle
@@ -9495,10 +9746,28 @@ def livreur_dashboard():
     current_assignments_count = get_livreur_assigned_orders_count(admin_email)
     can_take_more = can_livreur_take_order(admin_email)
     
+    # Récupérer les commandes livrées par ce livreur pour les statistiques
+    delivered_orders_count = 0
+    try:
+        from db_helpers import get_all_merchant_orders
+        merchant_orders = get_all_merchant_orders()
+        delivered_orders_count += len([o for o in merchant_orders 
+                                     if o.delivery_employee_email == admin_email and o.status == 'delivered'])
+        
+        # Ajouter aussi les commandes admin livrées
+        from db_helpers import get_all_admin_orders
+        admin_orders = get_all_admin_orders()
+        delivered_orders_count += len([o for o in admin_orders 
+                                     if hasattr(o, 'delivery_employee_email') and 
+                                     o.delivery_employee_email == admin_email and o.status == 'delivered'])
+    except Exception as e:
+        print(f"❌ Erreur lors du calcul des commandes livrées: {e}")
+    
     # Statistiques pour le livreur
     stats = {
         'assigned_orders': len(assigned_orders),
         'available_orders': len(available_orders),
+        'delivered_orders': delivered_orders_count,
         'assignments_remaining': 3 - current_assignments_count,
         'max_assignments': 3,
         'can_take_more': can_take_more
@@ -9639,6 +9908,7 @@ def livreur_order_detail(order_id):
                 'customer_email': db_order.customer_email,
                 'customer_phone': db_order.customer_phone,
                 'total': db_order.total,
+                'shipping_fee': db_order.shipping_fee,
                 'status': db_order.status,
                 'status_text': db_order.status_text,
                 'status_color': db_order.status_color,
@@ -9699,6 +9969,7 @@ def livreur_order_detail(order_id):
                 'customer_email': admin_order.customer_email,
                 'customer_phone': admin_order.customer_phone,
                 'total': admin_order.total,
+                'shipping_fee': admin_order.shipping_fee,
                 'status': admin_order.status,
                 'status_text': admin_order.status_text,
                 'created_at': admin_order.created_at.strftime('%Y-%m-%d %H:%M:%S'),
@@ -9727,6 +9998,14 @@ def livreur_order_detail(order_id):
     if not order_data:
         flash('Commande non trouvée', 'danger')
         return redirect(url_for('livreur_orders'))
+    
+    # Vérifier si la commande est déjà livrée ou annulée - rediriger vers l'historique
+    if order_data['status'] in ['delivered', 'cancelled']:
+        if order_data['status'] == 'delivered':
+            flash('Cette commande a été livrée avec succès. Consultez votre historique pour plus de détails.', 'info')
+        else:
+            flash('Cette commande a été annulée et ne peut plus être modifiée.', 'warning')
+        return redirect(url_for('livreur_history'))
     
     # Enrichir les données pour l'affichage
     order_data['merchant_info'] = merchant_info
@@ -9826,6 +10105,109 @@ def livreur_unassign_order():
             'success': False,
             'message': f'Erreur lors de la désassignation: {str(e)}'
         })
+
+@app.route('/admin/livreur/history')
+@permission_required(['livreur'])
+def livreur_history():
+    """Page d'historique des livraisons pour un livreur"""
+    livreur_email = session.get('admin_email')
+    
+    if not livreur_email:
+        flash('Session expirée', 'danger')
+        return redirect(url_for('admin_login'))
+    
+    # Récupérer toutes les commandes livrées par ce livreur
+    delivered_orders = []
+    
+    # 1. Chercher dans les commandes marchands
+    from db_helpers import get_all_merchant_orders
+    merchant_orders = get_all_merchant_orders()
+    for order in merchant_orders:
+        if (order.delivery_employee_email == livreur_email and 
+            order.status in ['delivered', 'completed']):
+            
+            # Récupérer les informations du marchand
+            from db_helpers import get_merchant_by_id
+            merchant = get_merchant_by_id(order.merchant_id)
+            
+            order_info = {
+                'id': order.id,
+                'order_number': order.order_number,
+                'customer_name': order.customer_name,
+                'total': order.total,
+                'shipping_fee': order.shipping_fee,
+                'status': order.status,
+                'status_text': order.status_text or order.status,
+                'status_color': order.status_color or 'success',
+                'delivery_date': order.delivery_date,
+                'assigned_at': order.assigned_at,
+                'created_at': order.created_at,
+                'merchant_name': merchant.store_name if merchant else 'Marchand',
+                'source': 'merchant',
+                'shipping_address': order.get_shipping_address()
+            }
+            delivered_orders.append(order_info)
+    
+    # 2. Chercher dans les commandes admin
+    from db_helpers import get_all_admin_orders
+    admin_orders = get_all_admin_orders()
+    for order in admin_orders:
+        if (hasattr(order, 'delivery_employee_email') and 
+            order.delivery_employee_email == livreur_email and 
+            order.status in ['delivered', 'completed']):
+            
+            order_info = {
+                'id': order.id,
+                'order_number': order.order_number,
+                'customer_name': order.customer_name,
+                'total': order.total,
+                'shipping_fee': order.shipping_fee or 0,
+                'status': order.status,
+                'status_text': order.status_text or order.status,
+                'status_color': 'success',
+                'delivery_date': order.delivery_date,
+                'assigned_at': order.assigned_at,
+                'created_at': order.created_at,
+                'merchant_name': 'DOUKA KM (Admin)',
+                'source': 'admin',
+                'shipping_address': order.get_shipping_address()
+            }
+            delivered_orders.append(order_info)
+    
+    # Trier par date de livraison (plus récent en premier)
+    delivered_orders.sort(key=lambda x: x['delivery_date'] or x['created_at'], reverse=True)
+    
+    # Calculer les statistiques
+    total_deliveries = len(delivered_orders)
+    total_revenue = sum(order['total'] for order in delivered_orders)
+    total_shipping = sum(order['shipping_fee'] for order in delivered_orders)
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_orders = delivered_orders[start:end]
+    
+    # Informations de pagination
+    pagination_info = {
+        'page': page,
+        'per_page': per_page,
+        'total': total_deliveries,
+        'has_prev': page > 1,
+        'has_next': end < total_deliveries,
+        'prev_num': page - 1 if page > 1 else None,
+        'next_num': page + 1 if end < total_deliveries else None
+    }
+    
+    return render_template('admin/livreur_history.html',
+                          orders=paginated_orders,
+                          pagination=pagination_info,
+                          stats={
+                              'total_deliveries': total_deliveries,
+                              'total_revenue': total_revenue,
+                              'total_shipping': total_shipping
+                          })
 
 @app.route('/admin/orders')
 @permission_required(['super_admin', 'admin', 'manager', 'livreur'])
@@ -10027,7 +10409,7 @@ def admin_order_detail(order_id):
                 })
             target_order['subtotal'] = subtotal
             # Frais de livraison
-            target_order['shipping_fee'] = getattr(db_order, 'delivery_fee', 0) or 0
+            target_order['shipping_fee'] = db_order.shipping_fee or 0
             
             merchant_info = {
                 'email': merchant_record.email,
@@ -10081,7 +10463,8 @@ def admin_order_detail(order_id):
                 'payment_method': admin_order.payment_method or 'Non spécifié',
                 'shipping_method': getattr(admin_order, 'shipping_method', 'Standard'),
                 'shipping_address': admin_order.get_shipping_address(),
-                'items': []
+                'items': [],
+                'source': 'admin'
             }
             
             # Ajouter les items
@@ -10101,7 +10484,7 @@ def admin_order_detail(order_id):
                 })
             target_order['subtotal'] = subtotal
             # Frais de livraison
-            target_order['shipping_fee'] = getattr(admin_order, 'delivery_fee', 0) or 0
+            target_order['shipping_fee'] = admin_order.shipping_fee or 0
             
             merchant_info = {
                 'email': 'admin@douka-km.com',
@@ -10138,44 +10521,90 @@ def admin_order_detail(order_id):
     
     target_order['customer_info'] = customer_info
     
-    # Chercher le livreur assigné à cette commande (merchant ou admin)
-    assigned_livreur_email = None
+    # Chercher le livreur assigné à cette commande
     assigned_livreur_info = None
-    order_type = 'merchant' if target_order.get('merchant_info', {}).get('email') != 'admin@douka-km.com' else 'admin'
-    merchant_email = target_order.get('merchant_info', {}).get('email') if order_type == 'merchant' else None
-    # Recherche dans livreur_assignments_db (même si la commande n'est plus assignée, on veut garder la trace)
-    # On va aussi regarder dans la commande elle-même si possible
-    # 1. Chercher dans les assignations en mémoire
-    for livreur_email, assignments in livreur_assignments_db.items():
-        for assignment in assignments:
-            if (str(assignment['order_id']) == str(order_id) and assignment['order_type'] == order_type):
-                if order_type == 'merchant' and merchant_email:
-                    if assignment.get('merchant_email') == merchant_email:
+    current_order_obj = None
+    
+    # Récupérer l'objet Order de la base de données (qu'il soit marchand ou admin)
+    if db_order:
+        current_order_obj = db_order
+    elif admin_order:
+        current_order_obj = admin_order
+    else:
+        # Dernière tentative : récupérer directement par ID
+        current_order_obj = Order.query.get(order_id)
+    
+    # 1. Vérifier si les informations du livreur sont stockées dans la commande (historique permanent)
+    if current_order_obj and current_order_obj.delivery_employee_email:
+        assigned_livreur_info = {
+            'email': current_order_obj.delivery_employee_email,
+            'name': current_order_obj.delivery_employee_name or 'Livreur',
+            'phone': current_order_obj.delivery_employee_phone or '',
+            'assigned_at': current_order_obj.assigned_at.strftime('%Y-%m-%d %H:%M:%S') if current_order_obj.assigned_at else '',
+            'is_employee': True,
+            'is_from_history': True
+        }
+    
+    # 2. Si pas d'historique permanent, chercher dans les assignations actuelles
+    if not assigned_livreur_info:
+        assigned_livreur_email = None
+        order_type = 'merchant' if target_order.get('merchant_info', {}).get('email') != 'admin@douka-km.com' else 'admin'
+        merchant_email = target_order.get('merchant_info', {}).get('email') if order_type == 'merchant' else None
+        
+        # Chercher dans les assignations en mémoire
+        for livreur_email, assignments in livreur_assignments_db.items():
+            for assignment in assignments:
+                if (str(assignment['order_id']) == str(order_id) and assignment['order_type'] == order_type):
+                    if order_type == 'merchant' and merchant_email:
+                        if assignment.get('merchant_email') == merchant_email:
+                            assigned_livreur_email = livreur_email
+                            break
+                    else:
                         assigned_livreur_email = livreur_email
                         break
-                else:
-                    assigned_livreur_email = livreur_email
-                    break
+            if assigned_livreur_email:
+                break
+            if assigned_livreur_email:
+                break
+        
+        # 3. Récupérer les infos du livreur si trouvé dans les assignations actuelles
         if assigned_livreur_email:
-            break
-    # 2. Si pas trouvé, essayer de retrouver l'email du livreur dans la commande (si stocké)
-    if not assigned_livreur_email and hasattr(target_order, 'livreur_email'):
-        assigned_livreur_email = getattr(target_order, 'livreur_email', None)
-    # 3. Si pas trouvé, essayer de retrouver dans une table d'historique (à implémenter si besoin)
-    # 4. Récupérer toutes les infos du livreur si possible
-    if assigned_livreur_email:
-        user = users_db.get(assigned_livreur_email)
-        if user:
-            assigned_livreur_info = {
-                'email': assigned_livreur_email,
-                'name': f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
-                'phone': user.get('phone', ''),
-                'region': user.get('region', ''),
-                'city': user.get('city', ''),
-                'address': user.get('address', ''),
-            }
-        else:
-            assigned_livreur_info = {'email': assigned_livreur_email}
+            # D'abord chercher dans la table Employee (pour les employés livreurs)
+            from models import Employee
+            employee = Employee.query.filter_by(email=assigned_livreur_email, role='livreur').first()
+            if employee:
+                assigned_livreur_info = {
+                    'email': assigned_livreur_email,
+                    'name': f"{employee.first_name} {employee.last_name}".strip(),
+                    'phone': employee.phone or '',
+                    'address': '',  # Non disponible dans Employee
+                    'city': '',     # Non disponible dans Employee  
+                    'region': '',   # Non disponible dans Employee
+                    'is_employee': True,
+                    'is_active': employee.status == 'active',
+                    'is_from_history': False
+                }
+            else:
+                # Fallback vers users_db pour les utilisateurs classiques
+                user = users_db.get(assigned_livreur_email)
+                if user:
+                    assigned_livreur_info = {
+                        'email': assigned_livreur_email,
+                        'name': f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+                        'phone': user.get('phone', ''),
+                        'region': user.get('region', ''),
+                        'city': user.get('city', ''),
+                        'address': user.get('address', ''),
+                        'is_employee': False,
+                        'is_from_history': False
+                    }
+                else:
+                    assigned_livreur_info = {
+                        'email': assigned_livreur_email,
+                        'name': 'Livreur',
+                        'is_employee': False,
+                        'is_from_history': False
+                    }
     return render_template('admin/order_detail.html', 
                           order=target_order,
                           assigned_livreur=assigned_livreur_info)
@@ -12330,6 +12759,7 @@ def admin_user_detail(user_id):
             user_addresses = []
             if user_record.email in users_db:
                 user_addresses = users_db[user_record.email].get('addresses', [])
+            # Note: Les adresses pourraient être stockées dans une table séparée à l'avenir
             
             target_user_data = {
                 'id': user_record.id,
@@ -12343,7 +12773,7 @@ def admin_user_detail(user_id):
                 'registration_date': user_record.created_at.strftime('%Y-%m-%d') if user_record.created_at else '',
                 'last_login': user_record.last_login.strftime('%Y-%m-%d %H:%M') if user_record.last_login else '',
                 'is_active': user_record.is_active,
-                'email_verified': user_record.email_verified,
+                'email_verified': user_record.email_verified,  # <-- Cette propriété est cruciale
                 'orders': user_orders,
                 'orders_count': len(user_orders),
                 'total_spent': user_stats['total_spent'],
@@ -13278,7 +13708,7 @@ def api_validate_promo_code():
         })
 
 @app.route('/admin/settings', methods=['GET', 'POST'])
-@permission_required(['super_admin'])
+@permission_required(['super_admin', 'admin'])
 def admin_settings():
     """Page de paramètres et configuration du système"""
     admin_email = session.get('admin_email')
@@ -13833,7 +14263,7 @@ def get_or_create_default_shipping_rate():
     return default_rate
 
 @app.route('/admin/shipping-rates', methods=['GET', 'POST'])
-@permission_required(['super_admin'])
+@permission_required(['super_admin', 'admin'])
 def admin_shipping_rates():
     """Page de gestion des tarifs de livraison"""
     admin_email = session.get('admin_email')

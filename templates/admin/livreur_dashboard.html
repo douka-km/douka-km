@@ -27,6 +27,9 @@
                         <li><a class="dropdown-item" href="{{ url_for('livreur_orders') }}">
                             <i class="fas fa-list me-2"></i>Mes commandes
                         </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('livreur_history') }}">
+                            <i class="fas fa-history me-2"></i>Historique des livraisons
+                        </a></li>
                         <li><a class="dropdown-item" href="{{ url_for('livreur_settings') }}">
                             <i class="fas fa-user-cog me-2"></i>Mes paramètres
                         </a></li>
@@ -88,7 +91,7 @@
 
         <!-- Statistiques -->
         <div class="row mb-4">
-            <div class="col-md-3">
+            <div class="col-md">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-clipboard-list fa-2x text-primary mb-2"></i>
@@ -97,7 +100,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-boxes fa-2x text-success mb-2"></i>
@@ -106,7 +109,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-truck-loading fa-2x text-info mb-2"></i>
@@ -115,12 +118,21 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-check-circle fa-2x text-warning mb-2"></i>
                         <h5 class="card-title">{{ shipped_orders|length }}</h5>
                         <p class="card-text text-muted">Expédiées</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-history fa-2x text-secondary mb-2"></i>
+                        <h5 class="card-title">{{ stats.delivered_orders or 0 }}</h5>
+                        <p class="card-text text-muted">Livrées</p>
                     </div>
                 </div>
             </div>
@@ -138,6 +150,9 @@
                             </a>
                             <a href="{{ url_for('livreur_orders', view='available') }}" class="btn btn-outline-success {% if not can_take_more %}disabled{% endif %}">
                                 <i class="fas fa-plus me-1"></i>Prendre une commande
+                            </a>
+                            <a href="{{ url_for('livreur_history') }}" class="btn btn-outline-info">
+                                <i class="fas fa-history me-1"></i>Historique
                             </a>
                         </div>
                     </div>

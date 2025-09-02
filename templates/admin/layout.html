@@ -340,12 +340,36 @@
             <div class="sidebar-menu">
                 <ul>
                     <li>
+                        {% if admin and admin.role == 'livreur' %}
+                        <a href="{{ url_for('livreur_dashboard') }}" class="{{ 'active' if request.endpoint == 'livreur_dashboard' else '' }}">
+                            <i class="fas fa-truck"></i>
+                            <span>Dashboard Livreur</span>
+                        </a>
+                        {% else %}
                         <a href="{{ url_for('admin_dashboard') }}" class="{{ 'active' if request.endpoint == 'admin_dashboard' else '' }}">
                             <i class="fas fa-tachometer-alt"></i>
                             <span>Tableau de bord</span>
                         </a>
+                        {% endif %}
                     </li>
                     
+                    {% if admin and admin.role == 'livreur' %}
+                    <!-- Section spéciale pour les livreurs -->
+                    <li class="menu-header">Livraisons</li>
+                    <li>
+                        <a href="{{ url_for('livreur_dashboard') }}" class="{{ 'active' if request.endpoint == 'livreur_dashboard' else '' }}">
+                            <i class="fas fa-list"></i>
+                            <span>Mes Commandes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('livreur_history') }}" class="{{ 'active' if request.endpoint == 'livreur_history' else '' }}">
+                            <i class="fas fa-history"></i>
+                            <span>Historique</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <!-- Menu normal pour admin/manager -->
                     <li class="menu-header">Marchands</li>
                     <li>
                         <a href="{{ url_for('admin_merchants') }}" class="{{ 'active' if request.endpoint == 'admin_merchants' or request.endpoint == 'admin_merchant_detail' else '' }}">
@@ -400,6 +424,8 @@
                         </a>
                     </li>
                     
+                    <!-- Section Utilisateurs - Visible seulement pour super_admin et admin -->
+                    {% if admin and admin.role in ['super_admin', 'admin'] %}
                     <li class="menu-header">Utilisateurs</li>
                     <li>
                         <a href="{{ url_for('admin_users') }}" class="{{ 'active' if request.endpoint == 'admin_users' else '' }}">
@@ -413,6 +439,8 @@
                             <span>Employés</span>
                         </a>
                     </li>
+                    {% endif %}
+                    {% endif %}
                     
                     <li class="menu-header">Système</li>
                     <li>
@@ -421,12 +449,15 @@
                             <span>Codes Promo</span>
                         </a>
                     </li>
+                    <!-- Paramètres - Visible seulement pour super_admin et admin -->
+                    {% if admin and admin.role in ['super_admin', 'admin'] %}
                     <li>
                         <a href="{{ url_for('admin_settings') }}" class="{{ 'active' if request.endpoint == 'admin_settings' else '' }}">
                             <i class="fas fa-cog"></i>
                             <span>Paramètres</span>
                         </a>
                     </li>
+                    {% endif %}
                     
                     <li class="menu-separator"></li>
                     <li>

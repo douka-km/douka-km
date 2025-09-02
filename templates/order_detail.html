@@ -160,14 +160,20 @@
                                     <div class="col-sm-6">
                                         <p class="detail-label">Statut du paiement</p>
                                         <p class="detail-value">
-                                            <span class="badge bg-{{ 'success' if order['payment_status'] == 'completed' else 'warning' }}">
-                                                {{ 'Payé' if order['payment_status'] == 'completed' else 'En attente' }}
+                                            <span class="badge bg-{{ 'success' if order['payment_status'] == 'completed' else ('danger' if order['payment_status'] == 'cancelled' else 'warning') }}">
+                                                {% if order['payment_status'] == 'completed' %}
+                                                    Payé
+                                                {% elif order['payment_status'] == 'cancelled' %}
+                                                    Annulé
+                                                {% else %}
+                                                    En attente
+                                                {% endif %}
                                             </span>
                                         </p>
                                     </div>
                                     <div class="col-sm-12 mt-2">
-                                        <p class="detail-label">Méthode de livraison</p>
-                                        <p class="detail-value">{{ order['shipping_method'] }}</p>
+                                        <p class="detail-label">Mode de livraison</p>
+                                        <p class="detail-value">{{ order['shipping_method'] | clean_shipping_method }}</p>
                                     </div>
                                 </div>
                             </div>

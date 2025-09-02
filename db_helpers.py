@@ -1065,6 +1065,7 @@ def cancel_user_order(user_email, order_id):
         
         # Annuler la commande
         order.status = 'cancelled'
+        order.payment_status = 'cancelled'  # ✅ CORRECTION: Mettre à jour le statut de paiement aussi
         order.cancelled_at = datetime.utcnow()
         order.updated_at = datetime.utcnow()
         
@@ -1185,3 +1186,12 @@ def get_merchant_orders(merchant_id):
 def get_merchant_by_id(merchant_id):
     """Récupérer un marchand par son ID"""
     return Merchant.query.get(merchant_id)
+
+def get_all_admin_orders():
+    """Récupérer toutes les commandes admin"""
+    try:
+        # Les commandes admin ont merchant_id=None
+        return Order.query.filter(Order.merchant_id.is_(None)).order_by(Order.created_at.desc()).all()
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération des commandes admin: {e}")
+        return []

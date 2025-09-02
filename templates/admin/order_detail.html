@@ -50,6 +50,8 @@
                                 <span class="badge bg-warning">En attente</span>
                             {% elif payment_status == 'failed' %}
                                 <span class="badge bg-danger">Échec</span>
+                            {% elif payment_status == 'cancelled' %}
+                                <span class="badge bg-danger">Annulé</span>
                             {% else %}
                                 <span class="badge bg-secondary">{{ payment_status }}</span>
                             {% endif %}
@@ -165,26 +167,101 @@
 
     <!-- Sidebar avec informations client et marchand -->
     <div class="col-md-4">
+        
+        <!-- Informations Livreur -->
         {% if assigned_livreur %}
-        <div class="card mb-4 border-info">
-            <div class="card-header bg-info text-white">
-                <h5><i class="fas fa-motorcycle me-2"></i>Livreur Assigné</h5>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-truck me-2"></i>Livreur Assigné</h5>
             </div>
             <div class="card-body">
-                <p><strong>{{ assigned_livreur.name or 'Livreur' }}</strong></p>
-                {% if assigned_livreur.phone %}
-                <p><i class="fas fa-phone me-2"></i>{{ assigned_livreur.phone }}</p>
-                {% endif %}
-                {% if assigned_livreur.address %}
-                <p><i class="fas fa-home me-2"></i>{{ assigned_livreur.address }}</p>
-                {% endif %}
-                {% if assigned_livreur.city or assigned_livreur.region %}
-                <p><i class="fas fa-map-marker-alt me-2"></i>{{ assigned_livreur.city }}{% if assigned_livreur.region %}, {{ assigned_livreur.region }}{% endif %}</p>
-                {% endif %}
-                <p><small class="text-muted">{{ assigned_livreur.email }}</small></p>
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="mb-1">{{ assigned_livreur.get('name') or 'Nom non disponible' }}</h6>
+                        <small class="text-muted">{{ assigned_livreur.get('email') }}</small>
+                        {% if assigned_livreur.get('is_employee') %}
+                        <span class="badge bg-primary ms-2">Employé</span>
+                        {% endif %}
+                        {% if assigned_livreur.get('is_from_history') %}
+                        <span class="badge bg-info ms-2">Historique</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if assigned_livreur.get('is_from_history') %}
+                        <span class="badge bg-secondary">Commande terminée</span>
+                        {% elif assigned_livreur.get('is_active') == False %}
+                        <span class="badge bg-danger">Inactif</span>
+                        {% else %}
+                        <span class="badge bg-success">Actif</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        {% if assigned_livreur.get('phone') %}
+                        <p class="mb-2"><i class="fas fa-phone me-2 text-primary"></i>{{ assigned_livreur.get('phone') }}</p>
+                        {% else %}
+                        <p class="mb-2 text-muted"><i class="fas fa-phone me-2"></i>Téléphone non renseigné</p>
+                        {% endif %}
+                        
+                        {% if assigned_livreur.get('assigned_at') %}
+                        <p class="mb-2"><i class="fas fa-clock me-2 text-warning"></i>Assigné le: {{ assigned_livreur.get('assigned_at') }}</p>
+                        {% endif %}
+                        
+                        {% if assigned_livreur.get('is_employee') %}
+                        <p class="mb-2 text-info"><i class="fas fa-id-badge me-2"></i>Employé DOUKA KM</p>
+                        {% else %}
+                            {% if assigned_livreur.get('city') or assigned_livreur.get('region') %}
+                            <p class="mb-2"><i class="fas fa-map-marker-alt me-2 text-success"></i>
+                                {{ assigned_livreur.get('city') or 'Ville non renseignée' }}
+                                {% if assigned_livreur.get('region') %}, {{ assigned_livreur.get('region') }}{% endif %}
+                            </p>
+                            {% else %}
+                            <p class="mb-2 text-muted"><i class="fas fa-map-marker-alt me-2"></i>Localisation non renseignée</p>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if not assigned_livreur.get('is_employee') and assigned_livreur.get('address') %}
+                        <p class="mb-2"><i class="fas fa-home me-2 text-info"></i>{{ assigned_livreur.get('address') }}</p>
+                        {% elif not assigned_livreur.get('is_employee') %}
+                        <p class="mb-2 text-muted"><i class="fas fa-home me-2"></i>Adresse non renseignée</p>
+                        {% else %}
+                        <p class="mb-2 text-muted"><i class="fas fa-building me-2"></i>Informations de localisation disponibles en interne</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    {% if assigned_livreur.get('is_from_history') %}
+                    <span class="badge bg-secondary">
+                        <i class="fas fa-history me-1"></i>Historique de livraison
+                    </span>
+                    {% else %}
+                    <span class="badge bg-success">
+                        <i class="fas fa-check me-1"></i>Assigné
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-truck me-2"></i>Livreur</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Aucun livreur assigné à cette commande
+                </p>
+                <span class="badge bg-warning">
+                    <i class="fas fa-clock me-1"></i>En attente d'assignation
+                </span>
             </div>
         </div>
         {% endif %}
+
         <!-- Informations Client -->
         {% if order.get('customer_info') %}
         <div class="card mb-4">

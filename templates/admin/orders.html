@@ -176,6 +176,8 @@
                                 <span class="badge bg-warning text-dark">En attente</span>
                             {% elif payment_status == 'failed' %}
                                 <span class="badge bg-danger text-white">Échec</span>
+                            {% elif payment_status == 'cancelled' %}
+                                <span class="badge bg-danger text-white">Annulé</span>
                             {% else %}
                                 <span class="badge bg-secondary text-dark">{{ payment_status }}</span>
                             {% endif %}
