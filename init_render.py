@@ -102,6 +102,19 @@ def init_database_safely(app, initialize_production_db):
                 db.session.rollback()
                 raise
             
+            # MIGRATION: Ajouter les colonnes de livreur si elles n'existent pas
+            try:
+                print("🔄 Vérification et migration des colonnes de livreur...")
+                run_delivery_migration()
+                print("✅ Migration des colonnes terminée")
+            except Exception as migration_error:
+                print(f"⚠️  Erreur lors de la migration: {migration_error}")
+                # Ne pas faire échouer le déploiement pour une erreur de migration
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+            
             # Initialiser les données avec gestion d'erreur robuste
             try:
                 initialize_production_db()
@@ -120,6 +133,43 @@ def init_database_safely(app, initialize_production_db):
     except Exception as db_error:
         print(f"Erreur lors de l'initialisation DB: {db_error}")
         print("L'application continuera malgré l'erreur")
+
+def run_delivery_migration():
+    """Exécute la migration des colonnes de livreur pour PostgreSQL"""
+    from sqlalchemy import text
+    from app_final_with_db import db
+    
+    def check_column_exists(table_name, column_name):
+        """Vérifie si une colonne existe dans une table PostgreSQL"""
+        query = text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = :table_name AND column_name = :column_name
+        """)
+        result = db.session.execute(query, {'table_name': table_name, 'column_name': column_name})
+        return result.fetchone() is not None
+    
+    # Liste des colonnes à ajouter
+    columns_to_add = [
+        ('delivery_employee_id', 'INTEGER'),
+        ('delivery_employee_email', 'VARCHAR(120)'),
+        ('delivery_employee_name', 'VARCHAR(200)'),
+        ('delivery_employee_phone', 'VARCHAR(20)'),
+        ('assigned_at', 'TIMESTAMP')
+    ]
+    
+    for column_name, column_type in columns_to_add:
+        if not check_column_exists('orders', column_name):
+            try:
+                alter_query = text(f"ALTER TABLE orders ADD COLUMN {column_name} {column_type}")
+                db.session.execute(alter_query)
+                db.session.commit()
+                print(f"✓ Colonne {column_name} ajoutée")
+            except Exception as e:
+                print(f"⚠️  Erreur lors de l'ajout de {column_name}: {e}")
+                db.session.rollback()
+        else:
+            print(f"✓ Colonne {column_name} existe déjà")
 
 try:
     print("Initialisation de l'application pour Render.com...")
