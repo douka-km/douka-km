@@ -50,10 +50,6 @@ logs/
 
 # Environment variables
 .env
-.env.local
-
-# Database backups
-backups/
 
 # Temporary files
 *.tmp
