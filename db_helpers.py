@@ -350,7 +350,11 @@ def create_order(customer_id, merchant_id, items_data, shipping_address=None, **
 
 def update_order_status(order_id, new_status, admin_notes=None, changed_by='Marchand'):
     """Mettre à jour le statut d'une commande avec historique"""
-    order = Order.query.get(order_id)
+    try:
+        order_id_int = int(order_id)
+        order = Order.query.get(order_id_int)
+    except (ValueError, TypeError):
+        return None
     if not order:
         return None
     
@@ -411,7 +415,11 @@ def update_order_status(order_id, new_status, admin_notes=None, changed_by='Marc
 
 def get_order_by_id(order_id):
     """Récupérer une commande par son ID"""
-    return Order.query.get(order_id)
+    try:
+        order_id_int = int(order_id)
+        return Order.query.get(order_id_int)
+    except (ValueError, TypeError):
+        return None
 
 def get_order_by_number(order_number):
     """Récupérer une commande par son numéro"""
@@ -529,11 +537,16 @@ def get_admin_orders_count():
 
 def get_admin_order_by_id_and_email(order_id, customer_email):
     """Récupérer une commande admin spécifique par ID et email client"""
-    return Order.query.filter(
-        Order.id == order_id,
-        Order.customer_email == customer_email,
-        Order.merchant_id.is_(None)
-    ).first()
+    try:
+        # Convertir order_id en entier pour la compatibilité PostgreSQL
+        order_id_int = int(order_id)
+        return Order.query.filter(
+            Order.id == order_id_int,
+            Order.customer_email == customer_email,
+            Order.merchant_id.is_(None)
+        ).first()
+    except (ValueError, TypeError):
+        return None
 
 def get_admin_orders_by_status(status):
     """Récupérer les commandes admin par statut"""
@@ -544,10 +557,15 @@ def get_admin_orders_by_status(status):
 
 def update_admin_order_status(order_id, status):
     """Mettre à jour le statut d'une commande admin avec historique"""
-    order = Order.query.filter(
-        Order.id == order_id,
-        Order.merchant_id.is_(None)
-    ).first()
+    try:
+        # Convertir order_id en entier pour la compatibilité PostgreSQL
+        order_id_int = int(order_id)
+        order = Order.query.filter(
+            Order.id == order_id_int,
+            Order.merchant_id.is_(None)
+        ).first()
+    except (ValueError, TypeError):
+        return False, None
     
     if order:
         old_status = order.status
@@ -576,10 +594,15 @@ def update_admin_order_status(order_id, status):
 
 def get_admin_order_by_id(order_id):
     """Récupérer une commande admin par son ID"""
-    return Order.query.filter(
-        Order.id == order_id,
-        Order.merchant_id.is_(None)
-    ).first()
+    try:
+        # Convertir order_id en entier pour la compatibilité PostgreSQL
+        order_id_int = int(order_id)
+        return Order.query.filter(
+            Order.id == order_id_int,
+            Order.merchant_id.is_(None)
+        ).first()
+    except (ValueError, TypeError):
+        return None
 
 def get_admin_orders_for_delivery():
     """Récupérer les commandes admin disponibles pour livraison"""
@@ -931,7 +954,11 @@ def get_user_order_by_id(user_email, order_id):
             return None
             
         # Récupérer la commande spécifique
-        order = Order.query.filter_by(id=order_id, customer_id=user.id).first()
+        try:
+            order_id_int = int(order_id)
+            order = Order.query.filter_by(id=order_id_int, customer_id=user.id).first()
+        except (ValueError, TypeError):
+            return None
         if not order:
             return None
             
@@ -1031,7 +1058,11 @@ def cancel_user_order(user_email, order_id):
             return False, "Utilisateur non trouvé"
             
         # Récupérer la commande
-        order = Order.query.filter_by(id=order_id, customer_id=user.id).first()
+        try:
+            order_id_int = int(order_id)
+            order = Order.query.filter_by(id=order_id_int, customer_id=user.id).first()
+        except (ValueError, TypeError):
+            return False, "ID de commande invalide"
         if not order:
             return False, "Commande non trouvée"
             
@@ -1101,7 +1132,11 @@ def cancel_user_order(user_email, order_id):
 def update_user_order_status(order_id, new_status, notes=None):
     """Met à jour le statut d'une commande utilisateur dans la base de données avec historique"""
     try:
-        order = Order.query.get(order_id)
+        try:
+            order_id_int = int(order_id)
+            order = Order.query.get(order_id_int)
+        except (ValueError, TypeError):
+            return False, "ID de commande invalide"
         if not order:
             return False, "Commande non trouvée"
             
