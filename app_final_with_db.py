@@ -14677,7 +14677,7 @@ def admin_employees():
         for employee_record in db_employees:
             employees.append({
                 'display_id': f'EMP_{employee_record.id}',
-                'real_id': employee_record.id,
+                'real_id': f'emp_{employee_record.id}',  # Préfixe pour différencier
                 'source': 'database',
                 'email': employee_record.email,
                 'first_name': employee_record.first_name,
@@ -14697,7 +14697,7 @@ def admin_employees():
             if not any(emp['email'] == admin_record.email for emp in employees):
                 employees.append({
                     'display_id': f'ADMIN_{admin_record.id}',
-                    'real_id': admin_record.id,
+                    'real_id': f'admin_{admin_record.id}',  # Préfixe pour différencier
                     'source': 'admin_db',
                     'email': admin_record.email,
                     'first_name': admin_record.first_name,
@@ -14806,40 +14806,104 @@ def admin_add_employee():
 @permission_required(['super_admin', 'admin'])
 def admin_edit_employee(employee_id):
     """Modifier un employé existant"""
-    # Convertir employee_id en int pour la comparaison
-    try:
-        employee_id = int(employee_id)
-    except (ValueError, TypeError):
-        flash('ID employé invalide.', 'danger')
-        return redirect(url_for('admin_employees'))
+    # Analyser l'employee_id pour déterminer la source et l'ID réel
+    source = None
+    real_id = None
     
-    # Trouver l'employé d'abord dans la base de données, puis dans les dictionnaires
+    if employee_id.startswith('emp_'):
+        source = 'database'
+        try:
+            real_id = int(employee_id.replace('emp_', ''))
+        except (ValueError, TypeError):
+            flash('ID employé invalide.', 'danger')
+            return redirect(url_for('admin_employees'))
+    elif employee_id.startswith('admin_'):
+        source = 'admin_db'
+        try:
+            real_id = int(employee_id.replace('admin_', ''))
+        except (ValueError, TypeError):
+            flash('ID administrateur invalide.', 'danger')
+            return redirect(url_for('admin_employees'))
+    else:
+        # Ancienne méthode - essayer de convertir directement
+        try:
+            real_id = int(employee_id)
+            source = 'legacy'
+        except (ValueError, TypeError):
+            flash('ID employé invalide.', 'danger')
+            return redirect(url_for('admin_employees'))
+    
+    # Trouver l'employé selon la source
     employee_data = None
     employee_email = None
-    source = None
+    db_employee = None
+    db_admin = None
     
-    # DATABASE-FIRST: Chercher dans la base de données d'abord
-    db_employee = Employee.query.get(employee_id)
-    if db_employee:
-        employee_data = {
-            'id': db_employee.id,
-            'first_name': db_employee.first_name,
-            'last_name': db_employee.last_name,
-            'phone': db_employee.phone or '',
-            'role': db_employee.role,
-            'is_active': db_employee.status == 'active',
-            'permissions': db_employee.get_permissions()
-        }
-        employee_email = db_employee.email
-        source = 'database'
+    if source == 'database':
+        # Chercher dans la table Employee
+        db_employee = Employee.query.get(real_id)
+        if db_employee:
+            employee_data = {
+                'id': db_employee.id,
+                'first_name': db_employee.first_name,
+                'last_name': db_employee.last_name,
+                'phone': db_employee.phone or '',
+                'role': db_employee.role,
+                'is_active': db_employee.status == 'active',
+                'permissions': db_employee.get_permissions()
+            }
+            employee_email = db_employee.email
+    elif source == 'admin_db':
+        # Chercher dans la table Admin
+        db_admin = Admin.query.get(real_id)
+        if db_admin:
+            employee_data = {
+                'id': db_admin.id,
+                'first_name': db_admin.first_name,
+                'last_name': db_admin.last_name,
+                'phone': db_admin.phone or '',
+                'role': db_admin.role,
+                'is_active': db_admin.status == 'active',
+                'permissions': ['all'] if db_admin.role == 'super_admin' else [db_admin.role]
+            }
+            employee_email = db_admin.email
     else:
-        # Fallback: Chercher dans les dictionnaires
-        for email, employee in employees_db.items():
-            if int(employee['id']) == employee_id:
-                employee_data = employee
-                employee_email = email
-                source = 'legacy'
-                break
+        # Legacy - chercher dans les deux tables
+        db_employee = Employee.query.get(real_id)
+        if db_employee:
+            employee_data = {
+                'id': db_employee.id,
+                'first_name': db_employee.first_name,
+                'last_name': db_employee.last_name,
+                'phone': db_employee.phone or '',
+                'role': db_employee.role,
+                'is_active': db_employee.status == 'active',
+                'permissions': db_employee.get_permissions()
+            }
+            employee_email = db_employee.email
+            source = 'database'
+        else:
+            db_admin = Admin.query.get(real_id)
+            if db_admin:
+                employee_data = {
+                    'id': db_admin.id,
+                    'first_name': db_admin.first_name,
+                    'last_name': db_admin.last_name,
+                    'phone': db_admin.phone or '',
+                    'role': db_admin.role,
+                    'is_active': db_admin.status == 'active',
+                    'permissions': ['all'] if db_admin.role == 'super_admin' else [db_admin.role]
+                }
+                employee_email = db_admin.email
+                source = 'admin_db'
+            else:
+                # Fallback: Chercher dans les dictionnaires
+                for email, employee in employees_db.items():
+                    if int(employee['id']) == real_id:
+                        employee_data = employee
+                        employee_email = email
+                        source = 'legacy'
+                        break
     
     if not employee_data:
         flash('Employé introuvable.', 'danger')
@@ -14862,7 +14926,7 @@ def admin_edit_employee(employee_id):
                                  action='edit')
         
         # Vérifier le rôle
-        if role not in ['livreur', 'manager', 'admin']:
+        if role not in ['livreur', 'manager', 'admin', 'super_admin']:
             flash('Rôle invalide.', 'danger')
             return render_template('admin/employee_form.html', 
                                  employee=employee_data, 
@@ -14871,7 +14935,7 @@ def admin_edit_employee(employee_id):
         
         try:
             if source == 'database':
-                # Mettre à jour dans la base de données
+                # Mettre à jour dans la table Employee
                 db_employee.first_name = first_name
                 db_employee.last_name = last_name
                 db_employee.phone = phone
@@ -14886,7 +14950,8 @@ def admin_edit_employee(employee_id):
                 default_permissions = {
                     'livreur': ['livreur'],
                     'manager': ['manager', 'livreur'],
-                    'admin': ['admin', 'manager', 'livreur']
+                    'admin': ['admin', 'manager', 'livreur'],
+                    'super_admin': ['super_admin', 'admin', 'manager', 'livreur']
                 }
                 db_employee.set_permissions(default_permissions.get(role, [role]))
                 
@@ -14904,6 +14969,22 @@ def admin_edit_employee(employee_id):
                     })
                 
                 print(f"✅ Employé DB {employee_email} mis à jour avec succès")
+                
+            elif source == 'admin_db':
+                # Mettre à jour dans la table Admin
+                db_admin.first_name = first_name
+                db_admin.last_name = last_name
+                db_admin.phone = phone
+                db_admin.role = role
+                db_admin.status = 'active' if is_active else 'inactive'
+                
+                # Mettre à jour le mot de passe si fourni
+                if new_password:
+                    db_admin.set_password(new_password)
+                
+                db.session.commit()
+                
+                print(f"✅ Administrateur DB {employee_email} mis à jour avec succès")
                 
             else:
                 # Mettre à jour les données en mémoire (legacy)
