@@ -1085,8 +1085,30 @@ def verify_password_reset_token(token):
 
 def mark_password_reset_token_used(token):
     """Marque un token de récupération comme utilisé"""
-    if token in password_reset_tokens_db:
-        password_reset_tokens_db[token]['used'] = True
+    try:
+        # Marquer en base de données
+        token_record = PasswordResetToken.query.filter_by(token=token).first()
+        if token_record:
+            token_record.used = True
+            db.session.commit()
+            print(f"✅ Token marqué comme utilisé en base: {token[:20]}...")
+        else:
+            print(f"⚠️ Token non trouvé en base: {token[:20]}...")
+        
+        # Compatibilité: marquer aussi dans le dictionnaire
+        if token in password_reset_tokens_db:
+            password_reset_tokens_db[token]['used'] = True
+            print(f"✅ Token marqué comme utilisé en mémoire: {token[:20]}...")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erreur lors du marquage du token: {str(e)}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return False
 
 def send_merchant_new_order_notification(merchant_email, order_data):
     """Envoie une notification email au marchand pour une nouvelle commande"""
@@ -7963,40 +7985,52 @@ def reset_password():
             return render_template('reset_password.html', token=token)
         
         try:
+            print(f"🔄 Début de mise à jour du mot de passe pour: {email}")
+            
             # **DATABASE-FIRST: Mettre à jour le mot de passe dans la base de données d'abord**
             from db_helpers import get_user_by_email, update_user_password
             
             user_record = get_user_by_email(email)
             if user_record:
+                print(f"✅ Utilisateur trouvé en base: {email}")
                 # Mise à jour dans la base de données
                 success = update_user_password(email, generate_password_hash(password))
                 if success:
                     print(f"✅ Mot de passe mis à jour dans la base de données pour: {email}")
+                    
+                    # COMPATIBILITÉ: Mise à jour dans le dictionnaire pour fallback
+                    if email in users_db:
+                        users_db[email]['password_hash'] = generate_password_hash(password)
+                        print(f"🔄 Mot de passe mis à jour dans l'ancien dictionnaire pour: {email}")
                 else:
                     print(f"❌ Échec de mise à jour dans la base de données pour: {email}")
+                    raise Exception("Échec de mise à jour en base de données")
                     
-                # COMPATIBILITÉ: Mise à jour dans le dictionnaire pour fallback
-                if email in users_db:
-                    users_db[email]['password_hash'] = generate_password_hash(password)
-                    print(f"🔄 Mot de passe mis à jour dans l'ancien dictionnaire pour: {email}")
             else:
+                print(f"⚠️ Utilisateur non trouvé en base, recherche en mémoire: {email}")
                 # Fallback: mise à jour dans l'ancien dictionnaire seulement
                 user = users_db.get(email)
                 if user:
                     user['password_hash'] = generate_password_hash(password)
                     print(f"🔄 Mot de passe mis à jour uniquement dans l'ancien dictionnaire pour: {email}")
                 else:
+                    print(f"❌ Utilisateur non trouvé ni en base ni en mémoire: {email}")
                     flash('Utilisateur non trouvé.', 'danger')
                     return render_template('reset_password.html', token=token)
             
             # Marquer le token comme utilisé
+            print(f"🔄 Marquage du token comme utilisé: {token[:20]}...")
             mark_password_reset_token_used(token)
             
             flash('Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant vous connecter.', 'success')
+            print(f"✅ Réinitialisation mot de passe réussie pour: {email}")
             return redirect(url_for('login'))
                 
         except Exception as e:
-            print(f"Erreur lors de la mise à jour du mot de passe : {str(e)}")
+            print(f"❌ Erreur lors de la mise à jour du mot de passe pour {email}: {str(e)}")
+            print(f"❌ Type d'erreur: {type(e).__name__}")
+            import traceback
+            print(f"❌ Traceback: {traceback.format_exc()}")
             flash('Une erreur est survenue lors de la mise à jour du mot de passe.', 'danger')
     
     return render_template('reset_password.html', token=token)

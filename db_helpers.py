@@ -68,6 +68,33 @@ def update_user_email_verification(email, verified=True):
         db.session.rollback()
         return False
 
+def update_user_password(email, password_hash):
+    """Mettre à jour le mot de passe d'un utilisateur"""
+    try:
+        # Rollback préventif pour éviter les erreurs de transaction
+        db.session.rollback()
+        
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            print(f"❌ Utilisateur non trouvé pour l'email: {email}")
+            return False
+        
+        print(f"🔍 Mise à jour du mot de passe pour: {email}")
+        user.password_hash = password_hash
+        user.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        print(f"✅ Mot de passe mis à jour avec succès pour: {email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la mise à jour du mot de passe pour {email}: {str(e)}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return False
+
 # =============================================
 # FONCTIONS MARCHANDS
 # =============================================
