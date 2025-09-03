@@ -7664,8 +7664,6 @@ def inject_admin():
         email = session.get('admin_email')
         admin_role = session.get('admin_role')
         
-        print(f"🔍 DEBUG inject_admin: email={email}, session_role={admin_role}")
-        
         # Chercher d'abord dans la base de données
         try:
             db_admin = Admin.query.filter_by(email=email).first()
@@ -7678,20 +7676,17 @@ def inject_admin():
                     'role': db_admin.role,
                     'status': db_admin.status
                 }
-                print(f"✅ DEBUG inject_admin: Found admin in DB with role={db_admin.role}")
             else:
                 # Fallback: chercher dans le dictionnaire en mémoire
                 if email in admins_db:
                     admin = admins_db[email].copy()
                     admin['email'] = email
-                    print(f"✅ DEBUG inject_admin: Found admin in memory with role={admin.get('role')}")
                 
                 # Toujours ajouter le rôle depuis la session
                 if admin_role:
                     if admin is None:
                         admin = {'email': email}
                     admin['role'] = admin_role
-                    print(f"✅ DEBUG inject_admin: Using session role={admin_role}")
         except Exception as e:
             print(f"❌ Erreur lors de la récupération de l'admin {email}: {e}")
             # Fallback: utiliser les données de session
@@ -7700,10 +7695,6 @@ def inject_admin():
                     'email': email,
                     'role': admin_role
                 }
-                print(f"⚠️ DEBUG inject_admin: Fallback to session role={admin_role}")
-    
-    if admin:
-        print(f"🎯 DEBUG inject_admin FINAL: admin role = {admin.get('role')}")
     
     return {'admin': admin}
 
