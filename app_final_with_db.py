@@ -13040,22 +13040,34 @@ def admin_verify_user_email(user_id):
 def admin_delete_user(user_id):
     """Supprimer un utilisateur (avec confirmation)"""
     
-    # Trouver l'utilisateur dans la base de données
+    # DATABASE-FIRST: Chercher l'utilisateur dans la base de données d'abord
+    user_record = User.query.filter_by(id=user_id).first()
     target_user = None
     user_email = None
     
-    for email, user in users_db.items():
-        if user.get('id') == user_id:
-            target_user = user
-            user_email = email
-            break
+    if user_record:
+        # Utilisateur trouvé dans la base de données
+        user_email = user_record.email
+        target_user = {
+            'id': user_record.id,
+            'first_name': user_record.first_name,
+            'last_name': user_record.last_name,
+            'email': user_record.email
+        }
+    else:
+        # Fallback: chercher dans le dictionnaire en mémoire
+        for email, user in users_db.items():
+            if user.get('id') == user_id:
+                target_user = user
+                user_email = email
+                break
     
     if not target_user:
         return jsonify({'success': False, 'message': 'Utilisateur non trouvé'})
     
     try:
         # Vérifier s'il y a des commandes associées à cet utilisateur
-        user_orders = target_user.get('orders', [])
+        user_orders = target_user.get('orders', []) if user_email in users_db else []
         
         # Vérifier aussi les commandes dans la base de données
         user_db_orders = Order.query.filter_by(customer_email=user_email).all()
@@ -13065,8 +13077,7 @@ def admin_delete_user(user_id):
         if total_orders > 0:
             print(f"⚠️ Utilisateur {user_email} a {total_orders} commande(s) qui seront supprimées")
         
-        # Supprimer l'utilisateur de la base de données SQLite
-        user_record = User.query.filter_by(id=user_id).first()
+        # Supprimer l'utilisateur de la base de données
         if user_record:
             # Supprimer d'abord les éléments liés pour éviter les contraintes
             try:
@@ -13130,9 +13141,14 @@ def admin_delete_user(user_id):
                 print(f"❌ Erreur lors de la suppression en base: {str(db_error)}")
                 return jsonify({'success': False, 'message': f'Erreur base de données: {str(db_error)}'})
         
-        # Supprimer l'utilisateur du dictionnaire en mémoire
-        user_name = f"{target_user.get('first_name', '')} {target_user.get('last_name', '')}"
-        del users_db[user_email]
+        # Supprimer l'utilisateur du dictionnaire en mémoire (si il y est)
+        if user_email in users_db:
+            user_name = f"{target_user.get('first_name', '')} {target_user.get('last_name', '')}"
+            del users_db[user_email]
+            print(f"✅ Utilisateur {user_email} supprimé du dictionnaire en mémoire")
+        else:
+            user_name = f"{target_user.get('first_name', '')} {target_user.get('last_name', '')}"
+            print(f"✅ Utilisateur {user_email} supprimé (était uniquement en base de données)")
         
         orders_info = f" (avec {total_orders} commandes supprimées)" if total_orders > 0 else ""
         
