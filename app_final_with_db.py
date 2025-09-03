@@ -739,201 +739,75 @@ def send_order_status_email(customer_email, order_data, old_status, new_status):
     # Messages selon le statut
     status_messages = {
         'confirmed': {
-            'title': 'Commande confirmée !',
+            'subject': 'Commande confirmée !',
             'message': 'Nous avons bien reçu votre commande et elle est en cours de préparation.',
             'emoji': '✅'
         },
         'processing': {
-            'title': 'Commande en préparation',
+            'subject': 'Commande en préparation',
             'message': 'Votre commande est actuellement en cours de préparation par nos marchands.',
             'emoji': '⚙️'
         },
         'shipped': {
-            'title': 'Commande expédiée !',
+            'subject': 'Commande expédiée !',
             'message': 'Bonne nouvelle ! Votre commande a été expédiée et est en route vers vous.',
             'emoji': '🚚'
         },
         'delivered': {
-            'title': 'Commande livrée !',
+            'subject': 'Commande livrée !',
             'message': 'Votre commande a été livrée avec succès. Merci pour votre confiance !',
             'emoji': '📦'
         },
         'cancelled': {
-            'title': 'Commande annulée',
+            'subject': 'Commande annulée',
             'message': 'Votre commande a été annulée. Si vous avez des questions, contactez-nous.',
             'emoji': '❌'
         }
     }
     
     status_info = status_messages.get(new_status, {
-        'title': 'Mise à jour de commande',
+        'subject': 'Mise à jour de commande',
         'message': f'Le statut de votre commande a été mis à jour : {new_status}',
         'emoji': '📢'
     })
     
-    order_id = order_data.get('id', 'N/A')
-    order_total = order_data.get('total', 0)
-    order_date = order_data.get('created_at', 'N/A')
+    # Préparer les données pour le template
+    order_template_data = {
+        'id': order_data.get('id', 'N/A'),
+        'status': new_status,
+        'status_text': new_status.replace('_', ' ').title(),
+        'created_at': order_data.get('created_at', 'N/A'),
+        'total': order_data.get('total', 0),
+        'products': []
+    }
     
-    # Construire la liste des produits
-    products_list_html = ""
-    products_list_text = ""
-    
+    # Ajouter les produits si disponibles
     if 'items' in order_data:
         for item in order_data['items']:
-            product_name = item.get('name', 'Produit')
-            quantity = item.get('quantity', 1)
-            price = item.get('price', 0)
-            variant = item.get('variant_details', '')
-            
-            products_list_html += f"""
-            <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
-                <strong>{product_name}</strong><br>
-                Quantité: {quantity} | Prix: {price:,} KMF<br>
-                {f'<small>Variante: {variant}</small>' if variant else ''}
-            </div>
-            """
-            
-            products_list_text += f"- {product_name} (x{quantity}) - {price:,} KMF"
-            if variant:
-                products_list_text += f" - {variant}"
-            products_list_text += "\n"
+            order_template_data['products'].append({
+                'name': item.get('name', 'Produit'),
+                'quantity': item.get('quantity', 1),
+                'price': item.get('price', 0)
+            })
     
-    # Construire le contenu HTML
-    html_content = f"""
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{status_info['title']}</title>
-        <style>
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                line-height: 1.6;
-                color: #333;
-                margin: 0;
-                padding: 0;
-                background-color: #f4f4f4;
-            }}
-            .email-container {{
-                max-width: 600px;
-                margin: 0 auto;
-                background-color: #ffffff;
-                border-radius: 10px;
-                overflow: hidden;
-                box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            }}
-            .email-header {{
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 30px;
-                text-align: center;
-            }}
-            .email-header h1 {{
-                margin: 0;
-                font-size: 28px;
-                font-weight: 300;
-            }}
-            .email-body {{
-                padding: 40px 30px;
-            }}
-            .email-footer {{
-                background-color: #f8f9fa;
-                padding: 20px 30px;
-                text-align: center;
-                font-size: 14px;
-                color: #6c757d;
-            }}
-            .order-details {{
-                background-color: #f8f9fa;
-                border-radius: 8px;
-                padding: 20px;
-                margin: 20px 0;
-            }}
-            .status-badge {{
-                display: inline-block;
-                padding: 8px 16px;
-                border-radius: 20px;
-                font-weight: bold;
-                background-color: #28a745;
-                color: white;
-                margin: 10px 0;
-            }}
-            .button {{
-                display: inline-block;
-                padding: 12px 30px;
-                background-color: #007bff;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                font-weight: bold;
-                margin: 20px 0;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="email-container">
-            <div class="email-header">
-                <h1>{status_info['emoji']} DOUKA KM</h1>
-            </div>
-            <div class="email-body">
-                <h2>{status_info['title']}</h2>
-                
-                <p>Bonjour,</p>
-                
-                <p>{status_info['message']}</p>
-                
-                <div class="order-details">
-                    <h3>Détails de votre commande #{order_id}</h3>
-                    
-                    <p><strong>Nouveau statut :</strong> 
-                        <span class="status-badge">{new_status.upper()}</span>
-                    </p>
-                    
-                    <p><strong>Date de commande :</strong> {order_date}</p>
-                    <p><strong>Total :</strong> {order_total:,} KMF</p>
-                    
-                    <h4>Articles commandés :</h4>
-                    {products_list_html}
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="{CURRENT_EMAIL_CONFIG['VERIFICATION_URL_BASE']}/orders" class="button">Voir mes commandes</a>
-                </div>
-                
-                <p>Si vous avez des questions, n'hésitez pas à nous contacter à ledouka.km@gmail.com</p>
-                
-                <p>Cordialement,<br>L'équipe DOUKA KM</p>
-            </div>
-            <div class="email-footer">
-                <p><strong>DOUKA KM</strong></p>
-                <p>Votre marketplace de confiance aux Comores</p>
-                <p>📧 ledouka.km@gmail.com | 📞 +269 342 40 19</p>
-                <p style="font-size: 12px; margin-top: 20px;">
-                    Cet email a été envoyé automatiquement, merci de ne pas y répondre.
-                </p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    # Contenu texte simple (fallback)
-    text_content = f"""
-{status_info['emoji']} {status_info['title']}
+    try:
+        # Utiliser le template HTML existant
+        html_content = render_template('emails/order_status_notification.html', 
+                                     order=order_template_data, 
+                                     status_info=status_info)
+        
+        # Contenu texte simple (fallback)
+        text_content = f"""
+{status_info['emoji']} {status_info['subject']}
 
 Bonjour,
 
 {status_info['message']}
 
-Détails de votre commande #{order_id}:
-- Nouveau statut: {new_status.upper()}
-- Date de commande: {order_date}
-- Total: {order_total:,} KMF
-
-Articles commandés:
-{products_list_text}
+Détails de votre commande #{order_template_data['id']}:
+- Nouveau statut: {new_status.replace('_', ' ').title()}
+- Date de commande: {order_template_data['created_at']}
+- Total: {order_template_data['total']:,.0f} KMF
 
 Vous pouvez suivre vos commandes sur votre compte DOUKA KM.
 
@@ -941,22 +815,23 @@ Si vous avez des questions, contactez-nous à ledouka.km@gmail.com
 
 Cordialement,
 L'équipe DOUKA KM
-    """
-    
-    # Essayer d'envoyer l'email réel
-    try:
-        subject = f"[DOUKA KM] {status_info['emoji']} {status_info['title']} - Commande #{order_id}"
+        """
+        
+        # Envoyer l'email
+        subject = f"[DOUKA KM] {status_info['emoji']} {status_info['subject']} - Commande #{order_template_data['id']}"
         success = send_email(customer_email, subject, html_content, text_content)
         
         if success:
             print(f"✅ Email de notification envoyé avec succès à {customer_email}")
         else:
-            print(f"❌ Échec de l'envoi de l'email à {customer_email}")
-        
+            print(f"❌ Échec envoi email de notification à {customer_email}")
+            
         return success
         
     except Exception as e:
-        print(f"❌ Erreur lors de l'envoi de l'email à {customer_email}: {str(e)}")
+        print(f"❌ Erreur lors de l'envoi de notification de statut: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def create_verification_token(email):
@@ -6466,9 +6341,16 @@ def complete_order():
                 
                 # **NOUVELLE FONCTIONNALITÉ: Envoyer notification à l'admin**
                 try:
-                    send_admin_notification_new_order(db_order)
+                    print(f"🔔 Tentative d'envoi de notification admin pour commande {db_order.order_number}")
+                    admin_notification_result = send_admin_notification_new_order(db_order)
+                    if admin_notification_result:
+                        print(f"✅ Notification admin envoyée avec succès pour commande {db_order.order_number}")
+                    else:
+                        print(f"❌ Échec notification admin pour commande {db_order.order_number}")
                 except Exception as e:
                     print(f"⚠️ Erreur notification admin: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
                 
                 # **NOUVELLE FONCTIONNALITÉ: Synchroniser avec merchants_db pour compatibilité avec l'interface**
                 if merchant_email not in ['static_products', 'admin_products'] and merchant_email in merchants_db:
