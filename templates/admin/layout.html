@@ -423,6 +423,7 @@
                             <span>Toutes les commandes</span>
                         </a>
                     </li>
+                    {% endif %}
                     
                     <!-- Section Utilisateurs - Visible seulement pour super_admin et admin -->
                     {% if admin and admin.role in ['super_admin', 'admin'] %}
