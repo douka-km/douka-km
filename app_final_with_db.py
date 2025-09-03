@@ -13734,8 +13734,6 @@ def api_validate_promo_code():
 @permission_required(['super_admin', 'admin'])
 def admin_settings():
     """Page de paramètres et configuration du système"""
-    admin_email = session.get('admin_email')
-    admin = employees_db.get(admin_email, {})
     
     if request.method == 'POST':
         # Traitement des mises à jour de paramètres
@@ -14141,7 +14139,6 @@ def admin_settings():
     }
     
     return render_template('admin/settings.html',
-                          admin=admin,
                           site_settings=current_site_settings,
                           system_stats=system_stats)
 

@@ -440,14 +440,6 @@
                             <span>Employés</span>
                         </a>
                     </li>
-                    
-                    <!-- Paramètres - Visible seulement pour super_admin et admin -->
-                    <li>
-                        <a href="{{ url_for('admin_settings') }}" class="{{ 'active' if request.endpoint == 'admin_settings' else '' }}">
-                            <i class="fas fa-cog"></i>
-                            <span>Paramètres</span>
-                        </a>
-                    </li>
                     {% endif %}
                     
                     <li class="menu-header">Système</li>
@@ -457,8 +449,16 @@
                             <span>Codes Promo</span>
                         </a>
                     </li>
+                    
+                    <!-- Paramètres - Visible seulement pour super_admin et admin -->
+                    {% if admin and admin.role in ['super_admin', 'admin'] %}
+                    <li>
+                        <a href="{{ url_for('admin_settings') }}" class="{{ 'active' if request.endpoint == 'admin_settings' else '' }}">
+                            <i class="fas fa-cog"></i>
+                            <span>Paramètres</span>
                         </a>
                     </li>
+                    {% endif %}
                     
                     <li class="menu-separator"></li>
                     <li>
