@@ -7662,16 +7662,39 @@ def inject_admin():
     admin = None
     if 'admin_id' in session:
         email = session.get('admin_email')
-        if email in admins_db:
-            admin = admins_db[email]
-            admin['email'] = email  # Ajouter l'email dans le dictionnaire
-        
-        # Toujours ajouter le rôle depuis la session, même si admin n'est pas dans admins_db
         admin_role = session.get('admin_role')
-        if admin_role:
-            if admin is None:
-                admin = {}
-            admin['role'] = admin_role
+        
+        # Chercher d'abord dans la base de données
+        try:
+            db_admin = Admin.query.filter_by(email=email).first()
+            if db_admin:
+                admin = {
+                    'id': db_admin.id,
+                    'email': db_admin.email,
+                    'first_name': db_admin.first_name,
+                    'last_name': db_admin.last_name,
+                    'role': db_admin.role,
+                    'status': db_admin.status
+                }
+            else:
+                # Fallback: chercher dans le dictionnaire en mémoire
+                if email in admins_db:
+                    admin = admins_db[email].copy()
+                    admin['email'] = email
+                
+                # Toujours ajouter le rôle depuis la session
+                if admin_role:
+                    if admin is None:
+                        admin = {'email': email}
+                    admin['role'] = admin_role
+        except Exception as e:
+            print(f"❌ Erreur lors de la récupération de l'admin {email}: {e}")
+            # Fallback: utiliser les données de session
+            if admin_role:
+                admin = {
+                    'email': email,
+                    'role': admin_role
+                }
     
     return {'admin': admin}
 
