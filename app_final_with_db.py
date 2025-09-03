@@ -13040,8 +13040,23 @@ def admin_verify_user_email(user_id):
 def admin_delete_user(user_id):
     """Supprimer un utilisateur (avec confirmation)"""
     
+    print(f"🔍 Tentative de suppression utilisateur ID: {user_id} (type: {type(user_id)})")
+    
+    # S'assurer que la session est propre
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
+    
     # DATABASE-FIRST: Chercher l'utilisateur dans la base de données d'abord
-    user_record = User.query.filter_by(id=user_id).first()
+    try:
+        user_record = User.query.filter_by(id=user_id).first()
+        print(f"🔍 Recherche en base pour ID {user_id}: {'Trouvé' if user_record else 'Non trouvé'}")
+    except Exception as search_error:
+        print(f"❌ Erreur lors de la recherche: {search_error}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Erreur de recherche: {str(search_error)}'})
+    
     target_user = None
     user_email = None
     
@@ -13054,13 +13069,23 @@ def admin_delete_user(user_id):
             'last_name': user_record.last_name,
             'email': user_record.email
         }
+        print(f"✅ Utilisateur trouvé en base: {user_email}")
     else:
         # Fallback: chercher dans le dictionnaire en mémoire
+        print("🔄 Recherche dans le dictionnaire en mémoire...")
         for email, user in users_db.items():
             if user.get('id') == user_id:
                 target_user = user
                 user_email = email
+                print(f"✅ Utilisateur trouvé en mémoire: {user_email}")
                 break
+        
+        if not target_user:
+            print(f"❌ Utilisateur ID {user_id} non trouvé ni en base ni en mémoire")
+            print(f"📊 Total utilisateurs en mémoire: {len(users_db)}")
+            # Lister quelques IDs pour debug
+            memory_ids = [user.get('id') for user in users_db.values() if user.get('id')][:5]
+            print(f"📊 Quelques IDs en mémoire: {memory_ids}")
     
     if not target_user:
         return jsonify({'success': False, 'message': 'Utilisateur non trouvé'})
