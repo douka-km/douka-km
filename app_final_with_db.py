@@ -1893,6 +1893,36 @@ if os.environ.get('RENDER') == '1':
 else:
     print("🔧 MODE DÉVELOPPEMENT: Données de test conservées")
 
+# Fonction utilitaire pour récupérer un utilisateur de manière robuste
+def get_user_by_email(email):
+    """Récupère un utilisateur d'abord depuis la DB, puis le dictionnaire en mémoire"""
+    if not email:
+        return None
+    
+    try:
+        # D'abord chercher dans la base de données (priorité)
+        db_user = User.query.filter_by(email=email).first()
+        if db_user:
+            return {
+                'id': db_user.id,
+                'email': db_user.email,
+                'first_name': db_user.first_name,
+                'last_name': db_user.last_name,
+                'phone': getattr(db_user, 'phone', ''),
+                'source': 'database'
+            }
+        
+        # Fallback: chercher dans le dictionnaire en mémoire
+        user = users_db.get(email)
+        if user:
+            user['source'] = 'memory'
+            return user
+            
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la récupération utilisateur {email}: {e}")
+    
+    return None
+
 # Fonction pour ajouter un avis
 def add_review(product_id, user_id, rating, title, comment, user_name):
     """Ajouter un nouvel avis pour un produit"""
@@ -9938,13 +9968,12 @@ def livreur_order_detail(order_id):
         flash('Commande non trouvée', 'danger')
         return redirect(url_for('livreur_orders'))
     
-    # Vérifier si la commande est déjà livrée ou annulée - rediriger vers l'historique
-    if order_data['status'] in ['delivered', 'cancelled']:
-        if order_data['status'] == 'delivered':
-            flash('Cette commande a été livrée avec succès. Consultez votre historique pour plus de détails.', 'info')
-        else:
-            flash('Cette commande a été annulée et ne peut plus être modifiée.', 'warning')
-        return redirect(url_for('livreur_history'))
+    # Marquer les commandes livrées ou annulées comme étant en mode lecture seule
+    order_data['is_readonly'] = order_data['status'] in ['delivered', 'cancelled']
+    if order_data['status'] == 'delivered':
+        flash('Cette commande a été livrée avec succès. Affichage en mode consultation.', 'info')
+    elif order_data['status'] == 'cancelled':
+        flash('Cette commande a été annulée. Affichage en mode consultation.', 'warning')
     
     # Enrichir les données pour l'affichage
     order_data['merchant_info'] = merchant_info
@@ -17610,8 +17639,11 @@ def submit_review():
             return jsonify({'success': False, 'message': 'Données invalides'}), 400
         
         # Récupérer les informations de l'utilisateur
-        user = users_db.get(session.get('user_email'))
+        user_email = session.get('user_email')
+        user = get_user_by_email(user_email)
+        
         if not user:
+            print(f"❌ Utilisateur non trouvé - Email: {user_email}")
             return jsonify({'success': False, 'message': 'Utilisateur non trouvé'}), 404
         
         user_name = f"{user['first_name']} {user['last_name'][0]}."
@@ -17665,8 +17697,11 @@ def submit_order_review():
             return jsonify({'success': False, 'message': 'Données manquantes'}), 400
         
         # Récupérer les informations de l'utilisateur
-        user = users_db.get(session.get('user_email'))
+        user_email = session.get('user_email')
+        user = get_user_by_email(user_email)
+        
         if not user:
+            print(f"❌ Utilisateur non trouvé - Email: {user_email}")
             return jsonify({'success': False, 'message': 'Utilisateur non trouvé'}), 404
         
         user_name = f"{user['first_name']} {user['last_name'][0]}."
