@@ -6000,8 +6000,8 @@ def complete_order():
     
     # **NOUVELLE VERSION: Utiliser la base de données**
     print(f"🔍 Recherche utilisateur par email: {user_email}")
-    user_record = get_user_by_email(user_email)
-    if not user_record:
+    user_record_dict = get_user_by_email(user_email)
+    if not user_record_dict:
         print(f"❌ Utilisateur non trouvé avec email: {user_email}")
         return jsonify({
             'success': False,
@@ -6009,27 +6009,30 @@ def complete_order():
             'redirect': url_for('login')
         })
     
-    print(f"✅ Utilisateur trouvé: {user_record.email} (ID: {user_record.id})")
-    print(f"   Nom: {user_record.first_name} {user_record.last_name}")
-    print(f"   Téléphone: {user_record.phone}")
-    print(f"   Adresse: {user_record.address}")
-    print(f"   Ville: {user_record.city}")
-    print(f"   Région: {user_record.region}")
+    # Récupérer aussi l'objet User réel de la base de données pour les opérations qui en ont besoin
+    user_record = User.query.filter_by(email=user_email).first()
+    if not user_record:
+        # Fallback si pas trouvé en base, créer un objet temporaire avec les données du dictionnaire
+        user_record = type('UserRecord', (), user_record_dict)()
+    
+    print(f"✅ Utilisateur trouvé: {user_record_dict['email']} (ID: {user_record_dict['id']})")
+    print(f"   Nom: {user_record_dict['first_name']} {user_record_dict['last_name']}")
+    print(f"   Téléphone: {user_record_dict.get('phone', 'N/A')}")
     
     # **CORRECTION CRITIQUE: Utiliser directement les données de la base de données**
     # Créer l'adresse de livraison depuis les informations de l'utilisateur
     shipping_address = {
-        'full_name': f"{user_record.first_name} {user_record.last_name}",
-        'street': user_record.address or '',
-        'city': user_record.city or '',
-        'region': delivery_region or user_record.region or 'default',  # Priorité au formulaire
-        'phone': user_record.phone or ''
+        'full_name': f"{user_record_dict['first_name']} {user_record_dict['last_name']}",
+        'street': user_record_dict.get('address', ''),
+        'city': user_record_dict.get('city', ''),
+        'region': delivery_region or user_record_dict.get('region', 'default'),  # Priorité au formulaire
+        'phone': user_record_dict.get('phone', '')
     }
     
     print(f"✅ Adresse de livraison créée: {shipping_address}")
     
-    # Convertir en dictionnaire pour compatibilité avec le reste du code
-    user = user_record.to_dict()
+    # user_record_dict est déjà un dictionnaire depuis get_user_by_email()
+    user = user_record_dict
     
     # Grouper les produits par marchand dès le début
     merchant_groups = {}
@@ -6322,7 +6325,7 @@ def complete_order():
         
         # **NOUVELLE VERSION: Déterminer le marchand ou créer la commande admin**
         merchant_id = None
-        customer_id = user_record.id
+        customer_id = user_record_dict['id']
         
         if merchant_email not in ['static_products', 'admin_products']:
             # Commande pour un vrai marchand
