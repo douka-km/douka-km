@@ -12842,9 +12842,9 @@ def admin_subcategories():
     
     # Préparer les catégories pour le formulaire d'ajout
     categories_for_form = [
-        {'id': cat_id, 'name': cat['name']} 
-        for cat_id, cat in admin_categories_db.items() 
-        if cat.get('active', True)
+        {'id': cat.id, 'name': cat.name} 
+        for cat in categories_list 
+        if cat.active
     ]
     
     # Statistiques générales
@@ -12868,6 +12868,8 @@ def admin_subcategory_add():
     """Ajouter une nouvelle sous-catégorie"""
     
     try:
+        from db_helpers import create_subcategory_safe, check_subcategory_name_exists_safe, get_all_categories_safe
+        
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         category_id = int(request.form.get('category_id', 0))
@@ -12879,35 +12881,27 @@ def admin_subcategory_add():
         if not description:
             return jsonify({'success': False, 'message': 'La description de la sous-catégorie est obligatoire'})
         
-        if category_id not in admin_categories_db:
+        # Vérifier que la catégorie parente existe
+        categories = get_all_categories_safe()
+        category_exists = any(cat.id == category_id for cat in categories)
+        if not category_exists:
             return jsonify({'success': False, 'message': 'Catégorie parente invalide'})
         
         # Vérifier si le nom existe déjà dans la même catégorie
-        for subcat in admin_subcategories_db.values():
-            if (subcat['name'].lower() == name.lower() and 
-                subcat['category_id'] == category_id):
-                return jsonify({'success': False, 'message': f'Une sous-catégorie "{name}" existe déjà dans cette catégorie'})
+        if check_subcategory_name_exists_safe(name, category_id):
+            return jsonify({'success': False, 'message': f'Une sous-catégorie "{name}" existe déjà dans cette catégorie'})
         
-        # Générer un nouvel ID
-        new_id = max(admin_subcategories_db.keys()) + 1 if admin_subcategories_db else 1
+        # Créer dans la base de données
+        new_subcategory = create_subcategory_safe(name, description, category_id, True)
         
-        # Créer dans la base de données SQLite
-        new_subcategory_record = Subcategory(
-            name=name,
-            description=description,
-            category_id=category_id,
-            active=True
-        )
-        db.session.add(new_subcategory_record)
-        db.session.commit()
+        if not new_subcategory:
+            return jsonify({'success': False, 'message': 'Erreur lors de la création de la sous-catégorie'})
         
-        # Utiliser l'ID généré par la base de données
-        new_id = new_subcategory_record.id
-        print(f"✅ Sous-catégorie ID {new_id} ajoutée à la base de données")
+        print(f"✅ Sous-catégorie ID {new_subcategory.id} ajoutée à la base de données")
         
-        # Créer la nouvelle sous-catégorie pour le dictionnaire en mémoire
-        new_subcategory = {
-            'id': new_id,
+        # Ajouter au dictionnaire en mémoire
+        admin_subcategories_db[new_subcategory.id] = {
+            'id': new_subcategory.id,
             'name': name,
             'description': description,
             'category_id': category_id,
@@ -12916,17 +12910,15 @@ def admin_subcategory_add():
             'created_by': session.get('admin_email', 'admin')
         }
         
-        # Ajouter au dictionnaire en mémoire
-        admin_subcategories_db[new_id] = new_subcategory
-        
-        # Récupérer le nom de la catégorie parente pour la réponse
-        category_name = admin_categories_db[category_id]['name']
+        # Récupérer le nom de la catégorie parente pour la réponse  
+        categories = get_all_categories_safe()
+        category_name = next((cat.name for cat in categories if cat.id == category_id), 'Catégorie inconnue')
         
         return jsonify({
             'success': True, 
             'message': f'Sous-catégorie "{name}" ajoutée avec succès dans "{category_name}"',
             'subcategory': {
-                'id': new_id,
+                'id': new_subcategory.id,
                 'name': name,
                 'description': description,
                 'category_name': category_name,
@@ -12947,10 +12939,14 @@ def admin_subcategory_add():
 def admin_subcategory_edit(subcategory_id):
     """Modifier une sous-catégorie"""
     
-    if subcategory_id not in admin_subcategories_db:
-        return jsonify({'success': False, 'message': 'Sous-catégorie non trouvée'})
-    
     try:
+        from db_helpers import get_subcategory_by_id_safe, update_subcategory_safe, check_subcategory_name_exists_safe, get_all_categories_safe
+        
+        # Vérifier que la sous-catégorie existe
+        existing_subcat = get_subcategory_by_id_safe(subcategory_id)
+        if not existing_subcat:
+            return jsonify({'success': False, 'message': 'Sous-catégorie non trouvée'})
+        
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         category_id = int(request.form.get('category_id', 0))
@@ -12963,36 +12959,33 @@ def admin_subcategory_edit(subcategory_id):
         if not description:
             return jsonify({'success': False, 'message': 'La description de la sous-catégorie est obligatoire'})
         
-        if category_id not in admin_categories_db:
+        # Vérifier que la catégorie parente existe
+        categories = get_all_categories_safe()
+        category_exists = any(cat.id == category_id for cat in categories)
+        if not category_exists:
             return jsonify({'success': False, 'message': 'Catégorie parente invalide'})
         
         # Vérifier si le nom existe déjà dans la même catégorie (sauf pour la sous-catégorie actuelle)
-        for sub_id, subcat in admin_subcategories_db.items():
-            if (sub_id != subcategory_id and 
-                subcat['name'].lower() == name.lower() and 
-                subcat['category_id'] == category_id):
-                return jsonify({'success': False, 'message': f'Une sous-catégorie "{name}" existe déjà dans cette catégorie'})
+        if check_subcategory_name_exists_safe(name, category_id, exclude_id=subcategory_id):
+            return jsonify({'success': False, 'message': f'Une sous-catégorie "{name}" existe déjà dans cette catégorie'})
         
-        # Mettre à jour dans la base de données SQLite
-        subcategory_record = Subcategory.query.filter_by(id=subcategory_id).first()
-        if subcategory_record:
-            subcategory_record.name = name
-            subcategory_record.description = description
-            subcategory_record.category_id = category_id
-            subcategory_record.active = active
-            subcategory_record.updated_at = datetime.now()
-            db.session.commit()
-            print(f"✅ Sous-catégorie ID {subcategory_id} mise à jour dans la base de données")
+        # Mettre à jour dans la base de données
+        updated_subcat = update_subcategory_safe(subcategory_id, name, description, category_id, active)
+        if not updated_subcat:
+            return jsonify({'success': False, 'message': 'Erreur lors de la mise à jour de la sous-catégorie'})
         
-        # Mettre à jour le dictionnaire en mémoire
-        admin_subcategories_db[subcategory_id].update({
-            'name': name,
-            'description': description,
-            'category_id': category_id,
-            'active': active,
-            'updated_at': datetime.now().strftime('%Y-%m-%d'),
-            'updated_by': session.get('admin_email', 'admin')
-        })
+        print(f"✅ Sous-catégorie ID {subcategory_id} mise à jour dans la base de données")
+        
+        # Optionnel: Mettre à jour le dictionnaire en mémoire si il existe
+        if subcategory_id in admin_subcategories_db:
+            admin_subcategories_db[subcategory_id].update({
+                'name': name,
+                'description': description,
+                'category_id': category_id,
+                'active': active,
+                'updated_at': datetime.now().strftime('%Y-%m-%d'),
+                'updated_by': session.get('admin_email', 'admin')
+            })
         
         return jsonify({'success': True, 'message': f'Sous-catégorie "{name}" mise à jour avec succès'})
         
@@ -13008,10 +13001,14 @@ def admin_subcategory_edit(subcategory_id):
 def admin_subcategory_delete(subcategory_id):
     """Supprimer une sous-catégorie"""
     
-    if subcategory_id not in admin_subcategories_db:
-        return jsonify({'success': False, 'message': 'Sous-catégorie non trouvée'})
-    
     try:
+        from db_helpers import get_subcategory_by_id_safe, delete_subcategory_safe
+        
+        # Vérifier que la sous-catégorie existe
+        existing_subcat = get_subcategory_by_id_safe(subcategory_id)
+        if not existing_subcat:
+            return jsonify({'success': False, 'message': 'Sous-catégorie non trouvée'})
+        
         # Vérifier s'il y a des produits dans cette sous-catégorie
         all_products = get_all_products()
         products_in_subcategory = [p for p in all_products if p.get('subcategory_id') == subcategory_id]
@@ -13022,18 +13019,18 @@ def admin_subcategory_delete(subcategory_id):
                 'message': f'Impossible de supprimer cette sous-catégorie car elle contient {len(products_in_subcategory)} produit(s). Veuillez d\'abord déplacer ou supprimer ces produits.'
             })
         
-        # Supprimer de la base de données SQLite
-        subcategory_record = Subcategory.query.filter_by(id=subcategory_id).first()
-        if subcategory_record:
-            db.session.delete(subcategory_record)
-            db.session.commit()
+        # Supprimer de la base de données
+        if delete_subcategory_safe(subcategory_id):
             print(f"✅ Sous-catégorie ID {subcategory_id} supprimée de la base de données")
-        
-        # Supprimer du dictionnaire en mémoire
-        subcategory_name = admin_subcategories_db[subcategory_id]['name']
-        del admin_subcategories_db[subcategory_id]
-        
-        return jsonify({'success': True, 'message': f'Sous-catégorie "{subcategory_name}" supprimée avec succès'})
+            
+            # Supprimer du dictionnaire en mémoire si il existe
+            subcategory_name = existing_subcat.name
+            if subcategory_id in admin_subcategories_db:
+                del admin_subcategories_db[subcategory_id]
+            
+            return jsonify({'success': True, 'message': f'Sous-catégorie "{subcategory_name}" supprimée avec succès'})
+        else:
+            return jsonify({'success': False, 'message': 'Erreur lors de la suppression de la sous-catégorie'})
         
     except Exception as e:
         db.session.rollback()
@@ -13045,29 +13042,42 @@ def admin_subcategory_delete(subcategory_id):
 def admin_subcategory_toggle_status(subcategory_id):
     """Activer/désactiver une sous-catégorie"""
     
-    if subcategory_id not in admin_subcategories_db:
-        return jsonify({'success': False, 'message': 'Sous-catégorie non trouvée'})
-    
     try:
+        from db_helpers import get_subcategory_by_id_safe, update_subcategory_safe
+        
+        # Vérifier que la sous-catégorie existe
+        existing_subcat = get_subcategory_by_id_safe(subcategory_id)
+        if not existing_subcat:
+            return jsonify({'success': False, 'message': 'Sous-catégorie non trouvée'})
+        
         # Basculer le statut active
-        current_status = admin_subcategories_db[subcategory_id]['active']
+        current_status = existing_subcat.active
         new_status = not current_status
         
-        # Mettre à jour dans la base de données SQLite
-        subcategory_record = Subcategory.query.filter_by(id=subcategory_id).first()
-        if subcategory_record:
-            subcategory_record.active = new_status
-            subcategory_record.updated_at = datetime.now()
-            db.session.commit()
+        # Mettre à jour dans la base de données
+        updated_subcat = update_subcategory_safe(
+            subcategory_id, 
+            existing_subcat.name, 
+            existing_subcat.description, 
+            existing_subcat.category_id, 
+            new_status
+        )
+        
+        if updated_subcat:
             print(f"✅ Statut de la sous-catégorie ID {subcategory_id} mis à jour dans la base de données: {new_status}")
-        
-        # Mettre à jour le dictionnaire en mémoire
-        admin_subcategories_db[subcategory_id]['active'] = new_status
-        admin_subcategories_db[subcategory_id]['updated_at'] = datetime.now().strftime('%Y-%m-%d')
-        admin_subcategories_db[subcategory_id]['updated_by'] = session.get('admin_email', 'admin')
-        
-        subcategory_name = admin_subcategories_db[subcategory_id]['name']
-        status_text = 'activée' if new_status else 'désactivée'
+            
+            # Mettre à jour le dictionnaire en mémoire si il existe
+            if subcategory_id in admin_subcategories_db:
+                admin_subcategories_db[subcategory_id]['active'] = new_status
+                admin_subcategories_db[subcategory_id]['updated_at'] = datetime.now().strftime('%Y-%m-%d')
+                admin_subcategories_db[subcategory_id]['updated_by'] = session.get('admin_email', 'admin')
+            
+            subcategory_name = existing_subcat.name
+            status_text = 'activée' if new_status else 'désactivée'
+            
+            return jsonify({'success': True, 'message': f'Sous-catégorie "{subcategory_name}" {status_text} avec succès'})
+        else:
+            return jsonify({'success': False, 'message': 'Erreur lors de la mise à jour du statut'})
         
         return jsonify({
             'success': True, 

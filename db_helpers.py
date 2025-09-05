@@ -1751,3 +1751,164 @@ def get_all_categories_safe():
         return categories
     
     return safe_db_operation(try_normal_query, fallback_query)
+
+def get_subcategory_by_id_safe(subcategory_id):
+    """
+    Récupère une sous-catégorie par ID de manière sécurisée
+    """
+    def try_normal_query():
+        return Subcategory.query.get(subcategory_id)
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, name, category_id, description, active, created_at
+            FROM subcategories 
+            WHERE id = :subcategory_id
+        """), {'subcategory_id': subcategory_id})
+        
+        row = result.fetchone()
+        if row:
+            subcat = Subcategory()
+            subcat.id = row[0]
+            subcat.name = row[1]
+            subcat.category_id = row[2]
+            subcat.description = row[3]
+            subcat.active = row[4]
+            subcat.created_at = row[5]
+            return subcat
+        return None
+    
+    return safe_db_operation(try_normal_query, fallback_query)
+
+def update_subcategory_safe(subcategory_id, name, description, category_id, active=True):
+    """
+    Met à jour une sous-catégorie de manière sécurisée
+    """
+    def try_normal_update():
+        subcat = Subcategory.query.get(subcategory_id)
+        if subcat:
+            subcat.name = name
+            subcat.description = description
+            subcat.category_id = category_id
+            subcat.active = active
+            db.session.commit()
+            return subcat
+        return None
+    
+    def fallback_update():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            UPDATE subcategories 
+            SET name = :name, description = :description, category_id = :category_id, 
+                active = :active, updated_at = NOW()
+            WHERE id = :subcategory_id
+            RETURNING id
+        """), {
+            'subcategory_id': subcategory_id,
+            'name': name,
+            'description': description,
+            'category_id': category_id,
+            'active': active
+        })
+        
+        if result.rowcount > 0:
+            db.session.commit()
+            return get_subcategory_by_id_safe(subcategory_id)
+        return None
+    
+    return safe_db_operation(try_normal_update, fallback_update)
+
+def delete_subcategory_safe(subcategory_id):
+    """
+    Supprime une sous-catégorie de manière sécurisée
+    """
+    def try_normal_delete():
+        subcat = Subcategory.query.get(subcategory_id)
+        if subcat:
+            db.session.delete(subcat)
+            db.session.commit()
+            return True
+        return False
+    
+    def fallback_delete():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            DELETE FROM subcategories 
+            WHERE id = :subcategory_id
+        """), {'subcategory_id': subcategory_id})
+        
+        if result.rowcount > 0:
+            db.session.commit()
+            return True
+        return False
+    
+    return safe_db_operation(try_normal_delete, fallback_delete)
+
+def check_subcategory_name_exists_safe(name, category_id, exclude_id=None):
+    """
+    Vérifie si un nom de sous-catégorie existe déjà dans une catégorie
+    """
+    def try_normal_query():
+        query = Subcategory.query.filter(
+            Subcategory.name.ilike(name),
+            Subcategory.category_id == category_id
+        )
+        if exclude_id:
+            query = query.filter(Subcategory.id != exclude_id)
+        return query.first() is not None
+    
+    def fallback_query():
+        from sqlalchemy import text
+        if exclude_id:
+            result = db.session.execute(text("""
+                SELECT COUNT(*) FROM subcategories 
+                WHERE LOWER(name) = LOWER(:name) 
+                AND category_id = :category_id 
+                AND id != :exclude_id
+            """), {'name': name, 'category_id': category_id, 'exclude_id': exclude_id})
+        else:
+            result = db.session.execute(text("""
+                SELECT COUNT(*) FROM subcategories 
+                WHERE LOWER(name) = LOWER(:name) 
+                AND category_id = :category_id
+            """), {'name': name, 'category_id': category_id})
+        
+        count = result.fetchone()[0]
+        return count > 0
+    
+    return safe_db_operation(try_normal_query, fallback_query)
+
+def create_subcategory_safe(name, description, category_id, active=True):
+    """
+    Crée une nouvelle sous-catégorie de manière sécurisée
+    """
+    def try_normal_create():
+        new_subcat = Subcategory(
+            name=name,
+            description=description,
+            category_id=category_id,
+            active=active
+        )
+        db.session.add(new_subcat)
+        db.session.commit()
+        return new_subcat
+    
+    def fallback_create():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            INSERT INTO subcategories (name, description, category_id, active, created_at)
+            VALUES (:name, :description, :category_id, :active, NOW())
+            RETURNING id
+        """), {
+            'name': name,
+            'description': description,
+            'category_id': category_id,
+            'active': active
+        })
+        
+        new_id = result.fetchone()[0]
+        db.session.commit()
+        return get_subcategory_by_id_safe(new_id)
+    
+    return safe_db_operation(try_normal_create, fallback_create)
