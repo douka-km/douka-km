@@ -397,7 +397,8 @@ def initialize_db_proxies():
             except Exception:
                 pass
             
-            categories = Category.query.all()
+            from db_helpers import get_all_categories_safe
+            categories = get_all_categories_safe()
             for category in categories:
                 admin_categories_db[category.id] = category.to_dict()
             print(f"Catégories chargées: {len(admin_categories_db)}")
@@ -413,7 +414,8 @@ def initialize_db_proxies():
         # Simulation de admin_subcategories_db
         admin_subcategories_db = {}
         try:
-            subcategories = Subcategory.query.all()
+            from db_helpers import get_all_subcategories_safe
+            subcategories = get_all_subcategories_safe()
             for subcat in subcategories:
                 admin_subcategories_db[subcat.id] = subcat.to_dict()
             print(f"Sous-catégories chargées: {len(admin_subcategories_db)}")
@@ -522,14 +524,16 @@ def reload_categories_and_subcategories():
     try:
         # Recharger les catégories
         admin_categories_db = {}
-        categories = Category.query.all()
+        from db_helpers import get_all_categories_safe
+        categories = get_all_categories_safe()
         for category in categories:
             admin_categories_db[category.id] = category.to_dict()
         print(f"✅ {len(categories)} catégories rechargées avec succès")
         
         # Recharger les sous-catégories
         admin_subcategories_db = {}
-        subcategories = Subcategory.query.all()
+        from db_helpers import get_all_subcategories_safe
+        subcategories = get_all_subcategories_safe()
         for subcat in subcategories:
             admin_subcategories_db[subcat.id] = subcat.to_dict()
         print(f"✅ {len(subcategories)} sous-catégories rechargées avec succès")
@@ -12773,14 +12777,34 @@ def admin_category_toggle_status(category_id):
 def admin_subcategories():
     """Page d'administration pour la gestion des sous-catégories"""
     
-    # Récupérer toutes les sous-catégories
-    subcategories = admin_subcategories_db.copy()
+    # Récupérer toutes les sous-catégories directement depuis la base de données
+    try:
+        from db_helpers import get_all_subcategories_safe, get_all_categories_safe
+        subcategories_list = get_all_subcategories_safe()
+        categories_list = get_all_categories_safe()
+        
+        # Convertir en dictionnaires pour compatibilité
+        subcategories = {}
+        for subcat in subcategories_list:
+            subcategories[subcat.id] = subcat.to_dict()
+            
+        categories_dict = {}
+        for cat in categories_list:
+            categories_dict[cat.id] = cat.to_dict()
+            
+        print(f"🔍 DEBUG: Trouvé {len(subcategories)} sous-catégories en base de données")
+        
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la récupération des sous-catégories: {e}")
+        # Fallback vers le dictionnaire en mémoire
+        subcategories = admin_subcategories_db.copy()
+        categories_dict = admin_categories_db.copy()
     
     # Enrichir avec les noms de catégories parentes
     for subcategory in subcategories.values():
         category_id = subcategory.get('category_id')
-        if category_id in admin_categories_db:
-            subcategory['category_name'] = admin_categories_db[category_id]['name']
+        if category_id in categories_dict:
+            subcategory['category_name'] = categories_dict[category_id]['name']
         else:
             subcategory['category_name'] = 'Catégorie inconnue'
     
@@ -12792,7 +12816,7 @@ def admin_subcategories():
     # Grouper les sous-catégories par catégorie
     categories_with_subcategories = {}
     
-    for category_id, category in admin_categories_db.items():
+    for category_id, category in categories_dict.items():
         # Récupérer les sous-catégories de cette catégorie
         category_subcategories = [
             sub for sub in subcategories.values() 

@@ -1690,3 +1690,64 @@ def get_all_admin_orders():
         return orders
     
     return safe_db_operation(try_normal_query, fallback_query)
+
+def get_all_subcategories_safe():
+    """
+    Récupère toutes les sous-catégories de manière sécurisée
+    """
+    def try_normal_query():
+        return Subcategory.query.all()
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, name, category_id, description, active, created_at
+            FROM subcategories 
+            ORDER BY name ASC
+        """))
+        
+        subcategories = []
+        for row in result:
+            subcat = Subcategory()
+            subcat.id = row[0]
+            subcat.name = row[1]
+            subcat.category_id = row[2]
+            subcat.description = row[3]
+            subcat.active = row[4]
+            subcat.created_at = row[5]
+            subcategories.append(subcat)
+        
+        print(f"✅ Récupéré {len(subcategories)} sous-catégories avec schéma partiel")
+        return subcategories
+    
+    return safe_db_operation(try_normal_query, fallback_query)
+
+def get_all_categories_safe():
+    """
+    Récupère toutes les catégories de manière sécurisée
+    """
+    def try_normal_query():
+        return Category.query.all()
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, name, description, active, created_at
+            FROM categories 
+            ORDER BY name ASC
+        """))
+        
+        categories = []
+        for row in result:
+            cat = Category()
+            cat.id = row[0]
+            cat.name = row[1]
+            cat.description = row[2]
+            cat.active = row[3]
+            cat.created_at = row[4]
+            categories.append(cat)
+        
+        print(f"✅ Récupéré {len(categories)} catégories avec schéma partiel")
+        return categories
+    
+    return safe_db_operation(try_normal_query, fallback_query)
