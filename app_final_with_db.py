@@ -9105,7 +9105,8 @@ def admin_dashboard():
     
     # 5. STATISTIQUES COMMANDES - Database-first
     try:
-        total_orders_db = Order.query.count()
+        from db_helpers import get_orders_count_safe
+        total_orders_db = get_orders_count_safe()
         print(f"✅ {total_orders_db} commandes récupérées depuis la DB")
     except Exception as e:
         total_orders_db = 0
@@ -9179,7 +9180,8 @@ def admin_dashboard():
     
     try:
         # Récupérer UNIQUEMENT les 10 commandes les plus récentes depuis la DB
-        recent_orders_db = Order.query.order_by(Order.created_at.desc()).limit(10).all()
+        from db_helpers import get_recent_orders_safe
+        recent_orders_db = get_recent_orders_safe(10)
         
         for db_order in recent_orders_db:
             # Récupérer les infos du marchand
@@ -11249,7 +11251,8 @@ def admin_order_detail(order_id):
         current_order_obj = admin_order
     else:
         # Dernière tentative : récupérer directement par ID
-        current_order_obj = Order.query.get(order_id)
+        from db_helpers import get_order_by_id_safe
+        current_order_obj = get_order_by_id_safe(order_id)
     
     # 1. Vérifier si les informations du livreur sont stockées dans la commande (historique permanent)
     if current_order_obj and current_order_obj.delivery_employee_email:

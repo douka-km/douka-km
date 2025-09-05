@@ -147,6 +147,86 @@ def create_shipping_rate_safe(name, rate_type, category_id, subcategory_id,
     
     return safe_db_operation(try_normal_create, fallback_create)
 
+def get_recent_orders_safe(limit=10):
+    """
+    Récupère les commandes récentes de manière sécurisée
+    """
+    def try_normal_query():
+        return Order.query.order_by(Order.created_at.desc()).limit(limit).all()
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at
+            FROM orders 
+            ORDER BY created_at DESC
+            LIMIT :limit
+        """), {'limit': limit})
+        
+        orders = []
+        for row in result:
+            orders.append(create_order_from_row(row))
+        
+        print(f"✅ Récupéré {len(orders)} commandes récentes avec schéma partiel")
+        return orders
+    
+    return safe_db_operation(try_normal_query, fallback_query)
+
+def get_orders_count_safe():
+    """
+    Compte le nombre total de commandes de manière sécurisée
+    """
+    def try_normal_query():
+        return Order.query.count()
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT COUNT(*) FROM orders"))
+        count = result.fetchone()[0]
+        print(f"✅ Compté {count} commandes avec requête SQL brute")
+        return count
+    
+    return safe_db_operation(try_normal_query, fallback_query)
+
+def get_order_by_id_safe(order_id):
+    """
+    Récupère une commande par ID de manière sécurisée
+    """
+    def try_normal_query():
+        return Order.query.get(order_id)
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at, shipping_fee, discount,
+                   payment_method, shipping_method, shipping_address,
+                   delivery_date, estimated_delivery_date
+            FROM orders 
+            WHERE id = :order_id
+        """), {'order_id': order_id})
+        
+        row = result.fetchone()
+        if row:
+            order = create_order_from_row(row)
+            # Ajouter les colonnes supplémentaires
+            if len(row) > 11:
+                order.shipping_fee = row[11]
+                order.discount = row[12]
+                order.payment_method = row[13]
+                order.shipping_method = row[14]
+                order.shipping_address = row[15]
+                order.delivery_date = row[16]
+                order.estimated_delivery_date = row[17]
+            print(f"✅ Récupéré commande {order_id} avec schéma partiel")
+            return order
+        return None
+    
+    return safe_db_operation(try_normal_query, fallback_query)
+
 def update_shipping_rate_safe(rate_id, name, rate_type, category_id, subcategory_id, 
                              standard_rate, express_rate, priority=0, active=True):
     """
@@ -379,8 +459,30 @@ def get_merchant_products(merchant_id):
     return Product.query.filter_by(merchant_id=merchant_id).order_by(Product.created_at.desc()).all()
 
 def get_merchant_orders(merchant_id):
-    """Récupérer toutes les commandes d'un marchand"""
-    return Order.query.filter_by(merchant_id=merchant_id).order_by(Order.created_at.desc()).all()
+    """Récupérer toutes les commandes d'un marchand avec gestion sécurisée des erreurs"""
+    
+    def try_normal_query():
+        return Order.query.filter_by(merchant_id=merchant_id).order_by(Order.created_at.desc()).all()
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at
+            FROM orders 
+            WHERE merchant_id = :merchant_id 
+            ORDER BY created_at DESC
+        """), {'merchant_id': merchant_id})
+        
+        orders = []
+        for row in result:
+            orders.append(create_order_from_row(row))
+        
+        print(f"✅ Récupéré {len(orders)} commandes pour marchand {merchant_id} avec schéma partiel")
+        return orders
+    
+    return safe_db_operation(try_normal_query, fallback_query)
 
 def calculate_merchant_balance(merchant_id):
     """Calculer le solde d'un marchand basé sur les commandes livrées"""
@@ -1519,46 +1621,6 @@ def get_all_merchant_orders():
             orders.append(create_order_from_row(row))
         
         print(f"✅ Récupéré {len(orders)} commandes avec schéma partiel")
-        return orders
-    
-    return safe_db_operation(try_normal_query, fallback_query)
-
-def get_merchant_orders(merchant_id):
-    """Récupérer toutes les commandes d'un marchand spécifique avec gestion sécurisée des erreurs"""
-    
-    def try_normal_query():
-        return Order.query.filter_by(merchant_id=merchant_id).order_by(Order.created_at.desc()).all()
-    
-    def fallback_query():
-        # Utiliser une requête SQL brute pour éviter les colonnes manquantes
-        from sqlalchemy import text
-        result = db.session.execute(text("""
-            SELECT id, order_number, customer_id, merchant_id, total, 
-                   status, payment_status, customer_name, customer_email, 
-                   customer_phone, created_at, shipping_fee, discount,
-                   payment_method, shipping_method, shipping_address,
-                   delivery_date, estimated_delivery_date
-            FROM orders 
-            WHERE merchant_id = :merchant_id 
-            ORDER BY created_at DESC
-        """), {'merchant_id': merchant_id})
-        
-        # Convertir en objets Order partiels
-        orders = []
-        for row in result:
-            order = create_order_from_row(row)
-            # Ajouter les colonnes supplémentaires
-            if len(row) > 11:
-                order.shipping_fee = row[11]
-                order.discount = row[12]
-                order.payment_method = row[13]
-                order.shipping_method = row[14]
-                order.shipping_address = row[15]
-                order.delivery_date = row[16]
-                order.estimated_delivery_date = row[17]
-            orders.append(order)
-        
-        print(f"✅ Récupéré {len(orders)} commandes pour marchand {merchant_id} avec schéma partiel")
         return orders
     
     return safe_db_operation(try_normal_query, fallback_query)
