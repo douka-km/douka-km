@@ -958,12 +958,45 @@ def get_product_reviews(product_id, limit=None):
 # =============================================
 
 def get_admin_orders():
-    """Récupérer toutes les commandes admin (produits statiques/admin)"""
-    return Order.query.filter(Order.merchant_id.is_(None)).order_by(Order.created_at.desc()).all()
+    """Récupérer toutes les commandes admin (produits statiques/admin) avec gestion sécurisée des erreurs"""
+    
+    def try_normal_query():
+        return Order.query.filter(Order.merchant_id.is_(None)).order_by(Order.created_at.desc()).all()
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at
+            FROM orders 
+            WHERE merchant_id IS NULL 
+            ORDER BY created_at DESC
+        """))
+        
+        orders = []
+        for row in result:
+            orders.append(create_order_from_row(row))
+        
+        print(f"✅ Récupéré {len(orders)} commandes admin avec schéma partiel")
+        return orders
+    
+    return safe_db_operation(try_normal_query, fallback_query)
 
 def get_admin_orders_count():
-    """Récupérer le nombre total de commandes admin"""
-    return Order.query.filter(Order.merchant_id.is_(None)).count()
+    """Récupérer le nombre total de commandes admin avec gestion sécurisée des erreurs"""
+    
+    def try_normal_query():
+        return Order.query.filter(Order.merchant_id.is_(None)).count()
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT COUNT(*) FROM orders WHERE merchant_id IS NULL
+        """))
+        return result.scalar()
+    
+    return safe_db_operation(try_normal_query, fallback_query)
 
 def get_admin_order_by_id_and_email(order_id, customer_email):
     """Récupérer une commande admin spécifique par ID et email client"""
