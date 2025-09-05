@@ -168,6 +168,23 @@
         .offcanvas-menu .btn {
             margin: 15px;
         }
+        
+        /* Styles pour les boutons "Rupture de stock" */
+        .btn-secondary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary:disabled .fa-ban {
+            color: #dc3545;
+        }
+        
+        /* Animation légère pour attirer l'attention sur les produits en stock */
+        .add-to-cart-btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+        }
     </style>
 </head>
 <body>

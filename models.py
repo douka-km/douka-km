@@ -416,6 +416,11 @@ class Order(db.Model):
     payment_method = db.Column(db.String(100), nullable=True)  # cash, mvola, holo, bank_transfer, etc.
     shipping_method = db.Column(db.String(100), default='Standard')  # Standard, Express, etc.
     
+    # Délais de livraison calculés selon le mode choisi
+    delivery_days = db.Column(db.Integer, nullable=True)  # Nombre de jours prévu
+    delivery_hours = db.Column(db.Integer, nullable=True, default=0)  # Heures supplémentaires
+    estimated_delivery_date = db.Column(db.DateTime, nullable=True)  # Date estimée de livraison
+    
     # Adresse de livraison (JSON)
     shipping_address = db.Column(db.Text, nullable=True)
     
@@ -555,6 +560,9 @@ class Order(db.Model):
             'payment_status': self.payment_status,
             'payment_method': self.payment_method,
             'shipping_method': self.shipping_method,
+            'delivery_days': self.delivery_days,
+            'delivery_hours': self.delivery_hours,
+            'estimated_delivery_date': self.estimated_delivery_date.strftime('%Y-%m-%d %H:%M:%S') if self.estimated_delivery_date else None,
             'shipping_address': self.get_shipping_address(),
             'promo_code_used': self.promo_code_used,
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None,
@@ -589,6 +597,9 @@ class OrderItem(db.Model):
     # Image du produit au moment de la commande
     image = db.Column(db.String(500), nullable=True)
     
+    # Mode de livraison spécifique pour ce produit
+    shipping_method = db.Column(db.String(100), nullable=True)
+    
     def get_options(self):
         if self.options:
             return json.loads(self.options)
@@ -608,7 +619,8 @@ class OrderItem(db.Model):
             'subtotal': self.subtotal,
             'options': self.get_options(),
             'variant_details': self.variant_details,
-            'image': self.image
+            'image': self.image,
+            'shipping_method': self.shipping_method
         }
 
 class Review(db.Model):
@@ -1211,3 +1223,33 @@ class ShippingRate(db.Model):
                 'description': f'Tarif de livraison: {applied_rate.name}' if applied_rate else 'Tarif de livraison standard'
             }
         }
+
+class CategoryCommissionRate(db.Model):
+    """Modèle pour les taux de commission par catégorie"""
+    __tablename__ = 'category_commission_rates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
+    commission_rate = db.Column(db.Float, nullable=False, default=15.0)  # Pourcentage
+    active = db.Column(db.Boolean, default=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = db.Column(db.String(120), nullable=True)
+    
+    # Relations
+    category = db.relationship('Category', backref=db.backref('commission_rate', uselist=False))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'category_id': self.category_id,
+            'category_name': self.category.name if self.category else None,
+            'commission_rate': self.commission_rate,
+            'active': self.active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def __repr__(self):
+        return f'<CategoryCommissionRate {self.category.name if self.category else "Unknown"}: {self.commission_rate}%>'

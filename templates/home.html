@@ -240,8 +240,16 @@
                     <p class="card-text text-primary fw-bold">{{ product.price|format_number }} KMF</p>
                     <div class="action-buttons">
                         <a href="/product/{{ product.id }}" class="btn btn-outline-primary">Voir détails</a>
-                        <button class="btn btn-primary add-to-cart-btn" data-product-id="{{ product.id }}">
-                            <i class="fas fa-shopping-cart"></i> Ajouter au panier
+                        <button class="btn add-to-cart-btn 
+                                       {% if product.stock is defined and product.stock <= 0 %}btn-secondary{% else %}btn-primary{% endif %}" 
+                                data-product-id="{{ product.id }}"
+                                {% if product.stock is defined and product.stock <= 0 %}disabled{% endif %}>
+                            <i class="fas fa-{% if product.stock is defined and product.stock <= 0 %}ban{% else %}shopping-cart{% endif %}"></i> 
+                            {% if product.stock is defined and product.stock <= 0 %}
+                                Rupture de stock
+                            {% else %}
+                                Ajouter au panier
+                            {% endif %}
                         </button>
                     </div>
                 </div>
@@ -271,9 +279,15 @@
                         <p class="card-text text-primary fw-bold">{{ product.price|format_number }} KMF</p>
                         <div class="action-buttons">
                             <a href="/product/{{ product.id }}" class="btn btn-outline-primary btn-sm">Voir détails</a>
-                            <a href="/add-to-cart/{{ product.id }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-cart-plus"></i> Ajouter
-                            </a>
+                            {% if product.stock is defined and product.stock <= 0 %}
+                                <button class="btn btn-secondary btn-sm" disabled>
+                                    <i class="fas fa-ban"></i> Rupture de stock
+                                </button>
+                            {% else %}
+                                <a href="/add-to-cart/{{ product.id }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-cart-plus"></i> Ajouter
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -1116,6 +1130,11 @@
         const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
         addToCartButtons.forEach(button => {
             button.addEventListener('click', function() {
+                // Ne pas traiter si le bouton est déjà désactivé (rupture de stock)
+                if (this.disabled) {
+                    return;
+                }
+                
                 const productId = this.getAttribute('data-product-id');
                 const originalHTML = this.innerHTML;
                 

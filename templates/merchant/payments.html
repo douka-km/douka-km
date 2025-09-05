@@ -22,18 +22,6 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Information sur les paramètres -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-info">
-                <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Informations importantes</h6>
-                <p class="mb-1"><strong>Taux de commission actuel :</strong> {{ site_settings.commission_rate }}%</p>
-                <p class="mb-1"><strong>Frais de livraison :</strong> {{ site_settings.shipping_fee|format_number }} KMF (Gratuite pour commandes ≥ {{ site_settings.free_shipping_threshold|format_number }} KMF)</p>
-                <p class="mb-0"><small class="text-muted">Ces paramètres sont définis par l'administration et s'appliquent à toutes vos ventes.</small></p>
-            </div>
-        </div>
-    </div>
-
     <!-- Carte récapitulative du solde -->
     <div class="row">
         <div class="col-xl-4 col-md-6">
@@ -101,15 +89,15 @@
                         <tbody>
                             <tr>
                                 <td><strong>Total des gains bruts :</strong></td>
-                                <td class="text-end"><span class="text-success">{{ (balance_info.current + balance_info.pending + (merchant.total_withdrawn or 0))|format_number }} KMF</span></td>
+                                <td class="text-end"><span class="text-success">{{ merchant.total_earnings|format_number }} KMF</span></td>
                             </tr>
                             <tr>
-                                <td>Commission plateforme ({{ site_settings.commission_rate }}%) :</td>
-                                <td class="text-end"><span class="text-warning">-{{ ((balance_info.current + balance_info.pending + (merchant.total_withdrawn or 0)) * (site_settings.commission_rate / 100)    )|int|format_number }} KMF</span></td>
+                                <td>Commission plateforme (variable par catégorie) :</td>
+                                <td class="text-end"><span class="text-warning">-{{ merchant.commission_fees|format_number }} KMF</span></td>
                             </tr>
                             <tr class="border-top">
                                 <td><strong>Gains nets :</strong></td>
-                                <td class="text-end"><strong class="text-primary">{{ ((balance_info.current + balance_info.pending + (merchant.total_withdrawn or 0)) * (1 - site_settings.commission_rate / 100))|int|format_number }} KMF</strong></td>
+                                <td class="text-end"><strong class="text-primary">{{ (merchant.total_earnings - merchant.commission_fees)|format_number }} KMF</strong></td>
                             </tr>
                         </tbody>
                     </table>

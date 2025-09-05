@@ -1,0 +1,243 @@
+{% extends 'admin/layout.html' %}
+
+{% block title %}Taux de Commission par Catégorie - DOUKA KM Admin{% endblock %}
+
+{% block admin_content %}
+<style>
+    .commission-card {
+        transition: all 0.3s ease;
+        border: 1px solid #dee2e6;
+    }
+
+    .commission-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+
+    .custom-rate {
+        border-left: 4px solid #28a745;
+    }
+
+    .default-rate {
+        border-left: 4px solid #6c757d;
+    }
+
+    .rate-input {
+        max-width: 100px;
+    }
+
+    .rate-badge {
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+
+    .custom-badge {
+        background-color: #28a745;
+    }
+
+    .default-badge {
+        background-color: #6c757d;
+    }
+
+    .reset-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .commission-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+
+    .category-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .text-primary-custom {
+        color: #0d6efd !important;
+    }
+</style>
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Taux de Commission par Catégorie</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Tableau de bord</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin_settings') }}">Paramètres</a></li>
+        <li class="breadcrumb-item active">Taux de Commission</li>
+    </ol>
+
+    <!-- Messages Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Informations générales -->
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle me-2"></i>
+            <div>
+                <strong>Information:</strong> Les catégories sans taux spécifique utiliseront le taux par défaut ({{ default_rate }}%). 
+                Les taux personnalisés s'appliqueront à tous les produits de la catégorie correspondante.
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire de mise à jour -->
+    <form method="POST" id="commission-form" action="{{ url_for('admin_commission_rates') }}">
+        <input type="hidden" name="action" value="update_rates">
+        
+        <div class="row">
+            {% for category in categories %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card commission-card h-100 {% if category.is_custom %}custom-rate{% else %}default-rate{% endif %}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="{{ category.icon or 'fas fa-tag' }} text-primary me-2 fs-4"></i>
+                                <div>
+                                    <h5 class="card-title mb-1">{{ category.name }}</h5>
+                                    {% if category.description %}
+                                    <small class="text-muted">{{ category.description[:50] }}{% if category.description|length > 50 %}...{% endif %}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <span class="badge {% if category.is_custom %}custom-badge{% else %}default-badge{% endif %} rate-badge">
+                                {{ category.current_rate }}%
+                            </span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rate_{{ category.id }}" class="form-label">
+                                <i class="fas fa-percentage me-1"></i>
+                                Taux de commission
+                            </label>
+                            <div class="input-group">
+                                <input 
+                                    type="number" 
+                                    class="form-control rate-input" 
+                                    id="rate_{{ category.id }}" 
+                                    name="rate_{{ category.id }}" 
+                                    value="{{ category.current_rate }}" 
+                                    min="0" 
+                                    max="100" 
+                                    step="0.1"
+                                    data-default="{{ default_rate }}"
+                                >
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <div class="form-text">Entre 0% et 100%</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-box me-1"></i>
+                                {{ category.product_count }} produit{{ 's' if category.product_count != 1 else '' }}
+                            </small>
+                            {% if category.is_custom %}
+                            <button 
+                                type="button" 
+                                class="btn btn-outline-secondary btn-sm reset-btn"
+                                onclick="resetRate({{ category.id }}, '{{ category.name }}')"
+                                title="Remettre au taux par défaut">
+                                <i class="fas fa-undo me-1"></i>
+                                Reset
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card commission-summary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    <i class="fas fa-chart-line me-2"></i>
+                                    Gestion des Taux de Commission
+                                </h5>
+                                <p class="mb-0">{{ categories|length }} catégorie{{ 's' if categories|length != 1 else '' }} configurée{{ 's' if categories|length != 1 else '' }}</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-light" onclick="resetAllRates()">
+                                    <i class="fas fa-undo me-2"></i>
+                                    Tout remettre par défaut
+                                </button>
+                                <button type="submit" class="btn btn-light fw-bold">
+                                    <i class="fas fa-save me-2"></i>
+                                    Enregistrer les modifications
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function resetRate(categoryId, categoryName) {
+        if (confirm(`Voulez-vous vraiment remettre le taux de commission de "${categoryName}" au taux par défaut ({{ default_rate }}%) ?`)) {
+            const input = document.getElementById(`rate_${categoryId}`);
+            input.value = {{ default_rate }};
+            input.dispatchEvent(new Event('input'));
+        }
+    }
+
+    function resetAllRates() {
+        if (confirm('Voulez-vous vraiment remettre tous les taux de commission au taux par défaut ({{ default_rate }}%) ?')) {
+            const inputs = document.querySelectorAll('input[name^="rate_"]');
+            inputs.forEach(input => {
+                input.value = {{ default_rate }};
+                input.dispatchEvent(new Event('input'));
+            });
+        }
+    }
+
+    // Validation en temps réel
+    document.addEventListener('DOMContentLoaded', function() {
+        const rateInputs = document.querySelectorAll('input[name^="rate_"]');
+        
+        rateInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const value = parseFloat(this.value);
+                const card = this.closest('.commission-card');
+                const badge = card.querySelector('.rate-badge');
+                
+                if (value >= 0 && value <= 100) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                    badge.textContent = value + '%';
+                    
+                    // Changer la couleur en fonction de la valeur
+                    if (value == {{ default_rate }}) {
+                        card.className = card.className.replace('custom-rate', 'default-rate');
+                        badge.className = badge.className.replace('custom-badge', 'default-badge');
+                    } else {
+                        card.className = card.className.replace('default-rate', 'custom-rate');
+                        badge.className = badge.className.replace('default-badge', 'custom-badge');
+                    }
+                } else {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

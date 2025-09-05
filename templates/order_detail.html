@@ -244,6 +244,14 @@
                             </div>
                             <div class="order-item-details">
                                 <h6 class="item-name">{{ item['name'] }}</h6>
+                                {% if item.get('shipping_method') %}
+                                <div class="item-shipping-method mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-shipping-fast me-1"></i>
+                                        Mode de livraison: {{ item['shipping_method'] }}
+                                    </small>
+                                </div>
+                                {% endif %}
                                 {% if 'options' in item and item['options'] %}
                                 <div class="item-options">
                                     {% for key, value in item['options'].items() %}

@@ -10,6 +10,43 @@
         <li class="breadcrumb-item active">Paramètres</li>
     </ol>
 
+    <!-- Liens rapides -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-cogs me-1"></i>
+                    Configuration rapide
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <a href="{{ url_for('admin_commission_rates') }}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center align-items-center py-3">
+                                <i class="fas fa-percentage fs-1 mb-2"></i>
+                                <span class="fw-bold">Taux de Commission</span>
+                                <small class="text-muted">Par catégorie</small>
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="#site-settings" class="btn btn-outline-info w-100 h-100 d-flex flex-column justify-content-center align-items-center py-3">
+                                <i class="fas fa-globe fs-1 mb-2"></i>
+                                <span class="fw-bold">Site Web</span>
+                                <small class="text-muted">Informations générales</small>
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="#merchant-settings" class="btn btn-outline-success w-100 h-100 d-flex flex-column justify-content-center align-items-center py-3">
+                                <i class="fas fa-store fs-1 mb-2"></i>
+                                <span class="fw-bold">Commerce</span>
+                                <small class="text-muted">Frais et tarifs</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Statistiques système -->
         <div class="col-xl-4">
@@ -92,7 +129,7 @@
         <!-- Paramètres principaux -->
         <div class="col-xl-8">
             <!-- Informations du site -->
-            <div class="card mb-4">
+            <div class="card mb-4" id="site-settings">
                 <div class="card-header">
                     <i class="fas fa-globe me-1"></i>
                     Informations du site
@@ -202,7 +239,7 @@
             </div>
 
             <!-- Paramètres financiers -->
-            <div class="card mb-4">
+            <div class="card mb-4" id="merchant-settings">
                 <div class="card-header">
                     <i class="fas fa-percentage me-1"></i>
                     Paramètres financiers
@@ -639,5 +676,45 @@ function removeLogo() {
         });
     }
 }
+
+// Défilement fluide pour les liens de configuration rapide
+document.addEventListener('DOMContentLoaded', function() {
+    // Sélectionner tous les liens d'ancre
+    const anchorLinks = document.querySelectorAll('a[href^="#"]');
+    
+    anchorLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const targetId = this.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // Ajouter un effet de surlignage temporaire
+                targetElement.classList.add('highlighted');
+                setTimeout(() => {
+                    targetElement.classList.remove('highlighted');
+                }, 2000);
+            }
+        });
+    });
+});
 </script>
+
+<style>
+.highlighted {
+    animation: highlight 2s ease-in-out;
+}
+
+@keyframes highlight {
+    0% { box-shadow: 0 0 0 3px rgba(0,123,255,0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(0,123,255,0.2); }
+    100% { box-shadow: 0 0 0 3px rgba(0,123,255,0); }
+}
+</style>
 {% endblock %}

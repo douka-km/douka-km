@@ -9,25 +9,6 @@
         <li class="breadcrumb-item active">Dashboard</li>
     </ol>
     
-    <!-- Information sur les paramètres -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="alert alert-info">
-                <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Paramètres de vente actuels</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p class="mb-1"><strong>Taux de commission :</strong> {{ site_settings.commission_rate }}%</p>
-                        <small class="text-muted">Prélevé sur chaque vente</small>
-                    </div>
-                    <div class="col-md-6">
-                        <p class="mb-1"><strong>Frais de livraison :</strong> {{ site_settings.shipping_fee|format_number }} KMF</p>
-                        <small class="text-muted">Gratuite pour commandes ≥ {{ site_settings.free_shipping_threshold|format_number }} KMF</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
     <!-- Message de bienvenue -->
     <div class="row mb-4">
         <div class="col-12">
@@ -51,6 +32,50 @@
                             <strong>Boutique vérifiée</strong><br>
                             Votre boutique est vérifiée ! Vous pouvez maintenant gérer vos produits librement.
                         </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Taux de commission par catégorie -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-percentage me-2"></i>Taux de Commission par Catégorie</h6>
+                    <small>Les taux appliqués à vos produits selon leur catégorie</small>
+                </div>
+                <div class="card-body">
+                    {% if merchant_categories %}
+                    <div class="row">
+                        {% for category in merchant_categories %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">{{ category.name }}</h6>
+                                        <small class="text-muted">{{ category.product_count }} produit{{ 's' if category.product_count != 1 else '' }}</small>
+                                    </div>
+                                    <span class="badge {% if category.commission_rate == 0 %}bg-success{% elif category.commission_rate <= 5 %}bg-primary{% elif category.commission_rate <= 10 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
+                                        {{ category.commission_rate }}%
+                                    </span>
+                                </div>
+                                {% if category.commission_rate == 0 %}
+                                <small class="text-success"><i class="fas fa-check-circle me-1"></i>Aucune commission</small>
+                                {% else %}
+                                <small class="text-muted">Commission prélevée sur chaque vente</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-box-open fa-3x mb-3"></i>
+                        <p class="mb-0">Aucun produit ajouté pour le moment</p>
+                        <small>Ajoutez des produits pour voir les taux de commission applicables</small>
                     </div>
                     {% endif %}
                 </div>

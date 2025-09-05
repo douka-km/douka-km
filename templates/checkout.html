@@ -148,15 +148,22 @@
                                 <input class="form-check-input" type="radio" name="shipping_method" id="shipping{{ option.id }}" value="{{ option.name }}" {% if loop.first %}checked{% endif %}>
                                 <label class="form-check-label d-flex justify-content-between" for="shipping{{ option.id }}">
                                     <div>
-                                        <div class="fw-bold">{{ option.name }}</div>
+                                        <div class="fw-bold shipping-method-name">{{ option.name }}</div>
                                         {% if option.description %}
                                             <small class="text-muted">{{ option.description }}</small>
                                         {% endif %}
                                     </div>
-                                    <div class="fw-bold">{{ option.price|format_number }} KMF</div>
+                                    <div class="fw-bold shipping-method-price">{{ option.price|format_number }} KMF</div>
                                 </label>
                             </div>
                             {% endfor %}
+                            
+                            <!-- Message d'optimisation pour commandes multiples -->
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-truck me-2"></i>
+                                <strong>Optimisation des frais de livraison :</strong><br>
+                                Si votre panier contient des produits de plusieurs marchands, vous ne payerez les frais de livraison que pour la commande la plus élevée. Les autres livraisons seront gratuites !
+                            </div>
                             
                             <!-- Informations sur le calcul des frais -->
                             {% if shipping_breakdown %}
@@ -484,7 +491,7 @@
                                 
                                 // Mettre à jour l'affichage du prix dans le DOM
                                 const label = option.nextElementSibling;
-                                const priceSpan = label.querySelector('.fw-bold');
+                                const priceSpan = label.querySelector('.shipping-method-price');
                                 if (priceSpan) {
                                     if (rates[rateKey].is_free) {
                                         priceSpan.innerHTML = `<span class="text-success">GRATUIT</span> <small class="text-muted">(${rates[rateKey].base_price.toLocaleString().replace(/,/g, ' ')} KMF)</small>`;
@@ -518,7 +525,7 @@
                             optionData.price = rates[optionData.type];
                             
                             const label = option.nextElementSibling;
-                            const priceSpan = label.querySelector('.fw-bold');
+                            const priceSpan = label.querySelector('.shipping-method-price');
                             if (priceSpan) {
                                 const isShippingFree = currentTotal >= freeShippingThreshold;
                                 if (isShippingFree) {
@@ -575,8 +582,8 @@
         // Écouter les changements de région
         if (regionSelect) {
             regionSelect.addEventListener('change', updateShippingRatesForRegion);
-            // Mettre à jour initialement si une région est déjà sélectionnée
-            updateShippingRatesForRegion();
+            // Commenté temporairement pour éviter la modification automatique de l'affichage
+            // updateShippingRatesForRegion();
         }
         
         shippingOptions.forEach(option => {

@@ -214,6 +214,30 @@
                             <option value="">-- D'abord sélectionner une catégorie --</option>
                         </select>
                     </div>
+
+                    <!-- Champs pour tranches de prix (masqués par défaut) -->
+                    <div id="priceRangeFields" class="mb-3" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="minPrice" class="form-label">Prix minimum (Ar)</label>
+                                <input type="number" class="form-control" name="min_price" id="minPrice" 
+                                       min="0" step="0.01" placeholder="Ex: 10000">
+                                <small class="text-muted">Laisser vide pour "à partir de 0"</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="maxPrice" class="form-label">Prix maximum (Ar)</label>
+                                <input type="number" class="form-control" name="max_price" id="maxPrice" 
+                                       min="0" step="0.01" placeholder="Ex: 50000">
+                                <small class="text-muted">Laisser vide pour "sans limite"</small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-info">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Ce tarif s'appliquera aux commandes dont le montant total se trouve dans cette tranche de prix.
+                            </small>
+                        </div>
+                    </div>
                     
                     <div class="row">
                         <div class="col-md-6">
@@ -333,10 +357,37 @@ function loadSubcategories() {
         return;
     }
     
-    // Pour l'instant, on met un placeholder car nous n'avons pas de sous-catégories dans les données
-    subcategorySelect.innerHTML = '<option value="">-- Aucune sous-catégorie disponible --</option>';
+    // Afficher un indicateur de chargement
+    subcategorySelect.innerHTML = '<option value="">-- Chargement des sous-catégories... --</option>';
+    subcategorySelect.disabled = true;
     
-    // TODO: Ici on pourrait faire un appel AJAX pour charger les sous-catégories de la catégorie sélectionnée
+    // Appel AJAX pour charger les sous-catégories de la catégorie sélectionnée
+    fetch(`/api/subcategories/${categoryId}`)
+        .then(response => response.json())
+        .then(data => {
+            subcategorySelect.innerHTML = '';
+            subcategorySelect.disabled = false;
+            
+            if (data.subcategories && data.subcategories.length > 0) {
+                // Ajouter une option par défaut
+                subcategorySelect.innerHTML = '<option value="">-- Sélectionner une sous-catégorie --</option>';
+                
+                // Ajouter toutes les sous-catégories
+                data.subcategories.forEach(subcat => {
+                    const option = document.createElement('option');
+                    option.value = subcat.id;
+                    option.textContent = subcat.name;
+                    subcategorySelect.appendChild(option);
+                });
+            } else {
+                subcategorySelect.innerHTML = '<option value="">-- Aucune sous-catégorie disponible --</option>';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des sous-catégories:', error);
+            subcategorySelect.innerHTML = '<option value="">-- Erreur de chargement --</option>';
+            subcategorySelect.disabled = false;
+        });
 }
 
 // Event listeners pour les boutons d'action
@@ -417,11 +468,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <div class="mb-3">
                         <label for="editCategorySelect" class="form-label">Catégorie</label>
-                        <select class="form-select" name="category_id" id="editCategorySelect">
+                        <select class="form-select" name="category_id" id="editCategorySelect" onchange="loadEditSubcategories()">
                             <option value="">-- Aucune catégorie --</option>
                             {% for category in categories %}
                                 <option value="{{ category.id }}">{{ category.name }}</option>
                             {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editSubcategorySelect" class="form-label">Sous-catégorie</label>
+                        <select class="form-select" name="subcategory_id" id="editSubcategorySelect">
+                            <option value="">-- D'abord sélectionner une catégorie --</option>
                         </select>
                     </div>
                     

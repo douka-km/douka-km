@@ -329,7 +329,8 @@ def create_order(customer_id, merchant_id, items_data, shipping_address=None, **
     valid_order_fields = [
         'status', 'payment_status', 'payment_method', 'shipping_method',
         'promo_code_used', 'processing_date', 'shipping_date', 
-        'delivery_date', 'cancelled_at'
+        'delivery_date', 'cancelled_at', 'delivery_days', 'delivery_hours', 
+        'estimated_delivery_date'
     ]
     order_kwargs = {k: v for k, v in kwargs.items() 
                    if k not in ['shipping_fee', 'discount', 'total'] 
@@ -364,7 +365,8 @@ def create_order(customer_id, merchant_id, items_data, shipping_address=None, **
             quantity=item_data['quantity'],
             subtotal=item_data['price'] * item_data['quantity'],
             image=item_data.get('image'),
-            variant_details=item_data.get('variant_details')
+            variant_details=item_data.get('variant_details'),
+            shipping_method=item_data.get('shipping_method')  # Nouveau champ
         )
         
         if 'options' in item_data:
@@ -478,17 +480,30 @@ def get_pending_merchant_orders(merchant_id):
 def create_complete_order(customer_id, merchant_id, cart_items, shipping_address, **kwargs):
     """Créer une commande complète avec tous les articles"""
     try:
-        # Préparer les données des articles
+        # Récupérer le type de livraison choisi
+        shipping_method_raw = kwargs.get('shipping_method', 'Standard')
+        shipping_type = 'express' if 'express' in shipping_method_raw.lower() or 'rapide' in shipping_method_raw.lower() else 'standard'
+        
+        # Importer ici pour éviter les imports circulaires
+        from app_final_with_db import calculate_product_shipping_method
+        
+        # Préparer les données des articles avec le mode de livraison spécifique
         items_data = []
         for item in cart_items:
+            product_id = item.get('product_id', item.get('id'))
+            
+            # Calculer le mode de livraison spécifique pour ce produit
+            product_shipping_method = calculate_product_shipping_method(product_id, shipping_type)
+            
             items_data.append({
-                'product_id': item.get('product_id', item.get('id')),
+                'product_id': product_id,
                 'name': item['name'],
                 'price': item['price'],
                 'quantity': item['quantity'],
                 'image': item.get('image', ''),
                 'variant_details': item.get('variant_details', ''),
-                'options': item.get('options', {})
+                'options': item.get('options', {}),
+                'shipping_method': product_shipping_method  # Nouveau champ
             })
         
         # Enrichir l'adresse de livraison avec la méthode de livraison

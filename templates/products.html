@@ -104,6 +104,32 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+  
+  /* Styles pour les sous-catégories */
+  .category-group {
+    margin-bottom: 0.5rem;
+  }
+  
+  .subcategory-group {
+    border-left: 2px solid #e9ecef;
+    padding-left: 0.5rem;
+    transition: all 0.3s ease;
+  }
+  
+  .subcategory-group .form-check {
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+  }
+  
+  .subcategory-group .form-check-label {
+    color: #6c757d;
+    font-weight: normal;
+  }
+  
+  .subcategory-group .form-check-input:checked + .form-check-label {
+    color: #0d6efd;
+    font-weight: 500;
+  }
 </style>
 {% endblock %}
 
@@ -145,13 +171,31 @@
               <h6>Catégories</h6>
               <div class="category-filters">
                 {% for category in categories %}
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" name="category_filter" 
+                <div class="form-check category-group">
+                  <input class="form-check-input category-checkbox" type="checkbox" name="category_filter" 
                          id="category{{ category.id }}" value="{{ category.id }}"
-                         {% if category.id|string in request.args.getlist('category_filter') %}checked{% endif %}>
+                         {% if category.id|string in request.args.getlist('category_filter') %}checked{% endif %}
+                         data-category-id="{{ category.id }}">
                   <label class="form-check-label" for="category{{ category.id }}">
                     {{ category.name }}
                   </label>
+                  
+                  <!-- Sous-catégories (cachées par défaut) -->
+                  {% if category.subcategories %}
+                  <div class="subcategory-group ms-3 mt-2" id="subcategories-{{ category.id }}" style="display: none;">
+                    {% for subcategory in category.subcategories %}
+                    <div class="form-check">
+                      <input class="form-check-input subcategory-checkbox" type="checkbox" name="subcategory_filter" 
+                             id="subcategory{{ subcategory.id }}" value="{{ subcategory.id }}"
+                             {% if subcategory.id|string in request.args.getlist('subcategory_filter') %}checked{% endif %}
+                             data-parent-category="{{ category.id }}">
+                      <label class="form-check-label" for="subcategory{{ subcategory.id }}">
+                        {{ subcategory.name }}
+                      </label>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
                 </div>
                 {% endfor %}
               </div>
@@ -211,8 +255,48 @@
   
   <!-- Product grid -->
   <div class="col-lg-9">
+    <!-- Breadcrumb et navigation des catégories -->
+    {% if current_category %}
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('products') }}">Tous les produits</a></li>
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('category', category_slug=current_category.slug) }}">{{ current_category.name }}</a>
+        </li>
+        {% if current_subcategory %}
+        <li class="breadcrumb-item active" aria-current="page">{{ current_subcategory.name }}</li>
+        {% endif %}
+      </ol>
+    </nav>
+    
+    <!-- Navigation des sous-catégories -->
+    {% if current_category and current_category.subcategories and not current_subcategory %}
+    <div class="mb-4">
+      <h5 class="mb-3">Sous-catégories de {{ current_category.name }}</h5>
+      <div class="row g-2">
+        {% for subcategory_slug, subcategory in current_category.subcategories.items() %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{{ url_for('category', category_slug=current_category.slug, subcategory_slug=subcategory_slug) }}" 
+             class="btn btn-outline-primary w-100 text-start">
+            <i class="fas fa-tag me-2"></i>{{ subcategory.name }}
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+    
     <div class="mb-3 d-flex justify-content-between align-items-center">
-      <h2>Produits</h2>
+      <h2>
+        {% if current_subcategory %}
+          {{ current_subcategory.name }}
+        {% elif current_category %}
+          {{ current_category.name }}
+        {% else %}
+          Produits
+        {% endif %}
+      </h2>
       <!-- Mobile sort dropdown -->
       <div class="dropdown d-lg-none">
         <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" 
@@ -258,8 +342,17 @@
                 <div class="fw-bold fs-5 text-primary mb-3">{{ product.price|format_number }} KMF</div>
                 <!-- Sur mobile, on affiche seulement le bouton panier -->
                 <div class="action-buttons">
-                  <button class="btn btn-primary w-100 add-to-cart-btn" data-product-id="{{ product.id }}" onclick="event.preventDefault(); event.stopPropagation();">
-                    <i class="fas fa-cart-plus me-1"></i> Ajouter au panier
+                  <button class="btn w-100 add-to-cart-btn 
+                                 {% if product.stock is defined and product.stock <= 0 %}btn-secondary{% else %}btn-primary{% endif %}" 
+                          data-product-id="{{ product.id }}" 
+                          onclick="event.preventDefault(); event.stopPropagation();"
+                          {% if product.stock is defined and product.stock <= 0 %}disabled{% endif %}>
+                    <i class="fas fa-{% if product.stock is defined and product.stock <= 0 %}ban{% else %}cart-plus{% endif %} me-1"></i> 
+                    {% if product.stock is defined and product.stock <= 0 %}
+                      Rupture de stock
+                    {% else %}
+                      Ajouter au panier
+                    {% endif %}
                   </button>
                 </div>
               </div>
@@ -290,8 +383,16 @@
               <div class="fw-bold fs-5 text-primary mb-3">{{ product.price|format_number }} KMF</div>
               <div class="action-buttons">
                 <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-sm btn-outline-secondary">Détails</a>
-                <button class="btn btn-primary add-to-cart-btn" data-product-id="{{ product.id }}">
-                  <i class="fas fa-cart-plus me-1"></i> Ajouter au panier
+                <button class="btn add-to-cart-btn 
+                               {% if product.stock is defined and product.stock <= 0 %}btn-secondary{% else %}btn-primary{% endif %}" 
+                        data-product-id="{{ product.id }}"
+                        {% if product.stock is defined and product.stock <= 0 %}disabled{% endif %}>
+                  <i class="fas fa-{% if product.stock is defined and product.stock <= 0 %}ban{% else %}cart-plus{% endif %} me-1"></i> 
+                  {% if product.stock is defined and product.stock <= 0 %}
+                    Rupture de stock
+                  {% else %}
+                    Ajouter au panier
+                  {% endif %}
                 </button>
               </div>
             </div>
@@ -441,10 +542,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
+  // Gestion des sous-catégories
+  const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
+  const subcategoryCheckboxes = document.querySelectorAll('.subcategory-checkbox');
+  
+  // Fonction pour afficher/masquer les sous-catégories
+  function toggleSubcategories(categoryId, show) {
+    const subcategoryGroup = document.getElementById('subcategories-' + categoryId);
+    if (subcategoryGroup) {
+      subcategoryGroup.style.display = show ? 'block' : 'none';
+      
+      // Si on masque, décocher toutes les sous-catégories de cette catégorie
+      if (!show) {
+        const subcats = subcategoryGroup.querySelectorAll('.subcategory-checkbox');
+        subcats.forEach(subcat => {
+          subcat.checked = false;
+        });
+      }
+    }
+  }
+  
+  // Gérer les clics sur les catégories
+  categoryCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const categoryId = this.getAttribute('data-category-id');
+      
+      if (this.checked) {
+        // Afficher les sous-catégories quand la catégorie est cochée
+        toggleSubcategories(categoryId, true);
+      } else {
+        // Masquer les sous-catégories quand la catégorie est décochée
+        toggleSubcategories(categoryId, false);
+      }
+    });
+    
+    // Afficher les sous-catégories si la catégorie est déjà cochée au chargement
+    if (checkbox.checked) {
+      const categoryId = checkbox.getAttribute('data-category-id');
+      toggleSubcategories(categoryId, true);
+    }
+  });
+  
+  // Auto-submit du formulaire quand on change une sous-catégorie
+  subcategoryCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      // Soumettre le formulaire automatiquement
+      this.closest('form').submit();
+    });
+  });
+  
+  // Auto-submit du formulaire quand on change une catégorie
+  categoryCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      // Soumettre le formulaire automatiquement
+      this.closest('form').submit();
+    });
+  });
+  
   // Add to cart functionality for product buttons
   const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
   addToCartButtons.forEach(button => {
     button.addEventListener('click', function() {
+      // Ne pas traiter si le bouton est déjà désactivé (rupture de stock)
+      if (this.disabled) {
+        return;
+      }
+      
       const productId = this.getAttribute('data-product-id');
       // Disable button while processing
       this.disabled = true;

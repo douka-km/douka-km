@@ -27,7 +27,7 @@ from email_config import send_email, CURRENT_EMAIL_CONFIG
 from models import db, User, Merchant, Product, Category, Subcategory, Order, OrderItem, Cart, CartItem, WishlistItem
 
 # Imports pour la base de données
-from models import db, User, Merchant, Admin, Product, Order, OrderItem, Review, Category, Subcategory, PromoCode, WithdrawalRequest, WishlistItem, EmailVerificationToken, PasswordResetToken, SiteSettings, Employee, Address
+from models import db, User, Merchant, Admin, Product, Order, OrderItem, Review, Category, Subcategory, PromoCode, WithdrawalRequest, WishlistItem, EmailVerificationToken, PasswordResetToken, SiteSettings, Employee, Address, CategoryCommissionRate
 from db_helpers import *
 
 # =============================================
@@ -2537,6 +2537,85 @@ def get_site_settings():
     
     return default_settings
 
+# Fonction pour calculer les commissions admin avec le nouveau système par catégorie
+def calculate_admin_commission_revenue():
+    """
+    Calcule le revenu admin basé sur les commissions des marchands 
+    en utilisant les taux de commission personnalisés par catégorie
+    
+    Returns:
+        float: Total des commissions en KMF
+    """
+    try:
+        # Récupérer les paramètres globaux du site pour le taux par défaut
+        site_settings = get_site_settings()
+        default_commission_rate = float(site_settings['commission_rate']) / 100  # Convertir en décimal
+        
+        # Récupérer toutes les commandes livrées des marchands
+        merchant_orders_db = Order.query.filter(
+            Order.merchant_id.isnot(None),
+            Order.status.in_(['completed', 'delivered']),
+            Order.payment_status == 'completed'
+        ).all()
+        
+        total_commission_fees = 0
+        
+        for db_order in merchant_orders_db:
+            # Calculer la commission par item selon la catégorie (comme dans calculate_merchant_balance)
+            order_commission = 0
+            
+            # Parcourir chaque item de la commande pour appliquer le bon taux
+            for item in db_order.items:
+                try:
+                    # Récupérer le produit pour connaître sa catégorie
+                    product = Product.query.get(item.product_id)
+                    if product and product.category_id:
+                        # Utiliser le taux spécifique à la catégorie
+                        category_rate = get_category_commission_rate(product.category_id, default_commission_rate)
+                    else:
+                        # Utiliser le taux par défaut si pas de catégorie
+                        category_rate = default_commission_rate
+                    
+                    # Calculer la commission sur le sous-total de cet item
+                    item_commission = item.subtotal * category_rate
+                    order_commission += item_commission
+                    
+                except Exception as e:
+                    print(f"Erreur lors du calcul de commission admin pour l'item {item.id}: {e}")
+                    # Fallback sur l'ancien calcul
+                    item_commission = item.subtotal * default_commission_rate
+                    order_commission += item_commission
+            
+            total_commission_fees += order_commission
+        
+        return total_commission_fees
+        
+    except Exception as e:
+        print(f"Erreur lors du calcul des commissions admin: {e}")
+        return 0
+
+# Fonction pour obtenir le taux de commission par catégorie avec fallback
+def get_category_commission_rate(category_id, default_rate):
+    """
+    Récupère le taux de commission personnalisé pour une catégorie ou utilise le taux par défaut
+    
+    Args:
+        category_id (int): ID de la catégorie
+        default_rate (float): Taux par défaut en décimal (ex: 0.05 pour 5%)
+    
+    Returns:
+        float: Taux de commission en décimal
+    """
+    try:
+        # Chercher le taux personnalisé pour cette catégorie
+        custom_rate = CategoryCommissionRate.query.filter_by(category_id=category_id).first()
+        if custom_rate:
+            return custom_rate.commission_rate / 100  # Convertir en décimal
+        return default_rate
+    except Exception as e:
+        print(f"Erreur lors de la récupération du taux de commission pour la catégorie {category_id}: {e}")
+        return default_rate
+
 # Fonction pour calculer le solde dynamique d'un marchand
 def calculate_merchant_balance(merchant_email):
     """
@@ -2589,8 +2668,31 @@ def calculate_merchant_balance(merchant_email):
                 total_earnings += order_earnings
                 delivered_orders_count += 1
                 
-                # Calculer la commission sur les gains nets
-                order_commission = order_earnings * default_commission_rate
+                # Calculer la commission par item selon la catégorie
+                order_commission = 0
+                
+                # Parcourir chaque item de la commande pour appliquer le bon taux
+                for item in db_order.items:
+                    try:
+                        # Récupérer le produit pour connaître sa catégorie
+                        product = Product.query.get(item.product_id)
+                        if product and product.category_id:
+                            # Utiliser le taux spécifique à la catégorie
+                            category_rate = get_category_commission_rate(product.category_id, default_commission_rate)
+                        else:
+                            # Utiliser le taux par défaut si pas de catégorie
+                            category_rate = default_commission_rate
+                        
+                        # Calculer la commission sur le sous-total de cet item
+                        item_commission = item.subtotal * category_rate
+                        order_commission += item_commission
+                        
+                    except Exception as e:
+                        print(f"Erreur lors du calcul de commission pour l'item {item.id}: {e}")
+                        # Fallback sur l'ancien calcul
+                        item_commission = item.subtotal * default_commission_rate
+                        order_commission += item_commission
+                
                 total_commission_fees += order_commission
         
         # Calculer les retraits depuis la base de données
@@ -2671,11 +2773,31 @@ def calculate_dynamic_shipping_fee(cart_items, cart_total, region=None, shipping
     site_settings = get_all_site_settings()
     free_shipping_threshold = site_settings.get('free_shipping_threshold', 15000)
     
-    # Récupérer les tarifs personnalisés
+    # Récupérer les tarifs personnalisés depuis la table ShippingRate
     try:
-        custom_rates_json = get_site_setting('custom_shipping_rates', '[]')
-        custom_rates = json.loads(custom_rates_json) if custom_rates_json else []
-    except:
+        shipping_rates = ShippingRate.query.filter_by(active=True).all()
+        custom_rates = []
+        for rate in shipping_rates:
+            custom_rates.append({
+                'id': rate.id,
+                'name': rate.name,
+                'rate_type': rate.rate_type,
+                'category_id': rate.category_id,
+                'subcategory_id': rate.subcategory_id,
+                'standard_rate': rate.standard_rate,
+                'express_rate': rate.express_rate,
+                'standard_delivery_days': rate.standard_delivery_days,
+                'standard_delivery_hours': rate.standard_delivery_hours,
+                'express_delivery_days': rate.express_delivery_days,
+                'express_delivery_hours': rate.express_delivery_hours,
+                'priority': rate.priority,
+                'active': rate.active,
+                'is_system_default': rate.rate_type == 'default',
+                'created_at': rate.created_at.strftime('%Y-%m-%d %H:%M:%S.%f') if rate.created_at else None,
+                'updated_at': rate.updated_at.strftime('%Y-%m-%d %H:%M:%S.%f') if rate.updated_at else None
+            })
+    except Exception as e:
+        print(f"Erreur lors du chargement des tarifs ShippingRate: {e}")
         custom_rates = []
     
     # Analyser les catégories des produits dans le panier
@@ -2697,53 +2819,78 @@ def calculate_dynamic_shipping_fee(cart_items, cart_total, region=None, shipping
             if product.get('subcategory_id'):
                 subcategories_in_cart.add(product['subcategory_id'])
     
-    # Trouver le tarif le plus approprié avec priorité:
-    # 1. Sous-catégorie spécifique (priorité la plus haute)
-    # 2. Catégorie
-    # 3. Tarif par défaut
+    # Trouver le tarif le plus élevé parmi tous les tarifs applicables
+    # 1. Collecter d'abord tous les tarifs spécifiques (catégorie/sous-catégorie)
+    # 2. Si aucun tarif spécifique, utiliser le tarif par défaut
+    # 3. Si plusieurs tarifs spécifiques, prendre le plus élevé
     
-    selected_rate = None
-    rate_priority = 0  # Plus le chiffre est élevé, plus la priorité est haute
+    specific_rates = []  # Tarifs spécifiques (catégorie/sous-catégorie)
+    default_rates = []   # Tarifs par défaut
     
     for rate in custom_rates:
         if not rate.get('active', True):
             continue
             
-        current_priority = 0
         matches = False
+        rate_type = ""
+        is_specific = False
         
         # Vérifier les sous-catégories (priorité la plus haute)
         if rate.get('rate_type') == 'subcategory' and rate.get('subcategory_id'):
             if rate['subcategory_id'] in subcategories_in_cart:
-                current_priority = 3
                 matches = True
+                rate_type = "subcategory"
+                is_specific = True
         
         # Vérifier les catégories
         elif rate.get('rate_type') == 'category' and rate.get('category_id'):
             if rate['category_id'] in categories_in_cart:
-                current_priority = 2
                 matches = True
+                rate_type = "category"
+                is_specific = True
         
         # Tarif par défaut (système)
         elif rate.get('is_system_default', False):
-            current_priority = 1
             matches = True
+            rate_type = "default"
+            is_specific = False
         
-        # Prendre le tarif avec la plus haute priorité
-        if matches and current_priority > rate_priority:
-            selected_rate = rate
-            rate_priority = current_priority
+        if matches:
+            # Calculer le prix pour ce tarif selon le type de livraison
+            if shipping_type == 'express':
+                rate_price = rate.get('express_rate', rate.get('standard_rate', 0) + 1000)
+            else:
+                rate_price = rate.get('standard_rate', 0)
+            
+            rate_info = {
+                'rate': rate,
+                'price': rate_price,
+                'type': rate_type
+            }
+            
+            if is_specific:
+                specific_rates.append(rate_info)
+            else:
+                default_rates.append(rate_info)
+    
+    # Choisir les tarifs à utiliser : spécifiques en priorité, sinon par défaut
+    applicable_rates = specific_rates if specific_rates else default_rates
+    
+    # Trier par prix décroissant puis par priorité (subcategory > category > default)
+    priority_order = {'subcategory': 3, 'category': 2, 'default': 1}
+    applicable_rates.sort(key=lambda x: (x['price'], priority_order.get(x['type'], 0)), reverse=True)
+    
+    # Prendre le tarif avec le prix le plus élevé
+    selected_rate = applicable_rates[0]['rate'] if applicable_rates else None
+    selected_price = applicable_rates[0]['price'] if applicable_rates else None
     
     # Si aucun tarif trouvé, utiliser les paramètres par défaut
     if not selected_rate:
         default_shipping_fee = site_settings.get('shipping_fee', 1500)
         shipping_fee = default_shipping_fee + (1000 if shipping_type == 'express' else 0)
     else:
-        # Utiliser le tarif sélectionné
-        if shipping_type == 'express':
-            shipping_fee = selected_rate.get('express_rate', selected_rate['standard_rate'] + 1000)
-        else:
-            shipping_fee = selected_rate['standard_rate']
+        # Utiliser le prix calculé (déjà selon le type de livraison)
+        shipping_fee = selected_price
     
     # Vérifier si la livraison est gratuite selon le seuil global
     is_free_shipping = cart_total >= free_shipping_threshold
@@ -2760,7 +2907,9 @@ def calculate_dynamic_shipping_fee(cart_items, cart_total, region=None, shipping
         'selected_rate': selected_rate,
         'categories_analyzed': list(categories_in_cart),
         'subcategories_analyzed': list(subcategories_in_cart),
-        'rate_priority': rate_priority
+        'rate_priority': len(specific_rates) if specific_rates else len(default_rates),  # Nombre de tarifs applicables
+        'selected_price': selected_price,
+        'all_applicable_rates': [r['price'] for r in applicable_rates]  # Debug: tous les prix trouvés
     }
 
 def calculate_shipping_fee(cart_total, region=None, shipping_type='standard'):
@@ -3022,6 +3171,60 @@ def release_reserved_stock(reserved_items):
             success = False
     
     return success
+
+def check_product_stock_availability(product_id, requested_quantity):
+    """
+    Vérifie si un produit a suffisamment de stock pour la quantité demandée
+    
+    Args:
+        product_id (int): ID du produit
+        requested_quantity (int): Quantité demandée
+    
+    Returns:
+        dict: {
+            'available': bool,
+            'current_stock': int,
+            'requested': int,
+            'message': str
+        }
+    """
+    try:
+        # Récupérer le produit depuis la base de données
+        product_record = Product.query.filter_by(id=product_id).first()
+        
+        if not product_record:
+            return {
+                'available': False,
+                'current_stock': 0,
+                'requested': requested_quantity,
+                'message': 'Produit non trouvé'
+            }
+        
+        current_stock = product_record.stock or 0
+        
+        if current_stock < requested_quantity:
+            return {
+                'available': False,
+                'current_stock': current_stock,
+                'requested': requested_quantity,
+                'message': f'Stock insuffisant. Disponible: {current_stock}, Demandé: {requested_quantity}'
+            }
+        
+        return {
+            'available': True,
+            'current_stock': current_stock,
+            'requested': requested_quantity,
+            'message': 'Stock suffisant'
+        }
+        
+    except Exception as e:
+        print(f"Erreur lors de la vérification du stock pour le produit {product_id}: {e}")
+        return {
+            'available': False,
+            'current_stock': 0,
+            'requested': requested_quantity,
+            'message': f'Erreur lors de la vérification: {str(e)}'
+        }
 
 def release_stock(order_items):
     """
@@ -3795,6 +3998,86 @@ def get_payment_method_info(payment_method):
         'color': 'secondary'
     })
 
+def generate_slug(text):
+    """Génère un slug à partir d'un texte"""
+    import re
+    import unicodedata
+    
+    # Convertir en minuscules et normaliser les caractères unicode
+    slug = unicodedata.normalize('NFKD', text.lower())
+    
+    # Remplacer les caractères spéciaux
+    slug = re.sub(r'[àáâãäå]', 'a', slug)
+    slug = re.sub(r'[èéêë]', 'e', slug)
+    slug = re.sub(r'[ìíîï]', 'i', slug)
+    slug = re.sub(r'[òóôõö]', 'o', slug)
+    slug = re.sub(r'[ùúûü]', 'u', slug)
+    slug = re.sub(r'[ýÿ]', 'y', slug)
+    slug = re.sub(r'[ç]', 'c', slug)
+    slug = re.sub(r'[ñ]', 'n', slug)
+    
+    # Remplacer les espaces et caractères non alphanumériques par des tirets
+    slug = re.sub(r'[^a-z0-9]+', '-', slug)
+    
+    # Supprimer les tirets en début et fin
+    slug = slug.strip('-')
+    
+    return slug
+
+def get_commission_rate_for_product(product_id):
+    """Récupère le taux de commission applicable pour un produit donné"""
+    try:
+        # Récupérer le produit et sa catégorie
+        from models import Product
+        product = Product.query.get(product_id)
+        
+        if not product or not product.category_id:
+            # Utiliser le taux par défaut si pas de catégorie
+            site_settings = get_site_settings()
+            return float(site_settings.get('commission_rate', 15.0)) / 100
+        
+        # Chercher un taux spécifique pour cette catégorie
+        category_rate = CategoryCommissionRate.query.filter_by(
+            category_id=product.category_id,
+            active=True
+        ).first()
+        
+        if category_rate:
+            return float(category_rate.commission_rate) / 100
+        
+        # Utiliser le taux par défaut
+        site_settings = get_site_settings()
+        return float(site_settings.get('commission_rate', 15.0)) / 100
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération du taux de commission: {e}")
+        # Retourner le taux par défaut en cas d'erreur
+        return 0.15  # 15%
+
+def get_commission_rate_for_category(category_id):
+    """Récupère le taux de commission pour une catégorie donnée"""
+    try:
+        if not category_id:
+            site_settings = get_site_settings()
+            return float(site_settings.get('commission_rate', 15.0)) / 100
+        
+        # Chercher un taux spécifique pour cette catégorie
+        category_rate = CategoryCommissionRate.query.filter_by(
+            category_id=category_id,
+            active=True
+        ).first()
+        
+        if category_rate:
+            return float(category_rate.commission_rate) / 100
+        
+        # Utiliser le taux par défaut
+        site_settings = get_site_settings()
+        return float(site_settings.get('commission_rate', 15.0)) / 100
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération du taux de commission pour la catégorie: {e}")
+        return 0.15  # 15%
+
 def get_categories_for_display():
     """Récupère les catégories actives pour l'affichage sur la page d'accueil (maximum 4)"""
     try:
@@ -3803,6 +4086,9 @@ def get_categories_for_display():
         
         categories_list = []
         for category in categories:
+            # Générer un slug pour la catégorie
+            category_slug = generate_slug(category.name)
+            
             # Générer une image par défaut basée sur le nom de la catégorie
             category_image = generate_category_image(category.name, category.id)
             
@@ -3812,7 +4098,7 @@ def get_categories_for_display():
                 'description': category.description or f'Découvrez nos produits {category.name.lower()}',
                 'image': category_image,
                 'icon': category.icon or 'fas fa-folder',
-                'url': f'/products?category_filter={category.id}'
+                'url': f'/category/{category_slug}'
             })
         
         return categories_list
@@ -4155,12 +4441,8 @@ def search_suggestions():
 
 @app.route('/products')
 def products():
-    # Récupérer seulement les catégories actives pour l'affichage public
-    active_categories_dict = get_active_categories()
-    categories = [
-        {'id': cat_id, 'name': cat['name']} 
-        for cat_id, cat in active_categories_dict.items()
-    ]
+    # Récupérer les catégories avec leurs sous-catégories pour l'affichage public
+    categories = get_categories_with_subcategories()
     
     # Extended product list for products page - Now uses public products (from active categories)
     all_products = get_public_products()
@@ -4168,6 +4450,7 @@ def products():
     # Récupérer les paramètres de filtrage et de pagination
     search_query = request.args.get('q', '').lower()
     category_filters = request.args.getlist('category_filter')
+    subcategory_filters = request.args.getlist('subcategory_filter')
     min_price = request.args.get('min_price', '')
     max_price = request.args.get('max_price', '')
     in_stock = request.args.get('in_stock', '')
@@ -4202,6 +4485,11 @@ def products():
     if category_filters:
         category_ids = [int(cat_id) for cat_id in category_filters]
         filtered_products = [p for p in filtered_products if p['category_id'] in category_ids]
+    
+    # Filtrer par sous-catégorie
+    if subcategory_filters:
+        subcategory_ids = [int(subcat_id) for subcat_id in subcategory_filters]
+        filtered_products = [p for p in filtered_products if p.get('subcategory_id') in subcategory_ids]
     # Filtrer par prix
     if min_price is not None:
         filtered_products = [p for p in filtered_products if p['price'] >= min_price]
@@ -4655,12 +4943,8 @@ def search():
     category = request.args.get('category', '')
     sort_option = request.args.get('sort', 'default')  # Récupérer l'option de tri
     
-    # Récupérer toutes les catégories actives (même logique que la route products)
-    active_categories_dict = get_active_categories()
-    categories = [
-        {'id': cat_id, 'name': cat['name']} 
-        for cat_id, cat in active_categories_dict.items()
-    ]
+    # Récupérer les catégories avec leurs sous-catégories pour l'affichage public
+    categories = get_categories_with_subcategories()
     
     # Récupérer tous les produits publics
     all_products = get_public_products()
@@ -4729,50 +5013,93 @@ def category(category_slug, subcategory_slug=None):
         flash('La section alimentation a été intégrée dans la page produits générale.', 'info')
         return redirect(url_for('products'))
     
-    # Structure des catégories et sous-catégories
-    categories_structure = {}
-    
-    # Vérifier si la catégorie principale existe
-    if category_slug not in categories_structure:
-        return render_template('404.html'), 404
-    
-    current_category = categories_structure[category_slug]
-    current_subcategory = None
-    
-    # Vérifier si une sous-catégorie a été spécifiée et existe
-    if subcategory_slug:
-        if subcategory_slug not in current_category['subcategories']:
+    try:
+        # Récupérer les catégories et sous-catégories depuis la base de données
+        categories_records = Category.query.filter_by(active=True).all()
+        subcategories_records = Subcategory.query.filter_by(active=True).all()
+        
+        # Créer la structure des catégories avec leurs sous-catégories
+        categories_structure = {}
+        
+        # D'abord, ajouter toutes les catégories
+        for cat in categories_records:
+            cat_slug = generate_slug(cat.name)
+            categories_structure[cat_slug] = {
+                'id': cat.id,
+                'name': cat.name,
+                'slug': cat_slug,
+                'subcategories': {}
+            }
+        
+        # Ensuite, ajouter les sous-catégories à leurs catégories parentes
+        for subcat in subcategories_records:
+            parent_cat = next((cat for cat in categories_records if cat.id == subcat.category_id), None)
+            if parent_cat:
+                parent_slug = generate_slug(parent_cat.name)
+                subcat_slug = generate_slug(subcat.name)
+                if parent_slug in categories_structure:
+                    categories_structure[parent_slug]['subcategories'][subcat_slug] = {
+                        'id': subcat.id,
+                        'name': subcat.name,
+                        'slug': subcat_slug,
+                        'category_id': subcat.category_id
+                    }
+        
+        # Vérifier si la catégorie principale existe
+        if category_slug not in categories_structure:
+            print(f"❌ Catégorie non trouvée: {category_slug}")
             return render_template('404.html'), 404
-        current_subcategory = current_category['subcategories'][subcategory_slug]
-    
-    # Liste de toutes les catégories pour les menus
-    categories = []
-    for slug, cat in categories_structure.items():
-        categories.append({
-            'id': cat['id'], 
-            'name': cat['name'], 
-            'slug': slug
-        })
-    
-    # Simuler des produits pour la catégorie/sous-catégorie (dans une application réelle, vous les récupéreriez de la base de données)
-    all_products = get_all_products()
-    
-    # Filtrer les produits selon la catégorie/sous-catégorie
-    if subcategory_slug:
-        filtered_products = [p for p in all_products if p.get('subcategory_id') == current_subcategory['id']]
-        page_title = f"{current_subcategory['name']} - {current_category['name']}"
-    else:
-        filtered_products = [p for p in all_products if p.get('category_id') == current_category['id']]
-        page_title = current_category['name']
-    
-    return render_template(
-        'products.html',
-        products=filtered_products,
-        categories=categories,
-        current_category=current_category,
-        current_subcategory=current_subcategory,
-        title=f"{page_title} - DOUKA KM"
-    )
+        
+        current_category = categories_structure[category_slug]
+        current_subcategory = None
+        
+        # Vérifier si une sous-catégorie a été spécifiée et existe
+        if subcategory_slug:
+            if subcategory_slug not in current_category['subcategories']:
+                print(f"❌ Sous-catégorie non trouvée: {subcategory_slug} dans {category_slug}")
+                return render_template('404.html'), 404
+            current_subcategory = current_category['subcategories'][subcategory_slug]
+        
+        # Liste de toutes les catégories pour les menus
+        categories = []
+        for slug, cat in categories_structure.items():
+            categories.append({
+                'id': cat['id'], 
+                'name': cat['name'], 
+                'slug': slug
+            })
+        
+        # Récupérer tous les produits
+        all_products = get_all_products()
+        
+        # Filtrer les produits selon la catégorie/sous-catégorie
+        if subcategory_slug and current_subcategory:
+            # Filtrer par sous-catégorie
+            filtered_products = [p for p in all_products if p.get('subcategory_id') == current_subcategory['id']]
+            page_title = f"{current_subcategory['name']} - {current_category['name']}"
+            print(f"🔍 Filtrage par sous-catégorie {current_subcategory['id']}: {len(filtered_products)} produits trouvés")
+        else:
+            # Filtrer par catégorie
+            filtered_products = [p for p in all_products if p.get('category_id') == current_category['id']]
+            page_title = current_category['name']
+            print(f"🔍 Filtrage par catégorie {current_category['id']}: {len(filtered_products)} produits trouvés")
+        
+        print(f"✅ Affichage de {len(filtered_products)} produits pour {page_title}")
+        
+        return render_template(
+            'products.html',
+            products=filtered_products,
+            categories=categories,
+            current_category=current_category,
+            current_subcategory=current_subcategory,
+            title=f"{page_title} - DOUKA KM"
+        )
+        
+    except Exception as e:
+        print(f"❌ Erreur dans la fonction category: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return render_template('404.html'), 404
 
 # Ajout d'une route pour le favicon.svg
 @app.route('/favicon.svg')
@@ -5431,6 +5758,19 @@ def add_to_cart(product_id):
     # Option pour gérer la redirection
     should_redirect = request.form.get('redirect', 'false') == 'true'
     
+    # ✅ NOUVEAU: Vérifier le stock avant d'ajouter au panier
+    stock_check = check_product_stock_availability(int(product_id), quantity)
+    if not stock_check['available']:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': False, 
+                'message': stock_check['message'],
+                'stock_error': True,
+                'available_stock': stock_check['current_stock']
+            })
+        flash(stock_check['message'], 'error')
+        return redirect(url_for('product_detail', product_id=product_id))
+    
     # Récupération des options du produit (couleur, taille, etc.)
     options = {}
     try:
@@ -5801,15 +6141,24 @@ def checkout():
     if shipping_info.get('selected_rate'):
         rate_data = shipping_info['selected_rate']
         standard_days = rate_data.get('standard_delivery_days', 3)
+        standard_hours = rate_data.get('standard_delivery_hours', 0)
         express_days = rate_data.get('express_delivery_days', 1)
+        express_hours = rate_data.get('express_delivery_hours', 0)
         
-        # Formatage des durées pour l'affichage
-        if standard_days == 1:
+        # Formatage des durées pour l'affichage - Standard
+        if standard_days == 0 and standard_hours > 0:
+            standard_label = f"Standard ({standard_hours}h)"
+        elif standard_days == 0:
+            standard_label = "Standard (même jour)"
+        elif standard_days == 1:
             standard_label = "Standard (24h)"
         else:
             standard_label = f"Standard ({standard_days} jours)"
             
-        if express_days == 0:
+        # Formatage des durées pour l'affichage - Express
+        if express_days == 0 and express_hours > 0:
+            express_label = f"Express ({express_hours}h)"
+        elif express_days == 0:
             express_label = "Express (même jour)"
         elif express_days == 1:
             express_label = "Express (24-48h)"
@@ -5820,21 +6169,33 @@ def checkout():
         standard_label = "Standard (3 jours)"
         express_label = "Express (24-48h)"
     
+    # Calculer les tarifs basés sur les produits du panier
+    calculated_shipping = calculate_dynamic_shipping_fee(cart_items, cart_total, None, 'standard')
+    standard_shipping_cost = calculated_shipping.get('shipping_fee', default_rates.get('standard', site_settings['shipping_fee']))
+    
+    calculated_express = calculate_dynamic_shipping_fee(cart_items, cart_total, None, 'express')
+    express_shipping_cost = calculated_express.get('shipping_fee', default_rates.get('express', site_settings['shipping_fee'] * 2))
+    
     # Options de livraison avec prix et durées dynamiques
     shipping_options = [
         {
             'id': 1, 
             'name': standard_label, 
             'type': 'standard',
-            'price': default_rates.get('standard', site_settings['shipping_fee'])
+            'price': standard_shipping_cost
         },
         {
             'id': 2, 
             'name': express_label, 
             'type': 'express',
-            'price': default_rates.get('express', site_settings['shipping_fee'] * 2)
+            'price': express_shipping_cost
         }
     ]
+    
+    # Debug: Afficher les options de livraison préparées
+    print("🚚 DEBUG CHECKOUT - Options de livraison:")
+    for option in shipping_options:
+        print(f"   - {option['name']}: {option['price']} KMF")
     
     # Préparer les tarifs par région pour JavaScript
     regional_rates = {}
@@ -5916,6 +6277,367 @@ def api_shipping_rates():
             'success': False,
             'error': str(e)
         }), 400
+
+def optimize_shipping_fees_for_multiple_orders(merchant_groups, shipping_info, shipping_fee):
+    """
+    Optimise les frais de livraison pour plusieurs commandes d'un même client
+    Applique les frais les plus élevés à une seule commande, 0 aux autres
+    
+    Args:
+        merchant_groups (dict): Groupes de produits par marchand
+        shipping_info (dict): Informations de livraison calculées
+        shipping_fee (float): Frais de livraison calculés
+    
+    Returns:
+        dict: Dictionnaire avec merchant_email -> shipping_fee optimisé
+    """
+    optimized_fees = {}
+    
+    # Si une seule commande, pas d'optimisation nécessaire
+    if len(merchant_groups) <= 1:
+        for merchant_email in merchant_groups.keys():
+            optimized_fees[merchant_email] = shipping_fee
+        return optimized_fees
+    
+    # Pour plusieurs commandes, appliquer les frais au marchand avec le montant le plus élevé
+    print(f"🚚 OPTIMISATION LIVRAISON: {len(merchant_groups)} commandes détectées")
+    
+    # Calculer le total par marchand pour déterminer qui paie les frais
+    merchant_totals = {}
+    for merchant_email, products in merchant_groups.items():
+        total = sum(product['subtotal'] for product in products)
+        merchant_totals[merchant_email] = total
+        print(f"   - {merchant_email}: {total} KMF")
+    
+    # Trouver le marchand avec le montant le plus élevé
+    highest_merchant = max(merchant_totals.items(), key=lambda x: x[1])
+    highest_merchant_email = highest_merchant[0]
+    highest_amount = highest_merchant[1]
+    
+    print(f"🎯 Frais de livraison ({shipping_fee} KMF) appliqués à {highest_merchant_email} (montant le plus élevé: {highest_amount} KMF)")
+    
+    # Assigner les frais
+    for merchant_email in merchant_groups.keys():
+        if merchant_email == highest_merchant_email:
+            optimized_fees[merchant_email] = shipping_fee
+            print(f"   ✅ {merchant_email}: {shipping_fee} KMF")
+        else:
+            optimized_fees[merchant_email] = 0
+            print(f"   💰 {merchant_email}: 0 KMF (économie)")
+    
+    return optimized_fees
+
+def calculate_max_delivery_times_for_cart(cart_items):
+    """
+    Calcule les délais de livraison maximaux pour un panier donné
+    
+    Args:
+        cart_items: Liste des articles du panier
+    
+    Returns:
+        dict: {
+            'max_standard_days': int,
+            'max_standard_hours': int, 
+            'max_express_days': int,
+            'max_express_hours': int,
+            'standard_label': str,
+            'express_label': str
+        }
+    """
+    max_standard_days = 0
+    max_standard_hours = 0
+    max_express_days = 0
+    max_express_hours = 0
+    
+    # Analyser chaque produit du panier
+    for item in cart_items:
+        # Récupérer l'ID du produit
+        product_id = item.get('original_product_id', item.get('product_id'))
+        if isinstance(product_id, str):
+            try:
+                if product_id.startswith('product_'):
+                    product_id = int(product_id.replace('product_', ''))
+                else:
+                    product_id = int(product_id.split('_')[0])
+            except:
+                continue
+        
+        try:
+            # Récupérer le produit et sa catégorie
+            product = Product.query.get(product_id)
+            if not product:
+                continue
+            
+            # Chercher le tarif spécifique pour ce produit
+            rate = None
+            
+            # Sous-catégorie en priorité
+            if product.subcategory_id:
+                rate = ShippingRate.query.filter_by(
+                    rate_type='subcategory',
+                    subcategory_id=product.subcategory_id,
+                    active=True
+                ).first()
+            
+            # Catégorie si pas de sous-catégorie
+            if not rate and product.category_id:
+                rate = ShippingRate.query.filter_by(
+                    rate_type='category',
+                    category_id=product.category_id,
+                    active=True
+                ).first()
+            
+            # Tarif par défaut si pas de tarif spécifique
+            if not rate:
+                rate = ShippingRate.query.filter_by(
+                    rate_type='default',
+                    active=True
+                ).first()
+            
+            if rate:
+                # Comparer les délais standard
+                std_days = rate.standard_delivery_days or 0
+                std_hours = rate.standard_delivery_hours or 0
+                
+                # Convertir tout en heures pour comparer
+                total_std_hours = (std_days * 24) + std_hours
+                max_total_std_hours = (max_standard_days * 24) + max_standard_hours
+                
+                if total_std_hours > max_total_std_hours:
+                    max_standard_days = std_days
+                    max_standard_hours = std_hours
+                
+                # Comparer les délais express
+                exp_days = rate.express_delivery_days or 0
+                exp_hours = rate.express_delivery_hours or 0
+                
+                total_exp_hours = (exp_days * 24) + exp_hours
+                max_total_exp_hours = (max_express_days * 24) + max_express_hours
+                
+                if total_exp_hours > max_total_exp_hours:
+                    max_express_days = exp_days
+                    max_express_hours = exp_hours
+                    
+        except Exception as e:
+            print(f"Erreur lors du calcul des délais pour produit {product_id}: {e}")
+            continue
+    
+    # Si aucun délai trouvé, utiliser les valeurs par défaut
+    if max_standard_days == 0 and max_standard_hours == 0:
+        max_standard_days = 3
+    if max_express_days == 0 and max_express_hours == 0:
+        max_express_days = 1
+    
+    # Générer les labels
+    # Standard
+    if max_standard_days == 0 and max_standard_hours > 0:
+        standard_label = f"Standard ({max_standard_hours}h)"
+    elif max_standard_days == 0:
+        standard_label = "Standard (même jour)"
+    elif max_standard_days == 1:
+        standard_label = "Standard (24h)"
+    else:
+        standard_label = f"Standard ({max_standard_days} jours)"
+    
+    # Express
+    if max_express_days == 0 and max_express_hours > 0:
+        express_label = f"Express ({max_express_hours}h)"
+    elif max_express_days == 0:
+        express_label = "Express (même jour)"
+    elif max_express_days == 1:
+        express_label = "Express (24-48h)"
+    else:
+        express_label = f"Express ({max_express_days} jours)"
+    
+    return {
+        'max_standard_days': max_standard_days,
+        'max_standard_hours': max_standard_hours,
+        'max_express_days': max_express_days,
+        'max_express_hours': max_express_hours,
+        'standard_label': standard_label,
+        'express_label': express_label
+    }
+
+
+def calculate_product_shipping_method(product_id, shipping_type='standard'):
+    """
+    Calcule le mode de livraison spécifique pour un produit donné
+    
+    Args:
+        product_id: ID du produit
+        shipping_type: 'standard' ou 'express'
+    
+    Returns:
+        str: Mode de livraison formaté (ex: "Standard (7h)", "Express (3h)")
+    """
+    try:
+        # Récupérer le produit et sa catégorie
+        product = Product.query.get(product_id)
+        if not product:
+            return f"{shipping_type.title()} (délai inconnu)"
+        
+        # Chercher un tarif spécifique pour la sous-catégorie d'abord
+        rate = None
+        if product.subcategory_id:
+            rate = ShippingRate.query.filter_by(
+                rate_type='subcategory',
+                subcategory_id=product.subcategory_id,
+                active=True
+            ).first()
+        
+        # Si pas de tarif sous-catégorie, chercher par catégorie
+        if not rate and product.category_id:
+            rate = ShippingRate.query.filter_by(
+                rate_type='category',
+                category_id=product.category_id,
+                active=True
+            ).first()
+        
+        # Si pas de tarif spécifique, utiliser le tarif par défaut
+        if not rate:
+            rate = ShippingRate.query.filter_by(
+                rate_type='default',
+                active=True
+            ).first()
+        
+        if not rate:
+            # Fallback ultime
+            return f"{shipping_type.title()} (délai non configuré)"
+        
+        # Récupérer les délais selon le type de livraison
+        if shipping_type == 'express':
+            days = rate.express_delivery_days or 0
+            hours = rate.express_delivery_hours or 0
+        else:
+            days = rate.standard_delivery_days or 0
+            hours = rate.standard_delivery_hours or 0
+        
+        # Formater le label
+        if days == 0 and hours > 0:
+            return f"{shipping_type.title()} ({hours}h)"
+        elif days == 0:
+            return f"{shipping_type.title()} (même jour)"
+        elif days == 1:
+            return f"{shipping_type.title()} (24h)" if shipping_type == 'standard' else f"{shipping_type.title()} (24-48h)"
+        else:
+            return f"{shipping_type.title()} ({days} jours)"
+            
+    except Exception as e:
+        print(f"Erreur calcul shipping method pour produit {product_id}: {e}")
+        return f"{shipping_type.title()} (erreur)"
+
+
+def calculate_delivery_details(shipping_method, cart_items):
+    """
+    Calcule les délais de livraison selon le mode choisi et les produits du panier
+    
+    Args:
+        shipping_method (str): Mode de livraison choisi (ex: "Standard (3 jours)", "Express (24-48h)")
+        cart_items (list): Liste des produits du panier
+    
+    Returns:
+        dict: Délais calculés avec delivery_days, delivery_hours, estimated_delivery_date
+    """
+    from datetime import datetime, timedelta
+    from models import ShippingRate, Product, Category, Subcategory
+    
+    # Déterminer le type de livraison (standard ou express)
+    shipping_type = 'express' if 'express' in shipping_method.lower() or 'rapide' in shipping_method.lower() else 'standard'
+    
+    print(f"🚚 CALCUL DÉLAIS: Mode={shipping_method}, Type={shipping_type}")
+    
+    # Analyser les produits pour trouver les tarifs applicables
+    max_delivery_days = 0
+    max_delivery_hours = 0
+    applicable_rates = []
+    
+    for item in cart_items:
+        # Récupérer l'ID du produit original
+        product_id = item.get('original_product_id', item.get('product_id'))
+        if isinstance(product_id, str):
+            try:
+                if product_id.startswith('f_'):
+                    product_id = int(product_id[2:].split('_')[0])
+                else:
+                    product_id = int(product_id.split('_')[0])
+            except:
+                continue
+        
+        # Récupérer le produit et ses catégories
+        try:
+            product = Product.query.get(product_id)
+            if product:
+                # Chercher un tarif spécifique pour la sous-catégorie
+                if product.subcategory_id:
+                    rate = ShippingRate.query.filter_by(
+                        rate_type='subcategory',
+                        subcategory_id=product.subcategory_id,
+                        active=True
+                    ).first()
+                    if rate:
+                        applicable_rates.append(rate)
+                        continue
+                
+                # Chercher un tarif pour la catégorie
+                if product.category_id:
+                    rate = ShippingRate.query.filter_by(
+                        rate_type='category',
+                        category_id=product.category_id,
+                        active=True
+                    ).first()
+                    if rate:
+                        applicable_rates.append(rate)
+                        continue
+        except Exception as e:
+            print(f"Erreur lors de la récupération du produit {product_id}: {e}")
+    
+    # Si aucun tarif spécifique, utiliser le tarif par défaut
+    if not applicable_rates:
+        default_rate = ShippingRate.query.filter_by(
+            rate_type='default',
+            active=True
+        ).first()
+        if default_rate:
+            applicable_rates.append(default_rate)
+    
+    # Calculer les délais maximaux (le plus long délai l'emporte)
+    for rate in applicable_rates:
+        if shipping_type == 'express':
+            days = rate.express_delivery_days or 1
+            hours = rate.express_delivery_hours or 0
+        else:
+            days = rate.standard_delivery_days or 3
+            hours = rate.standard_delivery_hours or 0
+        
+        # Prendre le délai le plus long
+        if days > max_delivery_days or (days == max_delivery_days and hours > max_delivery_hours):
+            max_delivery_days = days
+            max_delivery_hours = hours
+        
+        print(f"   Tarif {rate.name}: {days}j {hours}h")
+    
+    # Valeurs par défaut si aucun tarif trouvé
+    if max_delivery_days == 0:
+        if shipping_type == 'express':
+            max_delivery_days = 1
+        else:
+            max_delivery_days = 3
+    
+    # Calculer la date estimée de livraison
+    estimated_date = datetime.now() + timedelta(days=max_delivery_days, hours=max_delivery_hours)
+    
+    # Exclure les week-ends (optionnel)
+    while estimated_date.weekday() >= 5:  # 5=Samedi, 6=Dimanche
+        estimated_date += timedelta(days=1)
+    
+    print(f"✅ DÉLAIS CALCULÉS: {max_delivery_days} jours, {max_delivery_hours} heures")
+    print(f"   Date estimée: {estimated_date.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    return {
+        'delivery_days': max_delivery_days,
+        'delivery_hours': max_delivery_hours,
+        'estimated_delivery_date': estimated_date
+    }
 
 @app.route('/complete-order', methods=['POST'])
 @login_required  # Exiger que l'utilisateur soit connecté
@@ -6174,17 +6896,12 @@ def complete_order():
         for j, prod in enumerate(products):
             print(f"  {j+1}. {prod['name']} x{prod['quantity']} = {prod['subtotal']} KMF")
     
-    # Créer des commandes séparées pour chaque marchand
+    
+    # Calculer le total global du panier pour déterminer les frais de livraison et les promos
     import random
     now = datetime.now()
     created_orders = []
     
-    
-    # OBSOLÈTE: Plus besoin d'initialiser orders dans user car nous utilisons la DB
-    # if 'orders' not in user:
-    #     user['orders'] = []
-    
-    # Calculer le total global du panier pour déterminer les frais de livraison et les promos
     cart_total = 0
     for item in checkout_cart:
         # Récupérer l'ID du produit original
@@ -6227,19 +6944,29 @@ def complete_order():
     # Créer un shipping_method descriptif basé sur les informations calculées
     if shipping_info.get('selected_rate'):
         if shipping_type == 'express':
-            delivery_time = shipping_info['selected_rate'].get('express_delivery_days', 1)
-            if delivery_time == 0:
+            delivery_days = shipping_info['selected_rate'].get('express_delivery_days', 1)
+            delivery_hours = shipping_info['selected_rate'].get('express_delivery_hours', 0)
+            
+            if delivery_days == 0 and delivery_hours > 0:
+                shipping_method = f"Express ({delivery_hours}h)"
+            elif delivery_days == 0:
                 shipping_method = "Express (même jour)"
-            elif delivery_time == 1:
+            elif delivery_days == 1:
                 shipping_method = "Express (24-48h)"
             else:
-                shipping_method = f"Express ({delivery_time} jours)"
+                shipping_method = f"Express ({delivery_days} jours)"
         else:
-            delivery_time = shipping_info['selected_rate'].get('standard_delivery_days', 3)
-            if delivery_time == 1:
+            delivery_days = shipping_info['selected_rate'].get('standard_delivery_days', 3)
+            delivery_hours = shipping_info['selected_rate'].get('standard_delivery_hours', 0)
+            
+            if delivery_days == 0 and delivery_hours > 0:
+                shipping_method = f"Standard ({delivery_hours}h)"
+            elif delivery_days == 0:
+                shipping_method = "Standard (même jour)"
+            elif delivery_days == 1:
                 shipping_method = "Standard (24h)"
             else:
-                shipping_method = f"Standard ({delivery_time} jours)"
+                shipping_method = f"Standard ({delivery_days} jours)"
     else:
         # Utilisation des tarifs par défaut
         if shipping_type == 'express':
@@ -6292,8 +7019,18 @@ def complete_order():
             promo_code = None  # Annuler le code promo
             promo_discount = 0
     
+    # **OPTIMISATION LIVRAISON: Calculer les frais optimisés pour commandes multiples**
+    optimized_shipping_fees = optimize_shipping_fees_for_multiple_orders(
+        merchant_groups, shipping_info, shipping_fee
+    )
+    
     # **NOUVELLE VERSION: Créer les commandes en base de données pour chaque marchand**
     for merchant_email, products in merchant_groups.items():
+        # Récupérer les frais de livraison optimisés pour ce marchand
+        merchant_shipping_fee = optimized_shipping_fees.get(merchant_email, 0)
+        
+        print(f"💳 COMMANDE {merchant_email}: Frais de livraison = {merchant_shipping_fee} KMF")
+        
         # Calculer le total pour ce marchand
         total = sum(product['subtotal'] for product in products)
         
@@ -6321,7 +7058,7 @@ def complete_order():
                     elif promo_record.type == 'fixed':
                         applied_discount = min(promo_record.value, eligible_total)
         
-        total_with_shipping = total + shipping_fee - applied_discount
+        total_with_shipping = total + merchant_shipping_fee - applied_discount
         
         # **NOUVELLE VERSION: Déterminer le marchand ou créer la commande admin**
         merchant_id = None
@@ -6355,6 +7092,9 @@ def complete_order():
             print(f"   shipping_address: {shipping_address}")
             print(f"   total: {total_with_shipping}")
             
+            # **NOUVEAU: Calculer les délais de livraison selon le mode choisi**
+            delivery_details = calculate_delivery_details(shipping_method, products)
+            
             db_order = create_complete_order(
                 customer_id=customer_id,
                 merchant_id=merchant_id,
@@ -6362,11 +7102,14 @@ def complete_order():
                 shipping_address=shipping_address,
                 shipping_method=shipping_method,
                 payment_method=payment_method,
-                shipping_fee=shipping_fee,
+                shipping_fee=merchant_shipping_fee,
                 discount=applied_discount,
                 promo_code=promo_code if applied_discount > 0 else None,
                 total=total_with_shipping,
-                status='processing'
+                status='processing',
+                delivery_days=delivery_details['delivery_days'],
+                delivery_hours=delivery_details['delivery_hours'],
+                estimated_delivery_date=delivery_details['estimated_delivery_date']
             )
             
             if db_order:
@@ -6404,7 +7147,7 @@ def complete_order():
                         'payment_status': 'pending',
                         'shipping_method': shipping_method,
                         'shipping_address': shipping_address,
-                        'shipping_fee': shipping_fee,
+                        'shipping_fee': merchant_shipping_fee,
                         'discount': applied_discount,
                         'promo_code': promo_code if applied_discount > 0 else None
                     }
@@ -6480,6 +7223,19 @@ def complete_order():
             print(f"✅ Compteur d'utilisation du code promo '{promo_code}' mis à jour")
         else:
             print(f"⚠️ Échec de la mise à jour du compteur pour le code promo '{promo_code}'")
+    
+    # **CORRECTION CRITIQUE: Définir les variables de session pour la page de confirmation**
+    order_ids = [order['id'] for order in created_orders]
+    order_numbers = [order['order_number'] for order in created_orders]
+    
+    session['last_order_ids'] = order_ids
+    session['last_order_numbers'] = order_numbers  
+    session['orders_count'] = len(created_orders)
+    
+    print(f"✅ Variables de session définies pour confirmation:")
+    print(f"   last_order_ids: {order_ids}")
+    print(f"   last_order_numbers: {order_numbers}")
+    print(f"   orders_count: {len(created_orders)}")
     
     # Réponse de succès
     return jsonify({
@@ -8282,21 +9038,19 @@ def admin_dashboard():
     admin_revenue = 0
     
     try:
-        # Le revenu admin = somme de toutes les commissions des marchands livrées
-        merchant_orders_db = Order.query.filter(
-            Order.merchant_id.isnot(None),
-            Order.status.in_(['completed', 'delivered'])
-        ).all()
-        
-        for db_order in merchant_orders_db:
-            order_commission = db_order.total * commission_rate
-            total_commission_fees += order_commission
-        
-        # LE REVENU ADMIN = TOTAL DES COMMISSIONS (pas de commandes admin séparées)
+        # Utiliser le nouveau système de calcul par catégorie
+        total_commission_fees = calculate_admin_commission_revenue()
         admin_revenue = total_commission_fees
         
+        # Compter les commandes pour le log
+        merchant_orders_db = Order.query.filter(
+            Order.merchant_id.isnot(None),
+            Order.status.in_(['completed', 'delivered']),
+            Order.payment_status == 'completed'
+        ).all()
+        
         print(f"✅ Commissions marchands: {total_commission_fees:.2f} KMF depuis {len(merchant_orders_db)} commandes DB")
-        print(f"� REVENU ADMIN = COMMISSIONS: {admin_revenue:.2f} KMF")
+        print(f"💰 REVENU ADMIN = COMMISSIONS: {admin_revenue:.2f} KMF")
         
     except Exception as e:
         print(f"❌ Erreur calcul revenus DB: {e}")
@@ -8475,16 +9229,8 @@ def admin_commission_stats():
         site_settings = get_site_settings()
         commission_rate = site_settings['commission_rate'] / 100
         
-        # 1. Calculer les commissions marchands depuis la base de données
-        merchant_orders_db = Order.query.filter(
-            Order.merchant_id.isnot(None),
-            Order.status.in_(['completed', 'delivered'])
-        ).all()
-        
-        total_commission_fees = 0
-        for db_order in merchant_orders_db:
-            order_commission = db_order.total * commission_rate
-            total_commission_fees += order_commission
+        # 1. Calculer les commissions marchands avec le nouveau système par catégorie
+        total_commission_fees = calculate_admin_commission_revenue()
         
         # 2. Revenu admin = commissions des marchands (logique corrigée)
         admin_revenue = total_commission_fees
@@ -12316,23 +13062,29 @@ def api_get_subcategories_by_category(category_id):
     """API pour récupérer les sous-catégories d'une catégorie donnée"""
     
     print(f"DEBUG API: Requête pour catégorie {category_id}")
-    print(f"DEBUG API: Total sous-catégories en DB: {len(admin_subcategories_db)}")
     
-    subcategories = get_subcategories_by_category(category_id)
-    
-    print(f"DEBUG API: Sous-catégories trouvées pour catégorie {category_id}: {len(subcategories)}")
-    for sub_id, sub in subcategories.items():
-        print(f"DEBUG API:   - {sub['name']} (ID: {sub_id})")
-    
-    subcategories_list = [
-        {'id': sub_id, 'name': sub['name']} 
-        for sub_id, sub in subcategories.items()
-    ]
-    
-    result = {'subcategories': subcategories_list}
-    print(f"DEBUG API: Réponse finale: {result}")
-    
-    return jsonify(result)
+    try:
+        # Utiliser directement la base de données au lieu de admin_subcategories_db
+        subcategories = Subcategory.query.filter_by(category_id=category_id, active=True).all()
+        
+        print(f"DEBUG API: Sous-catégories trouvées pour catégorie {category_id}: {len(subcategories)}")
+        
+        subcategories_list = [
+            {'id': subcat.id, 'name': subcat.name} 
+            for subcat in subcategories
+        ]
+        
+        for subcat in subcategories:
+            print(f"DEBUG API:   - {subcat.name} (ID: {subcat.id})")
+        
+        result = {'subcategories': subcategories_list}
+        print(f"DEBUG API: Réponse finale: {result}")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"DEBUG API: Erreur: {e}")
+        return jsonify({'subcategories': [], 'error': str(e)}), 500
 
 @app.route('/admin/products')
 @admin_required
@@ -14131,6 +14883,94 @@ def admin_settings():
                           site_settings=current_site_settings,
                           system_stats=system_stats)
 
+@app.route('/admin/commission-rates', methods=['GET', 'POST'])
+@permission_required(['super_admin', 'admin'])
+def admin_commission_rates():
+    """Gestion des taux de commission par catégorie"""
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'update_rates':
+            try:
+                # Récupérer toutes les catégories actives
+                categories = Category.query.filter_by(active=True).all()
+                
+                for category in categories:
+                    rate_input = request.form.get(f'rate_{category.id}')
+                    if rate_input:
+                        try:
+                            rate_value = float(rate_input)
+                            if 0 <= rate_value <= 100:
+                                # Chercher un taux existant ou en créer un nouveau
+                                existing_rate = CategoryCommissionRate.query.filter_by(category_id=category.id).first()
+                                
+                                if existing_rate:
+                                    existing_rate.commission_rate = rate_value
+                                    existing_rate.updated_at = datetime.utcnow()
+                                else:
+                                    new_rate = CategoryCommissionRate(
+                                        category_id=category.id,
+                                        commission_rate=rate_value,
+                                        created_by=session.get('admin_email', 'Admin')
+                                    )
+                                    db.session.add(new_rate)
+                            else:
+                                flash(f'Le taux pour {category.name} doit être entre 0 et 100%', 'warning')
+                                continue
+                        except ValueError:
+                            flash(f'Taux invalide pour {category.name}', 'warning')
+                            continue
+                
+                db.session.commit()
+                flash('Taux de commission mis à jour avec succès!', 'success')
+                
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Erreur lors de la mise à jour: {str(e)}', 'danger')
+                
+        elif action == 'reset_rate':
+            category_id = request.form.get('category_id')
+            try:
+                rate = CategoryCommissionRate.query.filter_by(category_id=category_id).first()
+                if rate:
+                    db.session.delete(rate)
+                    db.session.commit()
+                    flash('Taux réinitialisé au taux par défaut', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Erreur lors de la réinitialisation: {str(e)}', 'danger')
+    
+    # Récupérer les données pour l'affichage
+    categories = Category.query.filter_by(active=True).order_by(Category.name).all()
+    
+    # Récupérer les taux existants
+    commission_rates = {}
+    for rate in CategoryCommissionRate.query.all():
+        commission_rates[rate.category_id] = rate
+    
+    # Récupérer le taux par défaut
+    site_settings = get_site_settings()
+    default_rate = site_settings.get('commission_rate', 15.0)
+    
+    # Préparer les données pour le template
+    category_data = []
+    for category in categories:
+        current_rate = commission_rates.get(category.id)
+        category_data.append({
+            'id': category.id,
+            'name': category.name,
+            'description': category.description,
+            'icon': category.icon or 'fas fa-folder',
+            'current_rate': current_rate.commission_rate if current_rate else default_rate,
+            'is_custom': current_rate is not None,
+            'rate_object': current_rate
+        })
+    
+    return render_template('admin/commission_rates.html',
+                          categories=category_data,
+                          default_rate=default_rate)
+
 def format_delivery_time(days, hours):
     """Formater le temps de livraison en texte lisible"""
     if not days and not hours:
@@ -14275,8 +15115,6 @@ def get_or_create_default_shipping_rate():
 @permission_required(['super_admin', 'admin'])
 def admin_shipping_rates():
     """Page de gestion des tarifs de livraison"""
-    admin_email = session.get('admin_email')
-    admin = employees_db.get(admin_email, {})
     
     if request.method == 'POST':
         # Traitement des formulaires POST
@@ -14286,9 +15124,9 @@ def admin_shipping_rates():
         print(f"DEBUG: Données du formulaire = {dict(request.form)}")
         
         if action == 'create':
-            # Ajouter un nouveau tarif
+            # Ajouter un nouveau tarif dans la base de données
             try:
-                import json
+                from models import ShippingRate, db
                 
                 # Récupérer les données du formulaire
                 name = request.form.get('name', '').strip()
@@ -14304,12 +15142,16 @@ def admin_shipping_rates():
                 express_delivery_days = int(request.form.get('express_delivery_days', 1))
                 express_delivery_hours = int(request.form.get('express_delivery_hours', 0))
                 priority = int(request.form.get('priority', 0))
-                active = bool(request.form.get('active'))
+                active = 'active' in request.form  # Correction pour checkbox
                 
                 print(f"DEBUG: Création tarif - type='{rate_type}', cat_id='{category_id}', sub_id='{subcategory_id}'")
-                print(f"DEBUG: Tarifs - standard={standard_rate}, express={express_rate}")
+                print(f"DEBUG: Tarifs - standard={standard_rate}, express={express_rate}, active={active}")
                 
                 # Validation des données
+                if not name:
+                    flash('Le nom du tarif est obligatoire', 'error')
+                    return redirect(url_for('admin_shipping_rates'))
+                
                 if not rate_type:
                     flash('Le type de tarif est obligatoire', 'error')
                     return redirect(url_for('admin_shipping_rates'))
@@ -14318,59 +15160,45 @@ def admin_shipping_rates():
                     flash('Le tarif standard doit être supérieur à 0', 'error')
                     return redirect(url_for('admin_shipping_rates'))
                 
-                # Récupérer les tarifs existants avec gestion d'erreur robuste
-                try:
-                    existing_rates = get_site_setting('custom_shipping_rates', '[]')
-                    if not existing_rates or existing_rates == 'None':
-                        existing_rates = '[]'
-                    custom_rates = json.loads(existing_rates)
-                    print(f"DEBUG: Tarifs existants chargés: {len(custom_rates)} tarifs")
-                except Exception as json_error:
-                    print(f"DEBUG: Erreur chargement tarifs existants: {json_error}")
-                    custom_rates = []
+                if express_rate <= 0:
+                    express_rate = standard_rate + 1000  # Valeur par défaut
                 
                 # Convertir les IDs en int si non vides
                 category_id_int = int(category_id) if category_id and category_id.strip() else None
                 subcategory_id_int = int(subcategory_id) if subcategory_id and subcategory_id.strip() else None
                 
+                # Vérifier qu'une catégorie est spécifiée pour les types 'category'
+                if rate_type == 'category' and not category_id_int:
+                    flash('Une catégorie doit être sélectionnée pour ce type de tarif', 'error')
+                    return redirect(url_for('admin_shipping_rates'))
+                
+                # Vérifier qu'une sous-catégorie est spécifiée pour les types 'subcategory'
+                if rate_type == 'subcategory' and not subcategory_id_int:
+                    flash('Une sous-catégorie doit être sélectionnée pour ce type de tarif', 'error')
+                    return redirect(url_for('admin_shipping_rates'))
+                
                 # Créer le nouveau tarif
-                new_rate = {
-                    'id': len(custom_rates) + 2,  # +2 car ID 1 est réservé au tarif par défaut
-                    'name': name,
-                    'rate_type': rate_type,
-                    'category_id': category_id_int,
-                    'subcategory_id': subcategory_id_int,
-                    'standard_rate': standard_rate,
-                    'express_rate': express_rate if express_rate > 0 else standard_rate + 1000,
-                    'standard_delivery_days': standard_delivery_days,
-                    'standard_delivery_hours': standard_delivery_hours,
-                    'express_delivery_days': express_delivery_days,
-                    'express_delivery_hours': express_delivery_hours,
-                    'priority': priority,
-                    'active': active,
-                    'created_at': str(datetime.now())
-                }
+                new_rate = ShippingRate(
+                    name=name,
+                    rate_type=rate_type,
+                    category_id=category_id_int,
+                    subcategory_id=subcategory_id_int,
+                    standard_rate=standard_rate,
+                    express_rate=express_rate,
+                    standard_delivery_days=standard_delivery_days,
+                    standard_delivery_hours=standard_delivery_hours,
+                    express_delivery_days=express_delivery_days,
+                    express_delivery_hours=express_delivery_hours,
+                    priority=priority,
+                    active=active,
+                    created_by='admin@system.com'
+                )
                 
-                print(f"DEBUG: Nouveau tarif créé: {new_rate}")
+                db.session.add(new_rate)
+                db.session.commit()
                 
-                # Ajouter le nouveau tarif
-                custom_rates.append(new_rate)
-                
-                # Sauvegarder dans les paramètres
-                try:
-                    rates_json = json.dumps(custom_rates)
-                    update_site_setting('custom_shipping_rates', rates_json)
-                    print(f"DEBUG: Tarifs sauvegardés: {len(custom_rates)} tarifs")
-                except Exception as save_error:
-                    print(f"DEBUG: Erreur sauvegarde: {save_error}")
-                    raise save_error
-                
-                # Si c'est un tarif par défaut, mettre à jour aussi shipping_fee
-                if rate_type == 'default':
-                    update_site_setting('shipping_fee', standard_rate)
-                    print(f"DEBUG: Paramètre shipping_fee mis à jour à {standard_rate}")
-                
-                flash('Tarif de livraison créé avec succès !', 'success')
+                print(f"DEBUG: Nouveau tarif créé avec ID: {new_rate.id}")
+                flash(f"Tarif '{name}' créé avec succès !", 'success')
                 
             except ValueError as ve:
                 print(f"DEBUG: Erreur de valeur = {ve}")
@@ -14382,9 +15210,10 @@ def admin_shipping_rates():
                 flash(f'Erreur lors de la création du tarif : {str(e)}', 'error')
                 
         elif action == 'update':
-            # Mettre à jour un tarif existant
+            # Mettre à jour un tarif existant depuis la base de données
             try:
-                import json
+                from models import ShippingRate, db
+                
                 rate_id = int(request.form.get('rate_id', 0))
                 name = request.form.get('name', '').strip()
                 rate_type = request.form.get('rate_type', '').strip()
@@ -14403,51 +15232,36 @@ def admin_shipping_rates():
                 
                 print(f"DEBUG: Mise à jour tarif ID={rate_id}, standard={standard_rate}")
                 
-                # Récupérer les tarifs existants
-                custom_rates_json = get_site_setting('custom_shipping_rates', '[]')
-                try:
-                    custom_rates = json.loads(custom_rates_json) if custom_rates_json else []
-                except:
-                    custom_rates = []
+                # Récupérer le tarif depuis la base de données
+                rate = ShippingRate.query.get(rate_id)
                 
-                # Trouver et mettre à jour le tarif
-                rate_found = False
-                for i, rate in enumerate(custom_rates):
-                    if rate.get('id') == rate_id:
-                        # Préserver le flag système si c'est le tarif par défaut
-                        update_data = {
-                            'name': name,
-                            'rate_type': rate_type,
-                            'standard_rate': standard_rate,
-                            'express_rate': express_rate,
-                            'standard_delivery_days': standard_delivery_days,
-                            'standard_delivery_hours': standard_delivery_hours,
-                            'express_delivery_days': express_delivery_days,
-                            'express_delivery_hours': express_delivery_hours,
-                            'priority': priority,
-                            'active': active,
-                            'category_id': int(category_id) if category_id else None,
-                            'subcategory_id': int(subcategory_id) if subcategory_id else None,
-                            'updated_at': str(datetime.now())
-                        }
-                        
-                        # Préserver les propriétés système
-                        if custom_rates[i].get('is_system_default', False):
-                            update_data['is_system_default'] = True
-                            # Pour le tarif par défaut, mettre à jour aussi les paramètres site
-                            update_site_setting('shipping_fee', standard_rate)
-                        
-                        custom_rates[i].update(update_data)
-                        rate_found = True
-                        print(f"DEBUG: Tarif {rate_id} mis à jour avec succès")
-                        break
-                
-                if rate_found:
-                    # Sauvegarder les modifications
-                    rates_json = json.dumps(custom_rates)
-                    update_site_setting('custom_shipping_rates', rates_json)
-                    flash('Tarif de livraison mis à jour avec succès !', 'success')
+                if rate:
+                    # Mettre à jour les propriétés du tarif
+                    rate.name = name
+                    rate.rate_type = rate_type
+                    rate.standard_rate = standard_rate
+                    rate.express_rate = express_rate
+                    rate.standard_delivery_days = standard_delivery_days
+                    rate.standard_delivery_hours = standard_delivery_hours
+                    rate.express_delivery_days = express_delivery_days
+                    rate.express_delivery_hours = express_delivery_hours
+                    rate.priority = priority
+                    rate.active = active
+                    rate.category_id = int(category_id) if category_id else None
+                    rate.subcategory_id = int(subcategory_id) if subcategory_id else None
+                    rate.updated_at = datetime.now()
+                    
+                    # Si c'est le tarif par défaut, mettre à jour aussi le paramètre site
+                    if rate.rate_type == 'default':
+                        update_site_setting('shipping_fee', standard_rate)
+                    
+                    # Sauvegarder en base de données
+                    db.session.commit()
+                    
+                    print(f"DEBUG: Tarif '{rate.name}' (ID={rate_id}) mis à jour avec succès")
+                    flash(f"Tarif '{rate.name}' mis à jour avec succès !", 'success')
                 else:
+                    print(f"DEBUG: Tarif ID={rate_id} non trouvé en base de données")
                     flash('Tarif non trouvé', 'error')
                 
             except Exception as e:
@@ -14457,41 +15271,31 @@ def admin_shipping_rates():
                 flash(f'Erreur lors de la mise à jour : {str(e)}', 'error')
                 
         elif action == 'delete':
-            # Supprimer un tarif
+            # Supprimer un tarif depuis la base de données
             try:
-                import json
+                from models import ShippingRate, db
+                
                 rate_id = int(request.form.get('rate_id', 0))
                 print(f"DEBUG: Tentative suppression tarif ID={rate_id}")
                 
-                # Récupérer les tarifs existants
-                custom_rates_json = get_site_setting('custom_shipping_rates', '[]')
-                try:
-                    custom_rates = json.loads(custom_rates_json) if custom_rates_json else []
-                except:
-                    custom_rates = []
+                # Récupérer le tarif depuis la base de données
+                rate = ShippingRate.query.get(rate_id)
                 
-                # Vérifier si c'est le tarif par défaut
-                is_system_default = False
-                for rate in custom_rates:
-                    if rate.get('id') == rate_id and rate.get('is_system_default', False):
-                        is_system_default = True
-                        break
-                
-                if is_system_default:
-                    flash('Le tarif par défaut ne peut pas être supprimé, mais il peut être modifié', 'warning')
-                    return redirect(url_for('admin_shipping_rates'))
-                
-                # Supprimer le tarif
-                initial_count = len(custom_rates)
-                custom_rates = [rate for rate in custom_rates if rate.get('id') != rate_id]
-                
-                if len(custom_rates) < initial_count:
-                    # Sauvegarder les modifications
-                    rates_json = json.dumps(custom_rates)
-                    update_site_setting('custom_shipping_rates', rates_json)
-                    print(f"DEBUG: Tarif {rate_id} supprimé avec succès")
-                    flash('Tarif de livraison supprimé avec succès !', 'success')
+                if rate:
+                    # Vérifier si c'est le tarif par défaut
+                    if rate.rate_type == 'default':
+                        flash('Le tarif par défaut ne peut pas être supprimé, mais il peut être modifié', 'warning')
+                        return redirect(url_for('admin_shipping_rates'))
+                    
+                    # Supprimer le tarif
+                    rate_name = rate.name
+                    db.session.delete(rate)
+                    db.session.commit()
+                    
+                    print(f"DEBUG: Tarif '{rate_name}' (ID={rate_id}) supprimé avec succès")
+                    flash(f"Tarif '{rate_name}' supprimé avec succès !", 'success')
                 else:
+                    print(f"DEBUG: Tarif ID={rate_id} non trouvé en base de données")
                     flash('Tarif non trouvé', 'error')
                     
             except Exception as e:
@@ -14501,46 +15305,31 @@ def admin_shipping_rates():
                 flash(f'Erreur lors de la suppression : {str(e)}', 'error')
                 
         elif action == 'toggle_status':
-            # Activer/désactiver un tarif
+            # Activer/désactiver un tarif depuis la base de données
             try:
-                import json
+                from models import ShippingRate, db
+                
                 rate_id = int(request.form.get('rate_id', 0))
                 print(f"DEBUG: Basculement statut pour tarif ID={rate_id}")
                 
-                # Récupérer les tarifs existants
-                custom_rates_json = get_site_setting('custom_shipping_rates', '[]')
-                try:
-                    custom_rates = json.loads(custom_rates_json) if custom_rates_json else []
-                except:
-                    custom_rates = []
+                # Récupérer le tarif depuis la base de données
+                rate = ShippingRate.query.get(rate_id)
                 
-                # Vérifier si c'est le tarif par défaut
-                is_system_default = False
-                for rate in custom_rates:
-                    if rate.get('id') == rate_id and rate.get('is_system_default', False):
-                        is_system_default = True
-                        break
-                
-                if is_system_default:
-                    flash('Le tarif par défaut est toujours actif', 'info')
-                    return redirect(url_for('admin_shipping_rates'))
-                
-                # Basculer le statut du tarif
-                rate_found = False
-                for i, rate in enumerate(custom_rates):
-                    if rate.get('id') == rate_id:
-                        custom_rates[i]['active'] = not custom_rates[i].get('active', True)
-                        new_status = 'activé' if custom_rates[i]['active'] else 'désactivé'
-                        print(f"DEBUG: Tarif {rate_id} {new_status}")
-                        rate_found = True
-                        break
-                
-                if rate_found:
-                    # Sauvegarder les modifications
-                    rates_json = json.dumps(custom_rates)
-                    update_site_setting('custom_shipping_rates', rates_json)
-                    flash(f'Statut du tarif mis à jour', 'success')
+                if rate:
+                    # Vérifier si c'est le tarif par défaut
+                    if rate.rate_type == 'default':
+                        flash('Le tarif par défaut est toujours actif', 'info')
+                        return redirect(url_for('admin_shipping_rates'))
+                    
+                    # Basculer le statut du tarif
+                    rate.active = not rate.active
+                    db.session.commit()
+                    
+                    new_status = 'activé' if rate.active else 'désactivé'
+                    print(f"DEBUG: Tarif '{rate.name}' (ID={rate_id}) {new_status}")
+                    flash(f"Tarif '{rate.name}' {new_status} avec succès", 'success')
                 else:
+                    print(f"DEBUG: Tarif ID={rate_id} non trouvé en base de données")
                     flash('Tarif non trouvé', 'error')
                     
             except Exception as e:
@@ -14560,80 +15349,79 @@ def admin_shipping_rates():
     # Récupérer les paramètres de livraison actuels
     site_settings = get_all_site_settings()
     
-    # S'assurer que le tarif par défaut existe
-    get_or_create_default_shipping_rate()
-    
-    # Récupérer tous les tarifs (y compris le tarif par défaut)
-    custom_rates_json = get_site_setting('custom_shipping_rates', '[]')
+    # **NOUVEAU : Récupérer les tarifs depuis la table ShippingRate**
     try:
-        import json
-        custom_rates = json.loads(custom_rates_json) if custom_rates_json else []
-    except:
-        custom_rates = []
-    
-    # Créer une structure de données compatible avec le template
-    shipping_rates = []
-    
-    # Traiter tous les tarifs (y compris le tarif par défaut)
-    for rate in custom_rates:
-        # Récupérer les noms des catégories
-        category_name = None
-        subcategory_name = None
+        from models import ShippingRate, Category, Subcategory
         
-        if rate.get('category_id'):
-            category = admin_categories_db.get(rate['category_id'], {})
-            category_name = category.get('name', f'Catégorie {rate["category_id"]}')
+        # Récupérer tous les tarifs (actifs et inactifs) depuis la base de données
+        db_rates = ShippingRate.query.order_by(ShippingRate.priority.desc(), ShippingRate.name).all()
+        
+        # Créer une structure de données compatible avec le template
+        shipping_rates = []
+        
+        for rate in db_rates:
+            # Récupérer les noms des catégories
+            category_name = rate.category.name if rate.category else None
+            subcategory_name = rate.subcategory.name if rate.subcategory else None
             
-        if rate.get('subcategory_id'):
-            subcategory = admin_subcategories_db.get(rate['subcategory_id'], {})
-            subcategory_name = subcategory.get('name', f'Sous-catégorie {rate["subcategory_id"]}')
-        
-        # Déterminer le type d'affichage
-        if rate.get('is_system_default', False):
-            rate_type_display = 'Tarif par défaut'
-        elif rate['rate_type'] == 'category':
-            rate_type_display = f'Par catégorie: {category_name}'
-        elif rate['rate_type'] == 'subcategory':
-            rate_type_display = f'Par sous-catégorie: {subcategory_name}'
-        else:
-            rate_type_display = 'Tarif général'
+            # Déterminer le type d'affichage
+            if rate.rate_type == 'default':
+                rate_type_display = 'Tarif par défaut'
+            elif rate.rate_type == 'category':
+                rate_type_display = f'Par catégorie: {category_name}'
+            elif rate.rate_type == 'subcategory':
+                rate_type_display = f'Par sous-catégorie: {subcategory_name}'
+            else:
+                rate_type_display = 'Tarif général'
             
-        # Récupérer les délais de livraison avec valeurs par défaut
-        std_days = rate.get('standard_delivery_days', 3)
-        std_hours = rate.get('standard_delivery_hours', 0)
-        exp_days = rate.get('express_delivery_days', 1)
-        exp_hours = rate.get('express_delivery_hours', 0)
+            # Formatter les délais de livraison
+            def format_delivery_time(days, hours=0):
+                if days == 0 and hours == 0:
+                    return "Livraison immédiate"
+                elif days == 0:
+                    return f"{hours}h"
+                elif hours == 0:
+                    return f"{days} jour{'s' if days > 1 else ''}"
+                else:
+                    return f"{days} jour{'s' if days > 1 else ''} {hours}h"
+            
+            shipping_rates.append({
+                'id': rate.id,
+                'name': rate.name,
+                'rate_type': rate_type_display,
+                'category_name': category_name,
+                'subcategory_name': subcategory_name,
+                'category_id': rate.category_id,
+                'subcategory_id': rate.subcategory_id,
+                'active': rate.active,
+                'standard_rate': rate.standard_rate,
+                'express_rate': rate.express_rate,
+                'standard_delivery_formatted': format_delivery_time(rate.standard_delivery_days, rate.standard_delivery_hours),
+                'express_delivery_formatted': format_delivery_time(rate.express_delivery_days, rate.express_delivery_hours),
+                'standard_delivery_days': rate.standard_delivery_days,
+                'standard_delivery_hours': rate.standard_delivery_hours,
+                'express_delivery_days': rate.express_delivery_days,
+                'express_delivery_hours': rate.express_delivery_hours,
+                'priority': rate.priority,
+                'free_threshold': site_settings.get('free_shipping_threshold', 15000),
+                'description': f'Tarif personnalisé pour {rate_type_display.lower()}'
+            })
+            
+        print(f"DEBUG: Affichage de {len(shipping_rates)} tarifs depuis la base de données")
         
-        shipping_rates.append({
-            'id': rate['id'],
-            'name': rate.get('name', f'Tarif {rate_type_display}'),
-            'rate_type': rate_type_display,
-            'category_name': category_name,
-            'subcategory_name': subcategory_name,
-            'category_id': rate.get('category_id'),
-            'subcategory_id': rate.get('subcategory_id'),
-            'active': rate.get('active', True),
-            'standard_rate': rate['standard_rate'],
-            'express_rate': rate['express_rate'],
-            'standard_delivery_formatted': format_delivery_time(std_days, std_hours),
-            'express_delivery_formatted': format_delivery_time(exp_days, exp_hours),
-            'standard_delivery_days': std_days,
-            'standard_delivery_hours': std_hours,
-            'express_delivery_days': exp_days,
-            'express_delivery_hours': exp_hours,
-            'priority': rate.get('priority', 0),
-            'free_threshold': site_settings.get('free_shipping_threshold', 15000),
-            'description': f'Tarif personnalisé pour {rate_type_display.lower()}'
-        })
-    
-    print(f"DEBUG: Affichage de {len(shipping_rates)} tarifs (dont {len(custom_rates)} personnalisés)")
+    except Exception as e:
+        print(f"Erreur lors du chargement des tarifs ShippingRate: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Fallback vers l'ancien système en cas d'erreur
+        shipping_rates = []
     
     return render_template('admin/shipping_rates.html',
-                          admin=admin,
                           shipping_rates=shipping_rates,
                           site_settings=site_settings,
-                          categories=admin_categories_db.values(),
-                          subcategories=admin_subcategories_db.values())
+                          categories=Category.query.filter_by(active=True).all(),
+                          subcategories=Subcategory.query.filter_by(active=True).all())
 
 @app.route('/admin/profile')
 def admin_profile():
@@ -15668,11 +16456,49 @@ def merchant_dashboard():
         'rating_distribution': rating_distribution
     }
     
+    # Calculer les taux de commission par catégorie pour ce marchand
+    merchant_categories = []
+    if merchant_record:
+        # Récupérer les catégories des produits du marchand avec leurs taux
+        categories_with_products = db.session.query(
+            Category.id,
+            Category.name,
+            Category.description,
+            db.func.count(Product.id).label('product_count')
+        ).join(
+            Product, Category.id == Product.category_id
+        ).filter(
+            Product.merchant_id == merchant_record.id
+        ).group_by(
+            Category.id, Category.name, Category.description
+        ).all()
+        
+        # Récupérer les paramètres du site pour le taux par défaut
+        site_settings = get_site_settings()
+        default_rate = float(site_settings.get('commission_rate', 15.0))
+        
+        for category_data in categories_with_products:
+            # Chercher le taux spécifique à cette catégorie
+            custom_rate = CategoryCommissionRate.query.filter_by(category_id=category_data.id).first()
+            commission_rate = custom_rate.commission_rate if custom_rate else default_rate
+            
+            merchant_categories.append({
+                'id': category_data.id,
+                'name': category_data.name,
+                'description': category_data.description,
+                'product_count': category_data.product_count,
+                'commission_rate': commission_rate
+            })
+        
+        # Trier par nom de catégorie
+        merchant_categories.sort(key=lambda x: x['name'])
+    
     return render_template('merchant/dashboard.html', 
                           merchant=merchant_data,
                           stats=stats,
                           recent_orders=recent_orders,
-                          recent_reviews=recent_reviews)
+                          recent_reviews=recent_reviews,
+                          merchant_categories=merchant_categories)
 
 # À ajouter après la fonction calculate_merchant_balance (vers la ligne 450)
 
@@ -16483,12 +17309,20 @@ def merchant_reviews():
 def merchant_product_add():
     """Page d'ajout d'un nouveau produit"""
     merchant_email = session.get('merchant_email')
-    merchant = merchants_db.get(merchant_email, {})
     
-    # Vérifier si le marchand est vérifié
-    if not merchant.get('store_verified', False):
+    # Récupérer le marchand depuis la base de données
+    merchant_record = Merchant.query.filter_by(email=merchant_email).first()
+    if not merchant_record:
+        flash('Informations du marchand non trouvées', 'danger')
+        return redirect(url_for('merchant_login'))
+    
+    # Vérifier si le marchand est vérifié dans la base de données
+    if not merchant_record.store_verified:
         flash('Votre boutique doit être vérifiée par un administrateur avant de pouvoir ajouter des produits.', 'warning')
         return redirect(url_for('merchant_products'))
+    
+    # Fallback pour compatibilité avec le dictionnaire en mémoire
+    merchant = merchants_db.get(merchant_email, {})
     
     if request.method == 'POST':
         # Récupérer les données du formulaire
@@ -16971,12 +17805,20 @@ def merchant_product_edit(product_id):
 def merchant_product_delete(product_id):
     """Supprimer un produit existant"""
     merchant_email = session.get('merchant_email')
-    merchant = merchants_db.get(merchant_email, {})
     
-    # Vérifier si le marchand est vérifié
-    if not merchant.get('store_verified', False):
+    # Récupérer le marchand depuis la base de données
+    merchant_record = Merchant.query.filter_by(email=merchant_email).first()
+    if not merchant_record:
+        flash('Informations du marchand non trouvées', 'danger')
+        return redirect(url_for('merchant_login'))
+    
+    # Vérifier si le marchand est vérifié dans la base de données
+    if not merchant_record.store_verified:
         flash('Votre boutique doit être vérifiée par un administrateur avant de pouvoir supprimer des produits.', 'warning')
         return redirect(url_for('merchant_products'))
+    
+    # Fallback pour compatibilité avec le dictionnaire en mémoire
+    merchant = merchants_db.get(merchant_email, {})
     
     # VÉRIFIER D'ABORD SI LE PRODUIT EST RÉFÉRENCÉ DANS DES COMMANDES
     try:
@@ -17031,16 +17873,20 @@ def merchant_product_delete(product_id):
 def merchant_product_toggle(product_id):
     """Activer/désactiver un produit"""
     merchant_email = session.get('merchant_email')
-    merchant = merchants_db.get(merchant_email, {})
     
-    if not merchant:
-        flash('Marchand non trouvé.', 'danger')
+    # Récupérer le marchand depuis la base de données
+    merchant_record = Merchant.query.filter_by(email=merchant_email).first()
+    if not merchant_record:
+        flash('Informations du marchand non trouvées', 'danger')
         return redirect(url_for('merchant_login'))
     
-    # Vérifier si le marchand est vérifié
-    if not merchant.get('store_verified', False):
+    # Vérifier si le marchand est vérifié dans la base de données
+    if not merchant_record.store_verified:
         flash('Votre boutique doit être vérifiée par un administrateur avant de pouvoir modifier des produits.', 'warning')
         return redirect(url_for('merchant_products'))
+    
+    # Fallback pour compatibilité avec le dictionnaire en mémoire
+    merchant = merchants_db.get(merchant_email, {})
     
     try:
         product_db = Product.query.get(product_id)
@@ -17816,6 +18662,22 @@ def api_add_to_cart():
         if not product:
             return jsonify({'error': 'Produit non trouvé'}), 404
         
+        # ✅ NOUVEAU: Vérifier le stock avant d'ajouter au panier
+        try:
+            numeric_product_id = int(product_id) if str(product_id).isdigit() else product['id']
+            stock_check = check_product_stock_availability(numeric_product_id, quantity)
+            if not stock_check['available']:
+                return jsonify({
+                    'error': stock_check['message'],
+                    'stock_error': True,
+                    'available_stock': stock_check['current_stock'],
+                    'requested_quantity': quantity
+                }), 400
+        except Exception as e:
+            print(f"Erreur lors de la vérification du stock dans API: {e}")
+            # En cas d'erreur, continuer sans bloquer (pour compatibilité)
+            pass
+        
         # Récupérer le panier de la session
         if 'cart' not in session:
             session['cart'] = []
@@ -18378,7 +19240,7 @@ if __name__ == '__main__':
         print("="*60)
         
         # Lancer le serveur Flask avec le mode debug activé sur le port 5003
-        app.run(debug=True, host='0.0.0.0', port=5002)
+        app.run(debug=True, host='0.0.0.0', port=5003)
         
     except Exception as e:
         print(f"❌ Erreur au démarrage de l'application: {e}")

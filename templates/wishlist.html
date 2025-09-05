@@ -87,9 +87,15 @@
                                             <h5 class="card-title">{{ item.name }}</h5>
                                             <p class="card-text text-primary fw-bold">{{ item.price|format_number }} KMF</p>
                                             <div class="d-grid">
-                                                <button type="button" class="btn btn-primary" onclick="addToCart({{ item.id }})">
-                                                    <i class="fas fa-cart-plus me-2"></i> Ajouter au panier
-                                                </button>
+                                                {% if item.stock is defined and item.stock <= 0 %}
+                                                    <button type="button" class="btn btn-secondary" disabled>
+                                                        <i class="fas fa-ban me-2"></i> Rupture de stock
+                                                    </button>
+                                                {% else %}
+                                                    <button type="button" class="btn btn-primary" onclick="addToCart({{ item.id }})">
+                                                        <i class="fas fa-cart-plus me-2"></i> Ajouter au panier
+                                                    </button>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
