@@ -15126,7 +15126,7 @@ def admin_shipping_rates():
         if action == 'create':
             # Ajouter un nouveau tarif dans la base de données
             try:
-                from models import ShippingRate, db
+                from db_helpers import create_shipping_rate_safe
                 
                 # Récupérer les données du formulaire
                 name = request.form.get('name', '').strip()
@@ -15135,12 +15135,6 @@ def admin_shipping_rates():
                 subcategory_id = request.form.get('subcategory_id', '')
                 standard_rate = float(request.form.get('standard_rate', 0))
                 express_rate = float(request.form.get('express_rate', 0))
-                
-                # Récupérer les délais de livraison
-                standard_delivery_days = int(request.form.get('standard_delivery_days', 3))
-                standard_delivery_hours = int(request.form.get('standard_delivery_hours', 0))
-                express_delivery_days = int(request.form.get('express_delivery_days', 1))
-                express_delivery_hours = int(request.form.get('express_delivery_hours', 0))
                 priority = int(request.form.get('priority', 0))
                 active = 'active' in request.form  # Correction pour checkbox
                 
@@ -15177,28 +15171,23 @@ def admin_shipping_rates():
                     flash('Une sous-catégorie doit être sélectionnée pour ce type de tarif', 'error')
                     return redirect(url_for('admin_shipping_rates'))
                 
-                # Créer le nouveau tarif
-                new_rate = ShippingRate(
+                # Créer le nouveau tarif avec la fonction sécurisée
+                new_rate = create_shipping_rate_safe(
                     name=name,
                     rate_type=rate_type,
                     category_id=category_id_int,
                     subcategory_id=subcategory_id_int,
                     standard_rate=standard_rate,
                     express_rate=express_rate,
-                    standard_delivery_days=standard_delivery_days,
-                    standard_delivery_hours=standard_delivery_hours,
-                    express_delivery_days=express_delivery_days,
-                    express_delivery_hours=express_delivery_hours,
                     priority=priority,
-                    active=active,
-                    created_by='admin@system.com'
+                    active=active
                 )
                 
-                db.session.add(new_rate)
-                db.session.commit()
-                
-                print(f"DEBUG: Nouveau tarif créé avec ID: {new_rate.id}")
-                flash(f"Tarif '{name}' créé avec succès !", 'success')
+                if new_rate:
+                    print(f"DEBUG: Nouveau tarif créé avec ID: {new_rate.id}")
+                    flash(f"Tarif '{name}' créé avec succès !", 'success')
+                else:
+                    flash('Erreur lors de la création du tarif', 'error')
                 
             except ValueError as ve:
                 print(f"DEBUG: Erreur de valeur = {ve}")
@@ -15212,7 +15201,7 @@ def admin_shipping_rates():
         elif action == 'update':
             # Mettre à jour un tarif existant depuis la base de données
             try:
-                from models import ShippingRate, db
+                from db_helpers import update_shipping_rate_safe
                 
                 rate_id = int(request.form.get('rate_id', 0))
                 name = request.form.get('name', '').strip()
@@ -15224,42 +15213,32 @@ def admin_shipping_rates():
                 category_id = request.form.get('category_id', '').strip()
                 subcategory_id = request.form.get('subcategory_id', '').strip()
                 
-                # Récupérer les délais de livraison pour la mise à jour
-                standard_delivery_days = int(request.form.get('standard_delivery_days', 3))
-                standard_delivery_hours = int(request.form.get('standard_delivery_hours', 0))
-                express_delivery_days = int(request.form.get('express_delivery_days', 1))
-                express_delivery_hours = int(request.form.get('express_delivery_hours', 0))
-                
                 print(f"DEBUG: Mise à jour tarif ID={rate_id}, standard={standard_rate}")
                 
-                # Récupérer le tarif depuis la base de données
-                rate = ShippingRate.query.get(rate_id)
+                # Convertir les IDs en int si non vides
+                category_id_int = int(category_id) if category_id else None
+                subcategory_id_int = int(subcategory_id) if subcategory_id else None
                 
-                if rate:
-                    # Mettre à jour les propriétés du tarif
-                    rate.name = name
-                    rate.rate_type = rate_type
-                    rate.standard_rate = standard_rate
-                    rate.express_rate = express_rate
-                    rate.standard_delivery_days = standard_delivery_days
-                    rate.standard_delivery_hours = standard_delivery_hours
-                    rate.express_delivery_days = express_delivery_days
-                    rate.express_delivery_hours = express_delivery_hours
-                    rate.priority = priority
-                    rate.active = active
-                    rate.category_id = int(category_id) if category_id else None
-                    rate.subcategory_id = int(subcategory_id) if subcategory_id else None
-                    rate.updated_at = datetime.now()
-                    
+                # Mettre à jour le tarif avec la fonction sécurisée
+                updated_rate = update_shipping_rate_safe(
+                    rate_id=rate_id,
+                    name=name,
+                    rate_type=rate_type,
+                    category_id=category_id_int,
+                    subcategory_id=subcategory_id_int,
+                    standard_rate=standard_rate,
+                    express_rate=express_rate,
+                    priority=priority,
+                    active=active
+                )
+                
+                if updated_rate:
                     # Si c'est le tarif par défaut, mettre à jour aussi le paramètre site
-                    if rate.rate_type == 'default':
+                    if rate_type == 'default':
                         update_site_setting('shipping_fee', standard_rate)
                     
-                    # Sauvegarder en base de données
-                    db.session.commit()
-                    
-                    print(f"DEBUG: Tarif '{rate.name}' (ID={rate_id}) mis à jour avec succès")
-                    flash(f"Tarif '{rate.name}' mis à jour avec succès !", 'success')
+                    print(f"DEBUG: Tarif '{name}' (ID={rate_id}) mis à jour avec succès")
+                    flash(f"Tarif '{name}' mis à jour avec succès !", 'success')
                 else:
                     print(f"DEBUG: Tarif ID={rate_id} non trouvé en base de données")
                     flash('Tarif non trouvé', 'error')
@@ -15273,27 +15252,28 @@ def admin_shipping_rates():
         elif action == 'delete':
             # Supprimer un tarif depuis la base de données
             try:
-                from models import ShippingRate, db
+                from db_helpers import delete_shipping_rate_safe, get_shipping_rates_safe
                 
                 rate_id = int(request.form.get('rate_id', 0))
                 print(f"DEBUG: Tentative suppression tarif ID={rate_id}")
                 
-                # Récupérer le tarif depuis la base de données
-                rate = ShippingRate.query.get(rate_id)
+                # Récupérer le tarif pour vérifier s'il existe et récupérer son nom
+                rates = get_shipping_rates_safe()
+                rate_to_delete = next((r for r in rates if r.id == rate_id), None)
                 
-                if rate:
+                if rate_to_delete:
                     # Vérifier si c'est le tarif par défaut
-                    if rate.rate_type == 'default':
+                    if rate_to_delete.rate_type == 'default':
                         flash('Le tarif par défaut ne peut pas être supprimé, mais il peut être modifié', 'warning')
                         return redirect(url_for('admin_shipping_rates'))
                     
-                    # Supprimer le tarif
-                    rate_name = rate.name
-                    db.session.delete(rate)
-                    db.session.commit()
-                    
-                    print(f"DEBUG: Tarif '{rate_name}' (ID={rate_id}) supprimé avec succès")
-                    flash(f"Tarif '{rate_name}' supprimé avec succès !", 'success')
+                    # Supprimer le tarif avec la fonction sécurisée
+                    rate_name = rate_to_delete.name
+                    if delete_shipping_rate_safe(rate_id):
+                        print(f"DEBUG: Tarif '{rate_name}' (ID={rate_id}) supprimé avec succès")
+                        flash(f"Tarif '{rate_name}' supprimé avec succès !", 'success')
+                    else:
+                        flash('Erreur lors de la suppression du tarif', 'error')
                 else:
                     print(f"DEBUG: Tarif ID={rate_id} non trouvé en base de données")
                     flash('Tarif non trouvé', 'error')
@@ -15352,9 +15332,10 @@ def admin_shipping_rates():
     # **NOUVEAU : Récupérer les tarifs depuis la table ShippingRate**
     try:
         from models import ShippingRate, Category, Subcategory
+        from db_helpers import get_shipping_rates_safe
         
-        # Récupérer tous les tarifs (actifs et inactifs) depuis la base de données
-        db_rates = ShippingRate.query.order_by(ShippingRate.priority.desc(), ShippingRate.name).all()
+        # Récupérer tous les tarifs (actifs et inactifs) depuis la base de données de manière sécurisée
+        db_rates = get_shipping_rates_safe()
         
         # Créer une structure de données compatible avec le template
         shipping_rates = []
@@ -15374,8 +15355,10 @@ def admin_shipping_rates():
             else:
                 rate_type_display = 'Tarif général'
             
-            # Formatter les délais de livraison
+            # Formatter les délais de livraison avec des valeurs par défaut sécurisées
             def format_delivery_time(days, hours=0):
+                days = days or 0  # Convertir None en 0
+                hours = hours or 0  # Convertir None en 0
                 if days == 0 and hours == 0:
                     return "Livraison immédiate"
                 elif days == 0:
@@ -15384,6 +15367,12 @@ def admin_shipping_rates():
                     return f"{days} jour{'s' if days > 1 else ''}"
                 else:
                     return f"{days} jour{'s' if days > 1 else ''} {hours}h"
+            
+            # Utiliser des valeurs par défaut pour les colonnes manquantes
+            standard_delivery_days = getattr(rate, 'standard_delivery_days', 3)
+            standard_delivery_hours = getattr(rate, 'standard_delivery_hours', 0)
+            express_delivery_days = getattr(rate, 'express_delivery_days', 1)
+            express_delivery_hours = getattr(rate, 'express_delivery_hours', 0)
             
             shipping_rates.append({
                 'id': rate.id,
@@ -15396,12 +15385,12 @@ def admin_shipping_rates():
                 'active': rate.active,
                 'standard_rate': rate.standard_rate,
                 'express_rate': rate.express_rate,
-                'standard_delivery_formatted': format_delivery_time(rate.standard_delivery_days, rate.standard_delivery_hours),
-                'express_delivery_formatted': format_delivery_time(rate.express_delivery_days, rate.express_delivery_hours),
-                'standard_delivery_days': rate.standard_delivery_days,
-                'standard_delivery_hours': rate.standard_delivery_hours,
-                'express_delivery_days': rate.express_delivery_days,
-                'express_delivery_hours': rate.express_delivery_hours,
+                'standard_delivery_formatted': format_delivery_time(standard_delivery_days, standard_delivery_hours),
+                'express_delivery_formatted': format_delivery_time(express_delivery_days, express_delivery_hours),
+                'standard_delivery_days': standard_delivery_days,
+                'standard_delivery_hours': standard_delivery_hours,
+                'express_delivery_days': express_delivery_days,
+                'express_delivery_hours': express_delivery_hours,
                 'priority': rate.priority,
                 'free_threshold': site_settings.get('free_shipping_threshold', 15000),
                 'description': f'Tarif personnalisé pour {rate_type_display.lower()}'

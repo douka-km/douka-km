@@ -7,9 +7,221 @@ Fonctions utilitaires pour interagir avec la base de données SQLAlchemy
 
 from models import *
 from sqlalchemy import func, and_, or_
+from sqlalchemy.exc import SQLAlchemyError
 import uuid
 from datetime import datetime, timedelta
 import json
+
+def safe_db_operation(operation_func, fallback_func=None, *args, **kwargs):
+    """
+    Exécute une opération de base de données avec gestion sécurisée des erreurs et rollback automatique
+    """
+    try:
+        return operation_func(*args, **kwargs)
+    except SQLAlchemyError as e:
+        print(f"Erreur SQLAlchemy détectée: {e}")
+        try:
+            db.session.rollback()
+            print("Rollback effectué avec succès")
+        except Exception as rollback_error:
+            print(f"Erreur lors du rollback: {rollback_error}")
+        
+        if fallback_func:
+            try:
+                return fallback_func(*args, **kwargs)
+            except Exception as fallback_error:
+                print(f"Erreur dans le fallback: {fallback_error}")
+                return []
+        else:
+            return []
+    except Exception as e:
+        print(f"Erreur générale: {e}")
+        return []
+
+def create_order_from_row(row):
+    """
+    Crée un objet Order à partir d'une ligne de résultat SQL brut
+    Évite les colonnes problématiques comme delivery_days/delivery_hours
+    """
+    order = Order()
+    order.id = row[0] if len(row) > 0 else None
+    order.order_number = row[1] if len(row) > 1 else None
+    order.customer_id = row[2] if len(row) > 2 else None
+    order.merchant_id = row[3] if len(row) > 3 else None
+    order.total = row[4] if len(row) > 4 else None
+    order.status = row[5] if len(row) > 5 else None
+    order.payment_status = row[6] if len(row) > 6 else None
+    order.customer_name = row[7] if len(row) > 7 else None
+    order.customer_email = row[8] if len(row) > 8 else None
+    order.customer_phone = row[9] if len(row) > 9 else None
+    order.created_at = row[10] if len(row) > 10 else None
+    return order
+
+def get_shipping_rates_safe():
+    """
+    Récupère tous les tarifs de livraison de manière sécurisée
+    """
+    def try_normal_query():
+        return ShippingRate.query.all()
+    
+    def fallback_query():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, name, rate_type, category_id, subcategory_id, 
+                   standard_rate, express_rate, priority, active, created_at
+            FROM shipping_rates 
+            ORDER BY priority ASC, name ASC
+        """))
+        
+        rates = []
+        for row in result:
+            rate = ShippingRate()
+            rate.id = row[0]
+            rate.name = row[1]
+            rate.rate_type = row[2]
+            rate.category_id = row[3]
+            rate.subcategory_id = row[4]
+            rate.standard_rate = row[5]
+            rate.express_rate = row[6]
+            rate.priority = row[7]
+            rate.active = row[8]
+            rate.created_at = row[9]
+            # Définir des valeurs par défaut pour les colonnes manquantes
+            rate.standard_delivery_days = 3
+            rate.standard_delivery_hours = 0
+            rate.express_delivery_days = 1
+            rate.express_delivery_hours = 0
+            rates.append(rate)
+        
+        print(f"✅ Récupéré {len(rates)} tarifs avec schéma partiel")
+        return rates
+    
+    return safe_db_operation(try_normal_query, fallback_query)
+
+def create_shipping_rate_safe(name, rate_type, category_id, subcategory_id, 
+                             standard_rate, express_rate, priority=0, active=True):
+    """
+    Crée un tarif de livraison de manière sécurisée sans les colonnes problématiques
+    """
+    def try_normal_create():
+        rate = ShippingRate(
+            name=name,
+            rate_type=rate_type,
+            category_id=category_id if category_id else None,
+            subcategory_id=subcategory_id if subcategory_id else None,
+            standard_rate=standard_rate,
+            express_rate=express_rate,
+            priority=priority,
+            active=active
+        )
+        db.session.add(rate)
+        db.session.commit()
+        return rate
+    
+    def fallback_create():
+        from sqlalchemy import text
+        # Insertion SQL brute sans les colonnes problématiques
+        result = db.session.execute(text("""
+            INSERT INTO shipping_rates 
+            (name, rate_type, category_id, subcategory_id, standard_rate, 
+             express_rate, priority, active, created_at)
+            VALUES (:name, :rate_type, :category_id, :subcategory_id, 
+                    :standard_rate, :express_rate, :priority, :active, NOW())
+            RETURNING id
+        """), {
+            'name': name,
+            'rate_type': rate_type,
+            'category_id': category_id if category_id else None,
+            'subcategory_id': subcategory_id if subcategory_id else None,
+            'standard_rate': standard_rate,
+            'express_rate': express_rate,
+            'priority': priority,
+            'active': active
+        })
+        
+        rate_id = result.fetchone()[0]
+        db.session.commit()
+        
+        # Récupérer le tarif créé
+        return ShippingRate.query.get(rate_id)
+    
+    return safe_db_operation(try_normal_create, fallback_create)
+
+def update_shipping_rate_safe(rate_id, name, rate_type, category_id, subcategory_id, 
+                             standard_rate, express_rate, priority=0, active=True):
+    """
+    Met à jour un tarif de livraison de manière sécurisée sans les colonnes problématiques
+    """
+    def try_normal_update():
+        rate = ShippingRate.query.get(rate_id)
+        if rate:
+            rate.name = name
+            rate.rate_type = rate_type
+            rate.category_id = category_id if category_id else None
+            rate.subcategory_id = subcategory_id if subcategory_id else None
+            rate.standard_rate = standard_rate
+            rate.express_rate = express_rate
+            rate.priority = priority
+            rate.active = active
+            rate.updated_at = datetime.now()
+            db.session.commit()
+            return rate
+        return None
+    
+    def fallback_update():
+        from sqlalchemy import text
+        # Mise à jour SQL brute sans les colonnes problématiques
+        result = db.session.execute(text("""
+            UPDATE shipping_rates 
+            SET name = :name, rate_type = :rate_type, category_id = :category_id, 
+                subcategory_id = :subcategory_id, standard_rate = :standard_rate, 
+                express_rate = :express_rate, priority = :priority, active = :active,
+                updated_at = NOW()
+            WHERE id = :rate_id
+            RETURNING id
+        """), {
+            'rate_id': rate_id,
+            'name': name,
+            'rate_type': rate_type,
+            'category_id': category_id if category_id else None,
+            'subcategory_id': subcategory_id if subcategory_id else None,
+            'standard_rate': standard_rate,
+            'express_rate': express_rate,
+            'priority': priority,
+            'active': active
+        })
+        
+        if result.rowcount > 0:
+            db.session.commit()
+            return ShippingRate.query.get(rate_id)
+        return None
+    
+    return safe_db_operation(try_normal_update, fallback_update)
+
+def delete_shipping_rate_safe(rate_id):
+    """
+    Supprime un tarif de livraison de manière sécurisée
+    """
+    def try_normal_delete():
+        rate = ShippingRate.query.get(rate_id)
+        if rate:
+            db.session.delete(rate)
+            db.session.commit()
+            return True
+        return False
+    
+    def fallback_delete():
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            DELETE FROM shipping_rates WHERE id = :rate_id
+        """), {'rate_id': rate_id})
+        
+        if result.rowcount > 0:
+            db.session.commit()
+            return True
+        return False
+    
+    return safe_db_operation(try_normal_delete, fallback_delete)
 
 # =============================================
 # FONCTIONS UTILISATEURS
@@ -41,8 +253,44 @@ def create_user(email, password, first_name, last_name, phone=None, address=None
     return user
 
 def get_user_orders(user_id):
-    """Récupérer toutes les commandes d'un utilisateur"""
-    return Order.query.filter_by(customer_id=user_id).order_by(Order.created_at.desc()).all()
+    """Récupérer toutes les commandes d'un utilisateur avec gestion sécurisée des erreurs"""
+    
+    def try_normal_query():
+        return Order.query.filter_by(customer_id=user_id).order_by(Order.created_at.desc()).all()
+    
+    def fallback_query():
+        # Utiliser une requête SQL brute pour éviter les colonnes manquantes
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at, shipping_fee, discount,
+                   payment_method, shipping_method, shipping_address,
+                   delivery_date, estimated_delivery_date
+            FROM orders 
+            WHERE customer_id = :customer_id 
+            ORDER BY created_at DESC
+        """), {'customer_id': user_id})
+        
+        # Convertir en objets Order partiels
+        orders = []
+        for row in result:
+            order = create_order_from_row(row)
+            # Ajouter les colonnes supplémentaires
+            if len(row) > 11:
+                order.shipping_fee = row[11]
+                order.discount = row[12]
+                order.payment_method = row[13]
+                order.shipping_method = row[14]
+                order.shipping_address = row[15]
+                order.delivery_date = row[16]
+                order.estimated_delivery_date = row[17]
+            orders.append(order)
+        
+        print(f"✅ Récupéré {len(orders)} commandes pour utilisateur {user_id} avec schéma partiel")
+        return orders
+    
+    return safe_db_operation(try_normal_query, fallback_query)
 
 def get_user_wishlist(user_id):
     """Récupérer la liste de souhaits d'un utilisateur"""
@@ -443,12 +691,50 @@ def update_order_status(order_id, new_status, admin_notes=None, changed_by='Marc
     }
 
 def get_order_by_id(order_id):
-    """Récupérer une commande par son ID"""
-    try:
-        order_id_int = int(order_id)
+    """Récupérer une commande par ID avec gestion sécurisée des erreurs"""
+    
+    def try_normal_query():
+        order_id_int = int(order_id) if order_id else None
+        if not order_id_int:
+            return None
         return Order.query.get(order_id_int)
-    except (ValueError, TypeError):
-        return None
+    
+    def fallback_query():
+        from sqlalchemy import text
+        order_id_int = int(order_id) if order_id else None
+        if not order_id_int:
+            return None
+            
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at, shipping_fee, discount,
+                   payment_method, shipping_method, shipping_address,
+                   delivery_date, estimated_delivery_date, promo_code_used
+            FROM orders 
+            WHERE id = :order_id
+        """), {'order_id': order_id_int})
+        
+        row = result.fetchone()
+        if not row:
+            return None
+            
+        order = create_order_from_row(row)
+        # Ajouter les colonnes supplémentaires
+        if len(row) > 11:
+            order.shipping_fee = row[11]
+            order.discount = row[12]
+            order.payment_method = row[13]
+            order.shipping_method = row[14]
+            order.shipping_address = row[15]
+            order.delivery_date = row[16]
+            order.estimated_delivery_date = row[17]
+            order.promo_code_used = row[18] if len(row) > 18 else None
+        
+        print(f"✅ Récupéré commande {order_id} avec schéma partiel")
+        return order
+    
+    return safe_db_operation(try_normal_query, fallback_query)
 
 def get_order_by_number(order_number):
     """Récupérer une commande par son numéro"""
@@ -1210,65 +1496,102 @@ def update_user_order_status(order_id, new_status, notes=None):
         db.session.rollback()
         return False, f"Erreur lors de la mise à jour: {str(e)}"
 def get_all_merchant_orders():
-    """Récupérer toutes les commandes de tous les marchands"""
-    try:
+    """Récupérer toutes les commandes de tous les marchands avec gestion sécurisée des erreurs"""
+    
+    def try_normal_query():
         return Order.query.filter(Order.merchant_id.is_not(None)).order_by(Order.created_at.desc()).all()
-    except Exception as e:
-        if "does not exist" in str(e) or "UndefinedColumn" in str(e):
-            print(f"⚠️ Erreur de schéma détectée dans get_all_merchant_orders: {e}")
-            print("🔄 Tentative de récupération des commandes avec schéma partiel...")
-            try:
-                # Utiliser une requête SQL brute pour éviter les colonnes manquantes
-                from sqlalchemy import text
-                result = db.session.execute(text("""
-                    SELECT id, order_number, customer_id, merchant_id, total, 
-                           status, payment_status, customer_name, customer_email, 
-                           customer_phone, created_at
-                    FROM orders 
-                    WHERE merchant_id IS NOT NULL 
-                    ORDER BY created_at DESC
-                """))
-                
-                # Convertir en objets Order partiels
-                orders = []
-                for row in result:
-                    order = Order()
-                    order.id = row[0]
-                    order.order_number = row[1]
-                    order.customer_id = row[2]
-                    order.merchant_id = row[3]
-                    order.total = row[4]
-                    order.status = row[5]
-                    order.payment_status = row[6]
-                    order.customer_name = row[7]
-                    order.customer_email = row[8]
-                    order.customer_phone = row[9]
-                    order.created_at = row[10]
-                    orders.append(order)
-                
-                print(f"✅ Récupéré {len(orders)} commandes avec schéma partiel")
-                return orders
-                
-            except Exception as fallback_error:
-                print(f"❌ Erreur lors du fallback: {fallback_error}")
-                return []
-        else:
-            print(f"❌ Erreur inattendue dans get_all_merchant_orders: {e}")
-            return []
+    
+    def fallback_query():
+        # Utiliser une requête SQL brute pour éviter les colonnes manquantes
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at
+            FROM orders 
+            WHERE merchant_id IS NOT NULL 
+            ORDER BY created_at DESC
+        """))
+        
+        # Convertir en objets Order partiels
+        orders = []
+        for row in result:
+            orders.append(create_order_from_row(row))
+        
+        print(f"✅ Récupéré {len(orders)} commandes avec schéma partiel")
+        return orders
+    
+    return safe_db_operation(try_normal_query, fallback_query)
 
 def get_merchant_orders(merchant_id):
-    """Récupérer toutes les commandes d'un marchand spécifique"""
-    return Order.query.filter_by(merchant_id=merchant_id).order_by(Order.created_at.desc()).all()
+    """Récupérer toutes les commandes d'un marchand spécifique avec gestion sécurisée des erreurs"""
+    
+    def try_normal_query():
+        return Order.query.filter_by(merchant_id=merchant_id).order_by(Order.created_at.desc()).all()
+    
+    def fallback_query():
+        # Utiliser une requête SQL brute pour éviter les colonnes manquantes
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at, shipping_fee, discount,
+                   payment_method, shipping_method, shipping_address,
+                   delivery_date, estimated_delivery_date
+            FROM orders 
+            WHERE merchant_id = :merchant_id 
+            ORDER BY created_at DESC
+        """), {'merchant_id': merchant_id})
+        
+        # Convertir en objets Order partiels
+        orders = []
+        for row in result:
+            order = create_order_from_row(row)
+            # Ajouter les colonnes supplémentaires
+            if len(row) > 11:
+                order.shipping_fee = row[11]
+                order.discount = row[12]
+                order.payment_method = row[13]
+                order.shipping_method = row[14]
+                order.shipping_address = row[15]
+                order.delivery_date = row[16]
+                order.estimated_delivery_date = row[17]
+            orders.append(order)
+        
+        print(f"✅ Récupéré {len(orders)} commandes pour marchand {merchant_id} avec schéma partiel")
+        return orders
+    
+    return safe_db_operation(try_normal_query, fallback_query)
 
 def get_merchant_by_id(merchant_id):
     """Récupérer un marchand par son ID"""
     return Merchant.query.get(merchant_id)
 
 def get_all_admin_orders():
-    """Récupérer toutes les commandes admin"""
-    try:
+    """Récupérer toutes les commandes admin avec gestion sécurisée des erreurs"""
+    
+    def try_normal_query():
         # Les commandes admin ont merchant_id=None
         return Order.query.filter(Order.merchant_id.is_(None)).order_by(Order.created_at.desc()).all()
-    except Exception as e:
-        print(f"❌ Erreur lors de la récupération des commandes admin: {e}")
-        return []
+    
+    def fallback_query():
+        # Utiliser une requête SQL brute pour éviter les colonnes manquantes
+        from sqlalchemy import text
+        result = db.session.execute(text("""
+            SELECT id, order_number, customer_id, merchant_id, total, 
+                   status, payment_status, customer_name, customer_email, 
+                   customer_phone, created_at
+            FROM orders 
+            WHERE merchant_id IS NULL 
+            ORDER BY created_at DESC
+        """))
+        
+        # Convertir en objets Order partiels
+        orders = []
+        for row in result:
+            orders.append(create_order_from_row(row))
+        
+        print(f"✅ Récupéré {len(orders)} commandes admin avec schéma partiel")
+        return orders
+    
+    return safe_db_operation(try_normal_query, fallback_query)
